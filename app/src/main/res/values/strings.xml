@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">WiFi BSS 查询</string>
+    <string name="bssid_label">当前 BSSID:</string>
+    <string name="bssid_value">未获取</string>
+    <string name="query_button">查询 BSS 信息</string>
+    <string name="result_label">查询结果:</string>
+    <string name="result_default">点击查询按钮获取信息</string>
+    <string name="permission_required">需要位置权限才能获取 WiFi 信息</string>
+    <string name="no_wifi_connection">未连接到 WiFi 网络</string>
+    <string name="querying">查询中...</string>
+    <string name="query_error">查询失败</string>
+</resources>
