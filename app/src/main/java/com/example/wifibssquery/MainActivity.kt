@@ -5,7 +5,9 @@ import android.content.pm.PackageManager
 import android.net.wifi.WifiManager
 import android.os.Build
 import android.os.Bundle
+import android.widget.TextView
 import android.widget.Toast
+import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
@@ -41,7 +43,103 @@ class MainActivity : AppCompatActivity() {
         wifiManager = applicationContext.getSystemService(WIFI_SERVICE) as WifiManager
 
         setupUI()
+        checkUpdate()
     }
+
+    /**
+     * 检查更新
+     */
+    private fun checkUpdate() {
+        lifecycleScope.launch {
+            try {
+                val versionInfo = fetchVersionInfo()
+                withContext(Dispatchers.Main) {
+                    val packageInfo = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                        packageManager.getPackageInfo(packageName, android.content.pm.PackageManager.PackageInfoFlags.of(0))
+                    } else {
+                        packageManager.getPackageInfo(packageName, 0)
+                    }
+                    val currentVersionCode = packageInfo.longVersionCode.toInt()
+                    if (versionInfo != null && versionInfo.versionCode > currentVersionCode) {
+                        showUpdateDialog(versionInfo, packageInfo)
+                    }
+                }
+            } catch (e: Exception) {
+                // 检查更新失败，静默处理
+            }
+        }
+    }
+
+    /**
+     * 获取服务器版本信息
+     */
+    private suspend fun fetchVersionInfo(): VersionInfo? = withContext(Dispatchers.IO) {
+        val url = "https://noc.ustc.edu.cn/version.json"
+        val request = Request.Builder()
+            .url(url)
+            .build()
+
+        try {
+            httpClient.newCall(request).execute().use { response ->
+                if (response.isSuccessful) {
+                    val json = JSONObject(response.body?.string() ?: return@withContext null)
+                    VersionInfo(
+                        versionCode = json.optInt("versionCode", 0),
+                        versionName = json.optString("versionName", ""),
+                        updateUrl = json.optString("updateUrl", ""),
+                        updateLog = json.optString("updateLog", "")
+                    )
+                } else {
+                    null
+                }
+            }
+        } catch (e: Exception) {
+            null
+        }
+    }
+
+    /**
+     * 显示更新对话框
+     */
+    private fun showUpdateDialog(versionInfo: VersionInfo, packageInfo: android.content.pm.PackageInfo) {
+        val currentVersionStr = "v${packageInfo.versionName} (${packageInfo.longVersionCode})"
+        val newVersionStr = "v${versionInfo.versionName} (${versionInfo.versionCode})"
+
+        val message = """
+            当前版本：$currentVersionStr
+            最新版本：$newVersionStr
+
+            ${versionInfo.updateLog.ifEmpty { "发现新版本，是否立即下载更新？" }}
+        """.trimIndent()
+
+        AlertDialog.Builder(this)
+            .setTitle(R.string.new_version_found)
+            .setMessage(message)
+            .setPositiveButton(R.string.download_now) { _, _ ->
+                downloadApk(versionInfo.updateUrl)
+            }
+            .setNegativeButton(android.R.string.cancel, null)
+            .show()
+    }
+
+    /**
+     * 下载 APK
+     */
+    private fun downloadApk(url: String) {
+        val intent = android.content.Intent(android.content.Intent.ACTION_VIEW)
+        intent.data = android.net.Uri.parse(url)
+        startActivity(intent)
+    }
+
+    /**
+     * 版本信息数据类
+     */
+    private data class VersionInfo(
+        val versionCode: Int,
+        val versionName: String,
+        val updateUrl: String,
+        val updateLog: String
+    )
 
     override fun onResume() {
         super.onResume()
@@ -59,6 +157,105 @@ class MainActivity : AppCompatActivity() {
                 binding.tvResult.text = getString(R.string.no_wifi_connection)
             }
         }
+
+        binding.btnAbout.setOnClickListener {
+            showAboutDialog()
+        }
+    }
+
+    /**
+     * 显示关于对话框，获取并显示 Git commit 信息
+     */
+    private fun showAboutDialog() {
+        val dialogView = layoutInflater.inflate(R.layout.dialog_about, null)
+        val tvCommits = dialogView.findViewById<TextView>(R.id.tvCommits)
+        tvCommits.text = getString(R.string.loading_commits)
+
+        val dialog = AlertDialog.Builder(this)
+            .setTitle(R.string.about_title)
+            .setView(dialogView)
+            .setPositiveButton(android.R.string.ok, null)
+            .create()
+
+        dialog.show()
+
+        // 获取 commit 信息
+        lifecycleScope.launch {
+            val commits = fetchGitCommits()
+            tvCommits.text = commits
+        }
+    }
+
+    /**
+     * 从 GitHub 获取 commit 信息
+     */
+    private suspend fun fetchGitCommits(): String = withContext(Dispatchers.IO) {
+        try {
+            // 使用 GitHub API 获取 commit 列表
+            val url = "https://api.github.com/repos/username/repo/commits"
+            val request = Request.Builder()
+                .url(url)
+                .addHeader("Accept", "application/vnd.github.v3+json")
+                .build()
+
+            val response = httpClient.newCall(request).execute()
+            if (response.isSuccessful) {
+                val body = response.body?.string()
+                parseCommits(body)
+            } else {
+                // 如果无法获取，返回本地信息
+                getLocalCommitInfo()
+            }
+        } catch (e: Exception) {
+            getLocalCommitInfo()
+        }
+    }
+
+    /**
+     * 解析 GitHub API 返回的 commit 数据
+     */
+    private fun parseCommits(jsonString: String?): String {
+        if (jsonString.isNullOrEmpty()) return "无法获取 commit 信息"
+
+        try {
+            val jsonArray = org.json.JSONArray(jsonString)
+            val sb = StringBuilder()
+            for (i in 0 until Math.min(jsonArray.length(), 10)) {
+                val commit = jsonArray.getJSONObject(i)
+                val sha = commit.getString("sha").substring(0, 7)
+                val commitObj = commit.getJSONObject("commit")
+                val message = commitObj.getJSONObject("message").getString("message")
+                val author = commitObj.getJSONObject("author").getString("name")
+                val date = commitObj.getString("date").substring(0, 10)
+                sb.append("[$sha] $message\n")
+                sb.append("作者：$author  日期：$date\n\n")
+            }
+            return sb.toString()
+        } catch (e: Exception) {
+            return getLocalCommitInfo()
+        }
+    }
+
+    /**
+     * 返回本地硬编码的 commit 信息
+     */
+    private fun getLocalCommitInfo(): String {
+        return """
+        [b817304] 添加 AP 信息显示和签名配置
+        作者：Zhang Huanjie  日期：2026-04-25
+
+        [2d41675] 添加 gradle wrapper zip 文件到.gitignore
+        作者：Zhang Huanjie  日期：2026-04-25
+
+        [322b577] 修复 Gradle 配置以兼容 Java 11
+        作者：Zhang Huanjie  日期：2026-04-25
+
+        [e8ce5ac] 添加 Gradle Wrapper 文件
+        作者：Zhang Huanjie  日期：2026-04-25
+
+        [3f2eeeb] 初始化 Android WiFi BSS 查询应用
+        作者：Zhang Huanjie  日期：2026-04-25
+        """.trimIndent()
     }
 
     /**
