@@ -164,97 +164,38 @@ class MainActivity : AppCompatActivity() {
     }
 
     /**
-     * 显示关于对话框，获取并显示 Git commit 信息
+     * 显示关于对话框
      */
     private fun showAboutDialog() {
         val dialogView = layoutInflater.inflate(R.layout.dialog_about, null)
         val tvCommits = dialogView.findViewById<TextView>(R.id.tvCommits)
-        tvCommits.text = getString(R.string.loading_commits)
+        tvCommits.text = getAboutContent()
 
-        val dialog = AlertDialog.Builder(this)
+        AlertDialog.Builder(this)
             .setTitle(R.string.about_title)
             .setView(dialogView)
             .setPositiveButton(android.R.string.ok, null)
-            .create()
-
-        dialog.show()
-
-        // 获取 commit 信息
-        lifecycleScope.launch {
-            val commits = fetchGitCommits()
-            tvCommits.text = commits
-        }
+            .show()
     }
 
     /**
-     * 从 GitHub 获取 commit 信息
+     * 获取关于内容
      */
-    private suspend fun fetchGitCommits(): String = withContext(Dispatchers.IO) {
-        try {
-            // 使用 GitHub API 获取 commit 列表
-            val url = "https://api.github.com/repos/username/repo/commits"
-            val request = Request.Builder()
-                .url(url)
-                .addHeader("Accept", "application/vnd.github.v3+json")
-                .build()
-
-            val response = httpClient.newCall(request).execute()
-            if (response.isSuccessful) {
-                val body = response.body?.string()
-                parseCommits(body)
-            } else {
-                // 如果无法获取，返回本地信息
-                getLocalCommitInfo()
-            }
-        } catch (e: Exception) {
-            getLocalCommitInfo()
-        }
-    }
-
-    /**
-     * 解析 GitHub API 返回的 commit 数据
-     */
-    private fun parseCommits(jsonString: String?): String {
-        if (jsonString.isNullOrEmpty()) return "无法获取 commit 信息"
-
-        try {
-            val jsonArray = org.json.JSONArray(jsonString)
-            val sb = StringBuilder()
-            for (i in 0 until Math.min(jsonArray.length(), 10)) {
-                val commit = jsonArray.getJSONObject(i)
-                val sha = commit.getString("sha").substring(0, 7)
-                val commitObj = commit.getJSONObject("commit")
-                val message = commitObj.getJSONObject("message").getString("message")
-                val author = commitObj.getJSONObject("author").getString("name")
-                val date = commitObj.getString("date").substring(0, 10)
-                sb.append("[$sha] $message\n")
-                sb.append("作者：$author  日期：$date\n\n")
-            }
-            return sb.toString()
-        } catch (e: Exception) {
-            return getLocalCommitInfo()
-        }
-    }
-
-    /**
-     * 返回本地硬编码的 commit 信息
-     */
-    private fun getLocalCommitInfo(): String {
+    private fun getAboutContent(): String {
         return """
-        [b817304] 添加 AP 信息显示和签名配置
-        作者：Zhang Huanjie  日期：2026-04-25
+WiFi BSS 查询
+版本：1.1
 
-        [2d41675] 添加 gradle wrapper zip 文件到.gitignore
-        作者：Zhang Huanjie  日期：2026-04-25
+开发信息:
+[f3074e9] 添加启动时自动检查更新功能
+[b817304] 添加 AP 信息显示和签名配置
+[2d41675] 添加 gradle wrapper zip 文件到.gitignore
+[322b577] 修复 Gradle 配置以兼容 Java 11
+[e8ce5ac] 添加 Gradle Wrapper 文件
+[3f2eeeb] 初始化 Android WiFi BSS 查询应用
 
-        [322b577] 修复 Gradle 配置以兼容 Java 11
-        作者：Zhang Huanjie  日期：2026-04-25
-
-        [e8ce5ac] 添加 Gradle Wrapper 文件
-        作者：Zhang Huanjie  日期：2026-04-25
-
-        [3f2eeeb] 初始化 Android WiFi BSS 查询应用
-        作者：Zhang Huanjie  日期：2026-04-25
+作者：Zhang Huanjie
+USTC 2026
         """.trimIndent()
     }
 
