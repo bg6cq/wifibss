@@ -42,15 +42,130 @@
         app:layout_constraintTop_toBottomOf="@id/tvBssidValue" />
 
     <TextView
+        android:id="@+id/tvAcIpLabel"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/ac_ip_label"
+        android:textSize="16sp"
+        android:textStyle="bold"
+        android:layout_marginTop="24dp"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/btnQuery" />
+
+    <TextView
+        android:id="@+id/tvAcIp"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/result_default"
+        android:textSize="16sp"
+        android:fontFamily="monospace"
+        android:layout_marginStart="8dp"
+        app:layout_constraintStart_toEndOf="@id/tvAcIpLabel"
+        app:layout_constraintTop_toTopOf="@id/tvAcIpLabel"
+        app:layout_constraintBottom_toBottomOf="@id/tvAcIpLabel" />
+
+    <TextView
+        android:id="@+id/tvApIpLabel"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/ap_ip_label"
+        android:textSize="16sp"
+        android:textStyle="bold"
+        android:layout_marginTop="8dp"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/tvAcIpLabel" />
+
+    <TextView
+        android:id="@+id/tvApIp"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/result_default"
+        android:textSize="16sp"
+        android:fontFamily="monospace"
+        android:layout_marginStart="8dp"
+        app:layout_constraintStart_toEndOf="@id/tvApIpLabel"
+        app:layout_constraintTop_toTopOf="@id/tvApIpLabel"
+        app:layout_constraintBottom_toBottomOf="@id/tvApIpLabel" />
+
+    <TextView
+        android:id="@+id/tvApNameLabel"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/ap_name_label"
+        android:textSize="16sp"
+        android:textStyle="bold"
+        android:layout_marginTop="8dp"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/tvApIpLabel" />
+
+    <TextView
+        android:id="@+id/tvApName"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/result_default"
+        android:textSize="16sp"
+        android:fontFamily="monospace"
+        android:layout_marginStart="8dp"
+        app:layout_constraintStart_toEndOf="@id/tvApNameLabel"
+        app:layout_constraintTop_toTopOf="@id/tvApNameLabel"
+        app:layout_constraintBottom_toBottomOf="@id/tvApNameLabel" />
+
+    <TextView
+        android:id="@+id/tvApSnLabel"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/ap_sn_label"
+        android:textSize="16sp"
+        android:textStyle="bold"
+        android:layout_marginTop="8dp"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/tvApNameLabel" />
+
+    <TextView
+        android:id="@+id/tvApSn"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/result_default"
+        android:textSize="16sp"
+        android:fontFamily="monospace"
+        android:layout_marginStart="8dp"
+        app:layout_constraintStart_toEndOf="@id/tvApSnLabel"
+        app:layout_constraintTop_toTopOf="@id/tvApSnLabel"
+        app:layout_constraintBottom_toBottomOf="@id/tvApSnLabel" />
+
+    <TextView
+        android:id="@+id/tvApBuildingLabel"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/ap_building_label"
+        android:textSize="16sp"
+        android:textStyle="bold"
+        android:layout_marginTop="8dp"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/tvApSnLabel" />
+
+    <TextView
+        android:id="@+id/tvApBuilding"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/result_default"
+        android:textSize="16sp"
+        android:fontFamily="monospace"
+        android:layout_marginStart="8dp"
+        app:layout_constraintStart_toEndOf="@id/tvApBuildingLabel"
+        app:layout_constraintTop_toTopOf="@id/tvApBuildingLabel"
+        app:layout_constraintBottom_toBottomOf="@id/tvApBuildingLabel" />
+
+    <TextView
         android:id="@+id/tvResultLabel"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="@string/result_label"
         android:textSize="18sp"
         android:textStyle="bold"
-        android:layout_marginTop="48dp"
+        android:layout_marginTop="24dp"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/btnQuery" />
+        app:layout_constraintTop_toBottomOf="@id/tvApBuildingLabel" />
 
     <ScrollView
         android:layout_width="0dp"

@@ -1,11 +1,31 @@
+import java.io.FileInputStream
+import java.util.Properties
+
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
 }
 
+// 加载 keystore 属性
+val keystorePropertiesFile = rootProject.file("keystore.properties")
+val keystoreProperties = Properties()
+if (keystorePropertiesFile.exists()) {
+    keystoreProperties.load(FileInputStream(keystorePropertiesFile))
+}
+
 android {
     namespace = "com.example.wifibssquery"
     compileSdk = 34
+    buildToolsVersion = "33.0.2"
+
+    signingConfigs {
+        create("release") {
+            storeFile = file("../wifi-bss-key.jks")
+            storePassword = keystoreProperties["storePassword"] as String? ?: "android"
+            keyAlias = keystoreProperties["keyAlias"] as String? ?: "key"
+            keyPassword = keystoreProperties["keyPassword"] as String? ?: "android"
+        }
+    }
 
     defaultConfig {
         applicationId = "com.example.wifibssquery"
@@ -24,6 +44,7 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+            signingConfig = signingConfigs.getByName("release")
         }
     }
     compileOptions {

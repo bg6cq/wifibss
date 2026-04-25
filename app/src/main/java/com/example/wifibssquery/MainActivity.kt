@@ -16,6 +16,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
 import okhttp3.Request
+import org.json.JSONObject
 import java.util.concurrent.TimeUnit
 
 class MainActivity : AppCompatActivity() {
@@ -51,6 +52,8 @@ class MainActivity : AppCompatActivity() {
         binding.btnQuery.setOnClickListener {
             val bssid = getFormattedBssid()
             if (bssid != null && bssid.length == 12) {
+                // 更新界面显示的 BSSID
+                binding.tvBssidValue.text = bssid
                 queryBssInfo(bssid)
             } else {
                 binding.tvResult.text = getString(R.string.no_wifi_connection)
@@ -88,6 +91,12 @@ class MainActivity : AppCompatActivity() {
      */
     private fun queryBssInfo(bssid: String) {
         binding.tvResult.text = getString(R.string.querying)
+        // 清空之前的 AP 信息显示
+        binding.tvAcIp.text = "-"
+        binding.tvApIp.text = "-"
+        binding.tvApName.text = "-"
+        binding.tvApSn.text = "-"
+        binding.tvApBuilding.text = "-"
         binding.btnQuery.isEnabled = false
 
         lifecycleScope.launch {
@@ -95,6 +104,7 @@ class MainActivity : AppCompatActivity() {
                 val result = fetchBssInfo(bssid)
                 withContext(Dispatchers.Main) {
                     binding.tvResult.text = result.ifEmpty { "无相关信息" }
+                    parseAndDisplayApInfo(result)
                 }
             } catch (e: Exception) {
                 withContext(Dispatchers.Main) {
@@ -106,6 +116,38 @@ class MainActivity : AppCompatActivity() {
                     binding.btnQuery.isEnabled = true
                 }
             }
+        }
+    }
+
+    /**
+     * 解析 API 返回的 JSON 数据并显示 AP 信息
+     */
+    private fun parseAndDisplayApInfo(jsonString: String) {
+        if (jsonString.isEmpty()) return
+
+        try {
+            val json = JSONObject(jsonString)
+
+            // 检查是否返回成功
+            val status = json.optString("status", "")
+            if (status != "ok") {
+                val message = json.optString("message", "查询失败")
+                binding.tvResult.text = message
+                return
+            }
+
+            // 数据可能在 data 数组中
+            val data = json.optJSONArray("data")
+            if (data != null && data.length() > 0) {
+                val item = data.getJSONObject(0)
+                binding.tvAcIp.text = item.optString("AC_IP", "-")
+                binding.tvApIp.text = item.optString("AP_IP", "-")
+                binding.tvApName.text = item.optString("AP_NAME", "-")
+                binding.tvApSn.text = item.optString("AP_SN", "-")
+                binding.tvApBuilding.text = item.optString("AP_Building", "-")
+            }
+        } catch (e: Exception) {
+            // JSON 解析失败，可能是返回的数据格式不对
         }
     }
 

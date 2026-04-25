@@ -10,4 +10,9 @@
     <string name="no_wifi_connection">未连接到 WiFi 网络</string>
     <string name="querying">查询中...</string>
     <string name="query_error">查询失败</string>
+    <string name="ac_ip_label">AC IP 地址：</string>
+    <string name="ap_ip_label">AP IP 地址：</string>
+    <string name="ap_name_label">AP 名字：</string>
+    <string name="ap_sn_label">AP SN：</string>
+    <string name="ap_building_label">所在楼：</string>
 </resources>
