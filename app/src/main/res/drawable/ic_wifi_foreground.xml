@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <!-- WiFi 信号弧线 -->
+    <!-- 最外层弧线 -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M54,54m-32,0a32,32 0,1 1,64 0a32,32 0,1 1,-64 0"
+        android:strokeWidth="0"/>
+    <path
+        android:fillColor="#00000000"
+        android:pathData="M54,38c-8.84,0 -17.06,2.4 -24.16,6.56l4.32,7.44c6,-3.52 12.76,-5.6 19.84,-5.6s13.84,2.08 19.84,5.6l4.32,-7.44c-7.1,-4.16 -15.32,-6.56 -24.16,-6.56z"
+        android:strokeWidth="0"/>
+
+    <!-- 第二层弧线 -->
+    <path
+        android:fillColor="#00000000"
+        android:pathData="M54,46c-6.64,0 -12.82,1.8 -18.14,4.92l4.32,7.44c4.2,-2.48 8.92,-3.96 13.82,-3.96s9.62,1.48 13.82,3.96l4.32,-7.44c-5.32,-3.12 -11.5,-4.92 -18.14,-4.92z"
+        android:strokeWidth="0"/>
+
+    <!-- 第三层弧线 -->
+    <path
+        android:fillColor="#00000000"
+        android:pathData="M54,54c-4.44,0 -8.56,1.2 -12.12,3.28l4.32,7.44c2.4,-1.44 5.04,-2.32 7.8,-2.32s5.4,0.88 7.8,2.32l4.32,-7.44c-3.56,-2.08 -7.68,-3.28 -12.12,-3.28z"
+        android:strokeWidth="0"/>
+
+    <!-- 中心圆点 -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M54,64m-4,0a4,4 0,1 1,8 0a4,4 0,1 1,-8 0"
+        android:strokeWidth="0"/>
+</vector>
