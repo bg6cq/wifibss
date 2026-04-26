@@ -1,4 +1,4 @@
-package com.example.wifibssquery
+package com.ustc.wifibss
 
 import android.Manifest
 import android.content.Context
@@ -19,7 +19,7 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.lifecycleScope
-import com.example.wifibssquery.databinding.ActivityMainBinding
+import com.ustc.wifibss.databinding.ActivityMainBinding
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -334,7 +334,7 @@ class MainActivity : AppCompatActivity() {
      * 获取版本信息
      */
     private fun getVersionInfo(): String {
-        return "版本：1.7"
+        return "版本：1.8"
     }
 
     /**
@@ -349,6 +349,9 @@ class MainActivity : AppCompatActivity() {
      */
     private fun getChangesText(): String {
         return """
+v1.8 包名更新
+- 包名从 com.example.wifibssquery 更名为 com.ustc.wifibss
+
 v1.7 修正频段显示
 - 修正 5GHz/6GHz 频段判断逻辑（5925MHz 以上为 6GHz）
 - 无效频率时不显示频段标识

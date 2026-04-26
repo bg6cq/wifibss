@@ -14,7 +14,7 @@ if (keystorePropertiesFile.exists()) {
 }
 
 android {
-    namespace = "com.example.wifibssquery"
+    namespace = "com.ustc.wifibss"
     compileSdk = 34
     buildToolsVersion = "33.0.2"
 
@@ -28,11 +28,11 @@ android {
     }
 
     defaultConfig {
-        applicationId = "com.example.wifibssquery"
+        applicationId = "com.ustc.wifibss"
         minSdk = 29
         targetSdk = 34
-        versionCode = 7
-        versionName = "1.7"
+        versionCode = 8
+        versionName = "1.8"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
