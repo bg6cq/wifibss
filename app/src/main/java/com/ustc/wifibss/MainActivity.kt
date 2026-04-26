@@ -334,7 +334,7 @@ class MainActivity : AppCompatActivity() {
      * 获取版本信息
      */
     private fun getVersionInfo(): String {
-        return "版本：1.8"
+        return "版本：1.9"
     }
 
     /**
@@ -349,6 +349,9 @@ class MainActivity : AppCompatActivity() {
      */
     private fun getChangesText(): String {
         return """
+v1.9 应用图标更新
+- 更换为 WiFi 信号主题图标（青绿色背景 + 白色信号弧线）
+
 v1.8 包名更新
 - 包名从 com.example.wifibssquery 更名为 com.ustc.wifibss
 

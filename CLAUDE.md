@@ -41,13 +41,13 @@ Release 构建使用 `wifi-bss-key.jks` 签名。密钥库凭据在 `keystore.pr
 ```kotlin
 // MainActivity.kt
 private fun getVersionInfo(): String {
-    return "版本：1.8"  // 与 versionName 一致
+    return "版本：1.9"  // 与 versionName 一致
 }
 
 private fun getChangesText(): String {
     return """
-v1.8 包名更新
-- 包名从 com.example.wifibssquery 更名为 com.ustc.wifibss
+v1.9 应用图标更新
+- 更换为 WiFi 信号主题图标（青绿色背景 + 白色信号弧线）
     """.trimIndent()
 }
 ```
