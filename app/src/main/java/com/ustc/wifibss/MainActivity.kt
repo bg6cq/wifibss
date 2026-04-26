@@ -229,6 +229,8 @@ class MainActivity : AppCompatActivity() {
         // 检测 BSSID 变化，自动查询
         if (bssid != null && bssid != lastBssid) {
             lastBssid = bssid
+            // 记录历史（即使没有查询到数据）
+            addHistoryRecord(bssid, "", "")
             if (getAutoQuery() && bssid.length == 12) {
                 autoQueryRetryCount = 0
                 queryBssInfoWithRetry(bssid)
@@ -376,7 +378,7 @@ class MainActivity : AppCompatActivity() {
      * 获取版本信息
      */
     private fun getVersionInfo(): String {
-        return "版本：1.12"
+        return "版本：1.13"
     }
 
     /**
@@ -391,10 +393,15 @@ class MainActivity : AppCompatActivity() {
      */
     private fun getChangesText(): String {
         return """
+v1.13 历史记录优化
+- BSSID 变化时立即记录历史（无需等待查询结果）
+- 查询到 AP 信息后自动更新对应历史记录
+- 历史记录时间精确到秒
+
 v1.12 信号强度图表
 - 新增 RSSI 信号强度曲线图，显示最近 5 分钟变化
 - BSSID 切换时用红色大圆点标记
-- 优化布局：BSSID 合并为一行，删除冗余标题
+- 优化布局：图表置顶，查询结果可滚动
 
 v1.11 历史记录功能
 - 新增查询历史记录，保存 BSSID、AP 名字、楼名和查询时间
@@ -611,12 +618,36 @@ v1.0 初始版本
     }
 
     /**
+     * 更新历史记录（用 AP 信息更新最近一条同 BSSID 的记录）
+     */
+    private fun updateHistoryRecord(bssid: String, apName: String, building: String) {
+        val list = getHistoryList().toMutableList()
+
+        // 从后往前找第一条同 BSSID 且没有 AP 信息的记录
+        for (i in list.size - 1 downTo 0) {
+            if (list[i].bssid == bssid && list[i].apName.isEmpty()) {
+                list[i] = QueryHistory(
+                    timestamp = list[i].timestamp,
+                    bssid = bssid,
+                    apName = apName,
+                    building = building
+                )
+                saveHistoryList(list)
+                return
+            }
+        }
+
+        // 如果没有找到，添加新记录
+        addHistoryRecord(bssid, apName, building)
+    }
+
+    /**
      * 历史记录适配器
      */
     private class HistoryAdapter(private val historyList: List<QueryHistory>) :
         RecyclerView.Adapter<HistoryAdapter.ViewHolder>() {
 
-        private val dateFormat = SimpleDateFormat("MM-dd HH:mm", Locale.getDefault())
+        private val dateFormat = SimpleDateFormat("MM-dd HH:mm:ss", Locale.getDefault())
 
         class ViewHolder(view: android.view.View) : RecyclerView.ViewHolder(view) {
             val tvTime: TextView = view.findViewById(R.id.tvHistoryTime)
@@ -926,13 +957,13 @@ v1.0 初始版本
                 binding.tvApSn.text = item.optString("AP_SN", "-")
                 binding.tvApBuilding.text = apBuilding
 
-                // 添加历史记录（只在查询成功时）
+                // 更新历史记录（用 AP 信息填充最近一条同 BSSID 的记录）
                 val currentBssid = getFormattedBssid()
-                if (currentBssid != null && currentBssid.length == 12) {
-                    addHistoryRecord(
+                if (currentBssid != null && currentBssid.length == 12 && (apName != "-" || apBuilding != "-")) {
+                    updateHistoryRecord(
                         bssid = currentBssid,
-                        apName = if (apName != "-") apName else "",
-                        building = if (apBuilding != "-") apBuilding else ""
+                        apName = apName,
+                        building = apBuilding
                     )
                 }
             }

@@ -17,7 +17,8 @@
             android:layout_height="wrap_content"
             android:layout_weight="1"
             android:textSize="12sp"
-            android:textColor="#666666" />
+            android:textColor="#666666"
+            android:fontFamily="monospace" />
 
         <TextView
             android:id="@+id/tvHistoryBssid"
