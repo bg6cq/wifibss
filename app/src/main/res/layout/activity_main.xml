@@ -7,7 +7,7 @@
     android:padding="16dp"
     tools:context=".MainActivity">
 
-    <!-- BSSID 显示 -->
+    <!-- BSSID 显示（居中） -->
     <TextView
         android:id="@+id/tvBssidLabel"
         android:layout_width="wrap_content"
@@ -16,6 +16,7 @@
         android:textSize="16sp"
         android:textStyle="bold"
         app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
 
     <TextView
@@ -27,6 +28,7 @@
         android:fontFamily="monospace"
         android:layout_marginTop="4dp"
         app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintTop_toBottomOf="@id/tvBssidLabel" />
 
     <!-- WiFi 信息卡片 -->
@@ -209,144 +211,178 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@id/wifiInfoCard" />
 
-    <!-- AP 信息显示 -->
-    <TextView
-        android:id="@+id/tvBssMacLabel"
-        android:layout_width="wrap_content"
+    <!-- AP 信息显示（卡片形式，与 WiFi 信息一致） -->
+    <com.google.android.material.card.MaterialCardView
+        android:id="@+id/apInfoCard"
+        android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:layout_marginTop="16dp"
-        android:text="@string/bss_mac_label"
-        android:textSize="14sp"
-        android:textStyle="bold"
+        app:cardCornerRadius="8dp"
+        app:cardElevation="2dp"
+        app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/btnQuery" />
+        app:layout_constraintTop_toBottomOf="@id/btnQuery">
 
-    <TextView
-        android:id="@+id/tvBssMac"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginStart="8dp"
-        android:text="@string/result_default"
-        android:textSize="14sp"
-        android:fontFamily="monospace"
-        app:layout_constraintBottom_toBottomOf="@id/tvBssMacLabel"
-        app:layout_constraintStart_toEndOf="@id/tvBssMacLabel"
-        app:layout_constraintTop_toTopOf="@id/tvBssMacLabel" />
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="16dp">
 
-    <TextView
-        android:id="@+id/tvAcIpLabel"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="8dp"
-        android:text="@string/ac_ip_label"
-        android:textSize="14sp"
-        android:textStyle="bold"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/tvBssMacLabel" />
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="BSS 信息"
+                android:textSize="16sp"
+                android:textStyle="bold" />
 
-    <TextView
-        android:id="@+id/tvAcIp"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginStart="8dp"
-        android:text="@string/result_default"
-        android:textSize="14sp"
-        android:fontFamily="monospace"
-        app:layout_constraintBottom_toBottomOf="@id/tvAcIpLabel"
-        app:layout_constraintStart_toEndOf="@id/tvAcIpLabel"
-        app:layout_constraintTop_toTopOf="@id/tvAcIpLabel" />
+            <!-- BSS MAC -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:orientation="horizontal">
 
-    <TextView
-        android:id="@+id/tvApIpLabel"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="8dp"
-        android:text="@string/ap_ip_label"
-        android:textSize="14sp"
-        android:textStyle="bold"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/tvAcIpLabel" />
+                <TextView
+                    android:layout_width="100dp"
+                    android:layout_height="wrap_content"
+                    android:text="@string/bss_mac_label"
+                    android:textSize="14sp"
+                    android:textStyle="bold" />
 
-    <TextView
-        android:id="@+id/tvApIp"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginStart="8dp"
-        android:text="@string/result_default"
-        android:textSize="14sp"
-        android:fontFamily="monospace"
-        app:layout_constraintBottom_toBottomOf="@id/tvApIpLabel"
-        app:layout_constraintStart_toEndOf="@id/tvApIpLabel"
-        app:layout_constraintTop_toTopOf="@id/tvApIpLabel" />
+                <TextView
+                    android:id="@+id/tvBssMac"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="@string/result_default"
+                    android:textSize="14sp"
+                    android:fontFamily="monospace" />
+            </LinearLayout>
 
-    <TextView
-        android:id="@+id/tvApNameLabel"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="8dp"
-        android:text="@string/ap_name_label"
-        android:textSize="14sp"
-        android:textStyle="bold"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/tvApIpLabel" />
+            <!-- AC IP -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:orientation="horizontal">
 
-    <TextView
-        android:id="@+id/tvApName"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginStart="8dp"
-        android:text="@string/result_default"
-        android:textSize="14sp"
-        android:fontFamily="monospace"
-        app:layout_constraintBottom_toBottomOf="@id/tvApNameLabel"
-        app:layout_constraintStart_toEndOf="@id/tvApNameLabel"
-        app:layout_constraintTop_toTopOf="@id/tvApNameLabel" />
+                <TextView
+                    android:layout_width="100dp"
+                    android:layout_height="wrap_content"
+                    android:text="@string/ac_ip_label"
+                    android:textSize="14sp"
+                    android:textStyle="bold" />
 
-    <TextView
-        android:id="@+id/tvApSnLabel"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="8dp"
-        android:text="@string/ap_sn_label"
-        android:textSize="14sp"
-        android:textStyle="bold"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/tvApNameLabel" />
+                <TextView
+                    android:id="@+id/tvAcIp"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="@string/result_default"
+                    android:textSize="14sp"
+                    android:fontFamily="monospace" />
+            </LinearLayout>
 
-    <TextView
-        android:id="@+id/tvApSn"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginStart="8dp"
-        android:text="@string/result_default"
-        android:textSize="14sp"
-        android:fontFamily="monospace"
-        app:layout_constraintBottom_toBottomOf="@id/tvApSnLabel"
-        app:layout_constraintStart_toEndOf="@id/tvApSnLabel"
-        app:layout_constraintTop_toTopOf="@id/tvApSnLabel" />
+            <!-- AP IP -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:orientation="horizontal">
 
-    <TextView
-        android:id="@+id/tvApBuildingLabel"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="8dp"
-        android:text="@string/ap_building_label"
-        android:textSize="14sp"
-        android:textStyle="bold"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/tvApSnLabel" />
+                <TextView
+                    android:layout_width="100dp"
+                    android:layout_height="wrap_content"
+                    android:text="@string/ap_ip_label"
+                    android:textSize="14sp"
+                    android:textStyle="bold" />
 
-    <TextView
-        android:id="@+id/tvApBuilding"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginStart="8dp"
-        android:text="@string/result_default"
-        android:textSize="14sp"
-        android:fontFamily="monospace"
-        app:layout_constraintBottom_toBottomOf="@id/tvApBuildingLabel"
-        app:layout_constraintStart_toEndOf="@id/tvApBuildingLabel"
-        app:layout_constraintTop_toTopOf="@id/tvApBuildingLabel" />
+                <TextView
+                    android:id="@+id/tvApIp"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="@string/result_default"
+                    android:textSize="14sp"
+                    android:fontFamily="monospace" />
+            </LinearLayout>
+
+            <!-- AP Name -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:orientation="horizontal">
+
+                <TextView
+                    android:layout_width="100dp"
+                    android:layout_height="wrap_content"
+                    android:text="@string/ap_name_label"
+                    android:textSize="14sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:id="@+id/tvApName"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="@string/result_default"
+                    android:textSize="14sp"
+                    android:fontFamily="monospace" />
+            </LinearLayout>
+
+            <!-- AP SN -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:orientation="horizontal">
+
+                <TextView
+                    android:layout_width="100dp"
+                    android:layout_height="wrap_content"
+                    android:text="@string/ap_sn_label"
+                    android:textSize="14sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:id="@+id/tvApSn"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="@string/result_default"
+                    android:textSize="14sp"
+                    android:fontFamily="monospace" />
+            </LinearLayout>
+
+            <!-- AP Building -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:orientation="horizontal">
+
+                <TextView
+                    android:layout_width="100dp"
+                    android:layout_height="wrap_content"
+                    android:text="@string/ap_building_label"
+                    android:textSize="14sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:id="@+id/tvApBuilding"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="@string/result_default"
+                    android:textSize="14sp"
+                    android:fontFamily="monospace" />
+            </LinearLayout>
+
+        </LinearLayout>
+
+    </com.google.android.material.card.MaterialCardView>
 
     <!-- 查询结果 -->
     <TextView
@@ -358,7 +394,7 @@
         android:textSize="16sp"
         android:textStyle="bold"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/tvApBuildingLabel" />
+        app:layout_constraintTop_toBottomOf="@id/apInfoCard" />
 
     <ScrollView
         android:layout_width="0dp"
