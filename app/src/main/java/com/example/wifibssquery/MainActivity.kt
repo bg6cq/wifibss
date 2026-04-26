@@ -282,38 +282,78 @@ class MainActivity : AppCompatActivity() {
      */
     private fun showAboutDialog() {
         val dialogView = layoutInflater.inflate(R.layout.dialog_about, null)
+        val tvVersion = dialogView.findViewById<TextView>(R.id.tvVersion)
+        val tvDescription = dialogView.findViewById<TextView>(R.id.tvDescription)
+        val tvChanges = dialogView.findViewById<TextView>(R.id.tvChanges)
         val tvCommits = dialogView.findViewById<TextView>(R.id.tvCommits)
-        tvCommits.text = getAboutContent()
+        val tvAuthor = dialogView.findViewById<TextView>(R.id.tvAuthor)
+
+        tvVersion.text = getVersionInfo()
+        tvDescription.text = getDescriptionText()
+        tvChanges.text = getChangesText()
+        tvCommits.text = getCommitsText()
+        tvAuthor.text = getAuthorText()
 
         AlertDialog.Builder(this)
-            .setTitle(R.string.about_title)
             .setView(dialogView)
             .setPositiveButton(android.R.string.ok, null)
             .show()
     }
 
     /**
-     * 获取关于内容
+     * 获取版本信息
      */
-    private fun getAboutContent(): String {
-        val description = getString(R.string.about_description)
-        val versionInfo = """
-版本：1.2
+    private fun getVersionInfo(): String {
+        return "版本：1.2"
+    }
 
-开发信息:
-[菜单功能] 添加设置和关于菜单
-[WiFi 增强] 显示 SSID、IP、RSSI、频率/信道、链路速度等信息
+    /**
+     * 获取功能说明
+     */
+    private fun getDescriptionText(): String {
+        return getString(R.string.about_description)
+    }
+
+    /**
+     * 获取重大更新内容
+     */
+    private fun getChangesText(): String {
+        return """
+v1.2 新增 BSS MAC 显示
+- 在查询结果最上方显示返回的 BSS MAC 地址
+
+v1.1 菜单功能和 WiFi 信息增强
+- 添加右上角菜单（设置、关于）
+- 设置可配置查询 URL 和 KEY（Authorization: Bearer）
+- WiFi 信息卡片显示：SSID、BSSID、IP 地址、信号强度、频率/信道、链路速度
+- 信号强度分级显示（优秀/良好/一般/较差/弱）
+- 自动感知 WiFi 连接变化并刷新显示
+
+v1.0 初始版本
+- 获取当前 WiFi BSSID
+- 查询 USTC BSS 信息并显示
+        """.trimIndent()
+    }
+
+    /**
+     * 获取开发信息
+     */
+    private fun getCommitsText(): String {
+        return """
 [f3074e9] 添加启动时自动检查更新功能
 [b817304] 添加 AP 信息显示和签名配置
 [2d41675] 添加 gradle wrapper zip 文件到.gitignore
 [322b577] 修复 Gradle 配置以兼容 Java 11
 [e8ce5ac] 添加 Gradle Wrapper 文件
 [3f2eeeb] 初始化 Android WiFi BSS 查询应用
-
-作者：Zhang Huanjie
-USTC 2026
         """.trimIndent()
-        return "$description\n\n$versionInfo"
+    }
+
+    /**
+     * 获取作者信息
+     */
+    private fun getAuthorText(): String {
+        return "作者：Zhang Huanjie\nUSTC 2026"
     }
 
     /**
