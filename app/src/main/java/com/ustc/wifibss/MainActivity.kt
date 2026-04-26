@@ -378,7 +378,7 @@ class MainActivity : AppCompatActivity() {
      * 获取版本信息
      */
     private fun getVersionInfo(): String {
-        return "版本：1.13"
+        return "版本：1.14"
     }
 
     /**
@@ -393,6 +393,9 @@ class MainActivity : AppCompatActivity() {
      */
     private fun getChangesText(): String {
         return """
+v1.14 布局优化
+- 加宽左侧标签栏（70dp → 90dp），避免文字换行
+
 v1.13 历史记录优化
 - BSSID 变化时立即记录历史（无需等待查询结果）
 - 查询到 AP 信息后自动更新对应历史记录
