@@ -425,6 +425,7 @@ USTC 2026
     private fun queryBssInfo(bssid: String) {
         binding.tvResult.text = getString(R.string.querying)
         // 清空之前的 AP 信息显示
+        binding.tvBssMac.text = "-"
         binding.tvAcIp.text = "-"
         binding.tvApIp.text = "-"
         binding.tvApName.text = "-"
@@ -473,6 +474,7 @@ USTC 2026
             val data = json.optJSONArray("data")
             if (data != null && data.length() > 0) {
                 val item = data.getJSONObject(0)
+                binding.tvBssMac.text = item.optString("BSS_MAC", "-")
                 binding.tvAcIp.text = item.optString("AC_IP", "-")
                 binding.tvApIp.text = item.optString("AP_IP", "-")
                 binding.tvApName.text = item.optString("AP_NAME", "-")

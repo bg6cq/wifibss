@@ -235,15 +235,38 @@
 
     <!-- AP 信息显示 -->
     <TextView
-        android:id="@+id/tvAcIpLabel"
+        android:id="@+id/tvBssMacLabel"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginTop="16dp"
-        android:text="@string/ac_ip_label"
+        android:text="@string/bss_mac_label"
         android:textSize="14sp"
         android:textStyle="bold"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@id/btnQuery" />
+
+    <TextView
+        android:id="@+id/tvBssMac"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="8dp"
+        android:text="@string/result_default"
+        android:textSize="14sp"
+        android:fontFamily="monospace"
+        app:layout_constraintBottom_toBottomOf="@id/tvBssMacLabel"
+        app:layout_constraintStart_toEndOf="@id/tvBssMacLabel"
+        app:layout_constraintTop_toTopOf="@id/tvBssMacLabel" />
+
+    <TextView
+        android:id="@+id/tvAcIpLabel"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:text="@string/ac_ip_label"
+        android:textSize="14sp"
+        android:textStyle="bold"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/tvBssMacLabel" />
 
     <TextView
         android:id="@+id/tvAcIp"
