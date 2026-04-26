@@ -304,7 +304,7 @@ class MainActivity : AppCompatActivity() {
      * 获取版本信息
      */
     private fun getVersionInfo(): String {
-        return "版本：1.2"
+        return "版本：1.3"
     }
 
     /**
