@@ -42,7 +42,6 @@
     <string name="wifi_rssi_label">信号强度:</string>
     <string name="wifi_frequency_label">频率/信道:</string>
     <string name="wifi_linkspeed_label">链路速度:</string>
-    <string name="wifi_mac_label">设备 MAC:</string>
     <string name="signal_excellent">优秀</string>
     <string name="signal_good">良好</string>
     <string name="signal_fair">一般</string>

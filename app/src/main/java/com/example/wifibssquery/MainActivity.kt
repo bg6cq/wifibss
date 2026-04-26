@@ -202,10 +202,6 @@ class MainActivity : AppCompatActivity() {
 
         // 链路速度
         binding.tvLinkSpeed.text = "${wifiInfo.linkSpeed} Mbps"
-
-        // 设备 MAC
-        val mac = wifiInfo.macAddress
-        binding.tvMac.text = mac ?: "N/A"
     }
 
     /**
@@ -218,7 +214,6 @@ class MainActivity : AppCompatActivity() {
         binding.tvRssi.text = "-"
         binding.tvFrequency.text = "-"
         binding.tvLinkSpeed.text = "-"
-        binding.tvMac.text = "-"
     }
 
     /**
