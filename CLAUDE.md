@@ -1,36 +1,36 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+本文件为 Claude Code (claude.ai/code) 在此仓库工作时提供指导。
 
-## Build
+## 构建
 
 ```bash
-./gradlew assembleDebug      # Build debug APK
-./gradlew assembleRelease    # Build release (signed) APK
-./gradlew lint               # Run lint checks
-./gradlew test               # Run unit tests
-./gradlew connectedAndroidTest  # Run instrumentation tests (requires device/emulator)
+./gradlew assembleDebug      # 构建 Debug APK
+./gradlew assembleRelease    # 构建 Release (签名) APK
+./gradlew lint               # 运行 Lint 检查
+./gradlew test               # 运行单元测试
+./gradlew connectedAndroidTest  # 运行仪器测试（需要设备/模拟器）
 ```
 
-Appears at `app/build/outputs/apk/release/app-release.apk`.
+输出位置：`app/build/outputs/apk/release/app-release.apk`
 
-## Architecture
+## 架构
 
-Single-Activity Android app (`MainActivity.kt`) — no fragments, no ViewModel layer. Networking and JSON parsing are done directly in the Activity via coroutines. Uses ViewBinding for view access.
+单 Activity Android 应用 (`MainActivity.kt`) — 无 Fragment，无 ViewModel 层。网络和 JSON 解析通过协程直接在 Activity 中完成。使用 ViewBinding 访问视图。
 
-- **WiFi BSSID**: Read from `WifiManager.connectionInfo.bssid`, normalized by stripping non-hex chars and lowercasing.
-- **BSS info API**: `GET https://linux.ustc.edu.cn/api/bssinfo.php?bssid=<12-char-hex>` — returns JSON with a `data` array; the first element contains `AC_IP`, `AP_IP`, `AP_NAME`, `AP_SN`, `AP_Building`.
-- **Auto-update**: On launch, fetches `https://noc.ustc.edu.cn/version.json` (fields: `versionCode`, `versionName`, `updateUrl`, `updateLog`), compares with current `versionCode`, and shows an update dialog if server version is higher. Update just opens the `updateUrl` in a browser.
+- **WiFi BSSID**: 从 `WifiManager.connectionInfo.bssid` 读取，通过移除非十六进制字符并转为小写进行标准化。
+- **BSS 信息 API**: `GET https://linux.ustc.edu.cn/api/bssinfo.php?bssid=<12 位十六进制>` — 返回包含 `data` 数组的 JSON；第一个元素包含 `AC_IP`、`AP_IP`、`AP_NAME`、`AP_SN`、`AP_Building`。
+- **自动更新**: 启动时获取 `https://noc.ustc.edu.cn/version.json`（字段：`versionCode`、`versionName`、`updateUrl`、`updateLog`），与当前 `versionCode` 比较，如果服务器版本更高则显示更新对话框。更新只是在浏览器中打开 `updateUrl`。
 
-## Maven mirroring
+## Maven 镜像
 
-`settings.gradle.kts` redirects Google and Maven Central to Aliyun mirrors. If network issues occur during sync, these may need updating.
+`settings.gradle.kts` 将 Google 和 Maven Central 重定向到阿里云镜像。如果同步时出现网络问题，可能需要更新这些配置。
 
-## Signing
+## 签名
 
-Release builds are signed with `wifi-bss-key.jks`. Keystore credentials are in `keystore.properties` (gitignored).
+Release 构建使用 `wifi-bss-key.jks` 签名。密钥库凭据在 `keystore.properties` 中（已加入 .gitignore）。
 
-## Version Release Checklist
+## 版本发布清单
 
 每次更新版本时需要同步修改：
 
@@ -41,13 +41,13 @@ Release builds are signed with `wifi-bss-key.jks`. Keystore credentials are in `
 ```kotlin
 // MainActivity.kt
 private fun getVersionInfo(): String {
-    return "版本：1.5"  // 与 versionName 一致
+    return "版本：1.8"  // 与 versionName 一致
 }
 
 private fun getChangesText(): String {
     return """
-v1.5 更新说明
-- ...
+v1.8 包名更新
+- 包名从 com.example.wifibssquery 更名为 com.ustc.wifibss
     """.trimIndent()
 }
 ```
