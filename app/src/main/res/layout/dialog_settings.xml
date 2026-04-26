@@ -44,4 +44,11 @@
         android:textSize="12sp"
         android:textColor="?android:attr/textColorSecondary" />
 
+    <com.google.android.material.checkbox.MaterialCheckBox
+        android:id="@+id/cbAutoQuery"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="16dp"
+        android:text="@string/auto_query_label" />
+
 </LinearLayout>

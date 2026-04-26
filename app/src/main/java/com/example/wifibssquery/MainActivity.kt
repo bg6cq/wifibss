@@ -9,6 +9,7 @@ import android.os.Build
 import android.os.Bundle
 import android.view.Menu
 import android.view.MenuItem
+import android.widget.CheckBox
 import android.widget.EditText
 import android.widget.TextView
 import android.widget.Toast
@@ -19,6 +20,7 @@ import androidx.core.content.ContextCompat
 import androidx.lifecycle.lifecycleScope
 import com.example.wifibssquery.databinding.ActivityMainBinding
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
@@ -42,8 +44,12 @@ class MainActivity : AppCompatActivity() {
         private const val PREFS_NAME = "app_settings"
         private const val KEY_QUERY_URL = "query_url"
         private const val KEY_QUERY_KEY = "query_key"
+        private const val KEY_AUTO_QUERY = "auto_query"
         private const val DEFAULT_QUERY_URL = "https://linux.ustc.edu.cn/api/bssinfo.php"
     }
+
+    private var lastBssid: String? = null
+    private var autoQueryRetryCount = 0
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -170,6 +176,7 @@ class MainActivity : AppCompatActivity() {
         val wifiInfo = wifiManager.connectionInfo
         if (wifiInfo == null || wifiInfo.bssid == null) {
             clearWifiInfo()
+            lastBssid = null
             return
         }
 
@@ -181,6 +188,15 @@ class MainActivity : AppCompatActivity() {
         val bssid = getFormattedBssid()
         binding.tvBssidValue.text = bssid ?: getString(R.string.no_wifi_connection)
         binding.tvWifiBssid.text = bssid ?: getString(R.string.no_wifi_connection)
+
+        // 检测 BSSID 变化，自动查询
+        if (bssid != null && bssid != lastBssid) {
+            lastBssid = bssid
+            if (getAutoQuery() && bssid.length == 12) {
+                autoQueryRetryCount = 0
+                queryBssInfoWithRetry(bssid)
+            }
+        }
 
         // IP 地址
         val ip = formatIpAddress(wifiInfo.ipAddress)
@@ -359,10 +375,12 @@ v1.0 初始版本
         val dialogView = layoutInflater.inflate(R.layout.dialog_settings, null)
         val etQueryUrl = dialogView.findViewById<EditText>(R.id.etQueryUrl)
         val etQueryKey = dialogView.findViewById<EditText>(R.id.etQueryKey)
+        val cbAutoQuery = dialogView.findViewById<CheckBox>(R.id.cbAutoQuery)
 
         // 加载当前设置
         etQueryUrl.setText(getQueryUrl())
         etQueryKey.setText(getQueryKey())
+        cbAutoQuery.isChecked = getAutoQuery()
 
         AlertDialog.Builder(this)
             .setTitle(R.string.settings_title)
@@ -370,6 +388,7 @@ v1.0 初始版本
             .setPositiveButton(R.string.save) { _, _ ->
                 // 保存设置
                 saveSettings(etQueryUrl.text.toString(), etQueryKey.text.toString())
+                saveAutoQuery(cbAutoQuery.isChecked)
                 Toast.makeText(this, R.string.save, Toast.LENGTH_SHORT).show()
             }
             .setNegativeButton(R.string.cancel, null)
@@ -397,6 +416,22 @@ v1.0 初始版本
         prefs.edit()
             .putString(KEY_QUERY_URL, url.ifEmpty { DEFAULT_QUERY_URL })
             .putString(KEY_QUERY_KEY, key)
+            .apply()
+    }
+
+    /**
+     * 获取自动查询设置
+     */
+    private fun getAutoQuery(): Boolean {
+        return prefs.getBoolean(KEY_AUTO_QUERY, false)
+    }
+
+    /**
+     * 保存自动查询设置
+     */
+    private fun saveAutoQuery(enabled: Boolean) {
+        prefs.edit()
+            .putBoolean(KEY_AUTO_QUERY, enabled)
             .apply()
     }
 
@@ -451,7 +486,48 @@ v1.0 初始版本
     }
 
     /**
-     * 查询 BSS 信息
+     * 查询 BSS 信息（带重试，用于自动查询）
+     */
+    private fun queryBssInfoWithRetry(bssid: String) {
+        binding.tvResult.text = getString(R.string.querying)
+        // 清空之前的 AP 信息显示
+        binding.tvBssMac.text = "-"
+        binding.tvAcIp.text = "-"
+        binding.tvApIp.text = "-"
+        binding.tvApName.text = "-"
+        binding.tvApSn.text = "-"
+        binding.tvApBuilding.text = "-"
+
+        lifecycleScope.launch {
+            var success = false
+            while (!success && autoQueryRetryCount < 3) {
+                try {
+                    val result = fetchBssInfo(bssid)
+                    withContext(Dispatchers.Main) {
+                        binding.tvResult.text = result.ifEmpty { "无相关信息" }
+                        parseAndDisplayApInfo(result)
+                    }
+                    success = true
+                } catch (e: Exception) {
+                    autoQueryRetryCount++
+                    if (autoQueryRetryCount < 3) {
+                        withContext(Dispatchers.Main) {
+                            binding.tvResult.text = "查询失败，${1}s 后重试 (${autoQueryRetryCount}/3)..."
+                        }
+                        delay(1000)
+                    } else {
+                        withContext(Dispatchers.Main) {
+                            binding.tvResult.text = "${getString(R.string.query_error)}: 已达最大重试次数"
+                            Toast.makeText(this@MainActivity, getString(R.string.query_error), Toast.LENGTH_SHORT).show()
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    /**
+     * 查询 BSS 信息（手动查询，无重试）
      */
     private fun queryBssInfo(bssid: String) {
         binding.tvResult.text = getString(R.string.querying)
