@@ -32,6 +32,11 @@
     <string name="query_url_label">查询 URL:</string>
     <string name="query_key_label">查询 KEY:</string>
     <string name="query_key_hint">可选，如设置将添加到 Authorization 头</string>
+    <string name="auto_refresh_label">自动刷新 WiFi 信息</string>
+    <string name="auto_refresh_never">不刷新</string>
+    <string name="auto_refresh_1s">1 秒</string>
+    <string name="auto_refresh_5s">5 秒</string>
+    <string name="auto_refresh_10s">10 秒</string>
     <string name="auto_query_label">自动查询（BSSID 变化时）</string>
     <string name="save">保存</string>
     <string name="cancel">取消</string>

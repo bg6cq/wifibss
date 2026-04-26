@@ -11,6 +11,7 @@ import android.view.Menu
 import android.view.MenuItem
 import android.widget.CheckBox
 import android.widget.EditText
+import android.widget.RadioGroup
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
@@ -45,11 +46,14 @@ class MainActivity : AppCompatActivity() {
         private const val KEY_QUERY_URL = "query_url"
         private const val KEY_QUERY_KEY = "query_key"
         private const val KEY_AUTO_QUERY = "auto_query"
+        private const val KEY_AUTO_REFRESH = "auto_refresh"
         private const val DEFAULT_QUERY_URL = "https://linux.ustc.edu.cn/api/bssinfo.php"
     }
 
     private var lastBssid: String? = null
     private var autoQueryRetryCount = 0
+    private var autoRefreshJob: kotlinx.coroutines.Job? = null
+    private var autoRefreshIntervalMs: Int = 0 // 0 = 不刷新
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -59,8 +63,23 @@ class MainActivity : AppCompatActivity() {
         wifiManager = applicationContext.getSystemService(WIFI_SERVICE) as WifiManager
         prefs = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
 
+        // 加载自动刷新设置
+        autoRefreshIntervalMs = getAutoRefreshInterval()
+
         setupUI()
         checkUpdate()
+    }
+
+    override fun onResume() {
+        super.onResume()
+        updateWifiInfo()
+        restartAutoRefresh()
+    }
+
+    override fun onPause() {
+        super.onPause()
+        autoRefreshJob?.cancel()
+        autoRefreshJob = null
     }
 
     /**
@@ -157,11 +176,6 @@ class MainActivity : AppCompatActivity() {
         val updateUrl: String,
         val updateLog: String
     )
-
-    override fun onResume() {
-        super.onResume()
-        updateWifiInfo()
-    }
 
     /**
      * 更新所有 WiFi 信息显示
@@ -375,12 +389,22 @@ v1.0 初始版本
         val dialogView = layoutInflater.inflate(R.layout.dialog_settings, null)
         val etQueryUrl = dialogView.findViewById<EditText>(R.id.etQueryUrl)
         val etQueryKey = dialogView.findViewById<EditText>(R.id.etQueryKey)
+        val rgAutoRefresh = dialogView.findViewById<RadioGroup>(R.id.rgAutoRefresh)
         val cbAutoQuery = dialogView.findViewById<CheckBox>(R.id.cbAutoQuery)
 
         // 加载当前设置
         etQueryUrl.setText(getQueryUrl())
         etQueryKey.setText(getQueryKey())
         cbAutoQuery.isChecked = getAutoQuery()
+
+        // 设置自动刷新选中状态
+        val autoRefresh = getAutoRefreshInterval()
+        when (autoRefresh) {
+            0 -> rgAutoRefresh.check(R.id.rbNever)
+            1000 -> rgAutoRefresh.check(R.id.rb1s)
+            5000 -> rgAutoRefresh.check(R.id.rb5s)
+            10000 -> rgAutoRefresh.check(R.id.rb10s)
+        }
 
         AlertDialog.Builder(this)
             .setTitle(R.string.settings_title)
@@ -389,6 +413,20 @@ v1.0 初始版本
                 // 保存设置
                 saveSettings(etQueryUrl.text.toString(), etQueryKey.text.toString())
                 saveAutoQuery(cbAutoQuery.isChecked)
+                // 保存自动刷新设置
+                val selectedId = rgAutoRefresh.checkedRadioButtonId
+                val newInterval = when (selectedId) {
+                    R.id.rb1s -> 1000
+                    R.id.rb5s -> 5000
+                    R.id.rb10s -> 10000
+                    else -> 0
+                }
+                saveAutoRefreshInterval(newInterval)
+                // 如果间隔变化，重启自动刷新
+                if (newInterval != autoRefresh) {
+                    autoRefreshIntervalMs = newInterval
+                    restartAutoRefresh()
+                }
                 Toast.makeText(this, R.string.save, Toast.LENGTH_SHORT).show()
             }
             .setNegativeButton(R.string.cancel, null)
@@ -433,6 +471,38 @@ v1.0 初始版本
         prefs.edit()
             .putBoolean(KEY_AUTO_QUERY, enabled)
             .apply()
+    }
+
+    /**
+     * 获取自动刷新间隔（毫秒）
+     */
+    private fun getAutoRefreshInterval(): Int {
+        return prefs.getInt(KEY_AUTO_REFRESH, 0)
+    }
+
+    /**
+     * 保存自动刷新间隔
+     */
+    private fun saveAutoRefreshInterval(intervalMs: Int) {
+        prefs.edit()
+            .putInt(KEY_AUTO_REFRESH, intervalMs)
+            .apply()
+    }
+
+    /**
+     * 重启自动刷新
+     */
+    private fun restartAutoRefresh() {
+        autoRefreshJob?.cancel()
+        autoRefreshJob = null
+        if (autoRefreshIntervalMs > 0) {
+            autoRefreshJob = lifecycleScope.launch {
+                while (true) {
+                    delay(autoRefreshIntervalMs.toLong())
+                    updateWifiInfo()
+                }
+            }
+        }
     }
 
     /**
