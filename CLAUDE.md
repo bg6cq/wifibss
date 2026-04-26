@@ -29,3 +29,25 @@ Single-Activity Android app (`MainActivity.kt`) — no fragments, no ViewModel l
 ## Signing
 
 Release builds are signed with `wifi-bss-key.jks`. Keystore credentials are in `keystore.properties` (gitignored).
+
+## Version Release Checklist
+
+每次更新版本时需要同步修改：
+
+1. **app/build.gradle.kts** - 更新 `versionCode` 和 `versionName`
+2. **MainActivity.kt** - 更新 `getVersionInfo()` 返回的版本号
+3. **MainActivity.kt** - 更新 `getChangesText()` 添加新版本更新说明
+
+```kotlin
+// MainActivity.kt
+private fun getVersionInfo(): String {
+    return "版本：1.5"  // 与 versionName 一致
+}
+
+private fun getChangesText(): String {
+    return """
+v1.5 更新说明
+- ...
+    """.trimIndent()
+}
+```
