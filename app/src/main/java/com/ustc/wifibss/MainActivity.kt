@@ -9,11 +9,15 @@ import android.os.Build
 import android.os.Bundle
 import android.view.Menu
 import android.view.MenuItem
+import android.view.LayoutInflater
+import android.widget.Button
 import android.widget.CheckBox
 import android.widget.EditText
 import android.widget.RadioGroup
 import android.widget.TextView
 import android.widget.Toast
+import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.RecyclerView
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
@@ -26,7 +30,11 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
 import okhttp3.Request
+import org.json.JSONArray
 import org.json.JSONObject
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 import java.util.concurrent.TimeUnit
 
 class MainActivity : AppCompatActivity() {
@@ -47,8 +55,18 @@ class MainActivity : AppCompatActivity() {
         private const val KEY_QUERY_KEY = "query_key"
         private const val KEY_AUTO_QUERY = "auto_query"
         private const val KEY_AUTO_REFRESH = "auto_refresh"
+        private const val KEY_HISTORY = "query_history"
         private const val DEFAULT_QUERY_URL = "https://linux.ustc.edu.cn/api/bssinfo.php"
+        private const val MAX_HISTORY_COUNT = 50
     }
+
+    // 历史记录数据类
+    data class QueryHistory(
+        val timestamp: Long,
+        val bssid: String,
+        val apName: String,
+        val building: String
+    )
 
     private var lastBssid: String? = null
     private var autoQueryRetryCount = 0
@@ -334,7 +352,7 @@ class MainActivity : AppCompatActivity() {
      * 获取版本信息
      */
     private fun getVersionInfo(): String {
-        return "版本：1.10"
+        return "版本：1.11"
     }
 
     /**
@@ -349,6 +367,11 @@ class MainActivity : AppCompatActivity() {
      */
     private fun getChangesText(): String {
         return """
+v1.11 历史记录功能
+- 新增查询历史记录，保存 BSSID、AP 名字、楼名和查询时间
+- BSSID 变化时自动记录，相同 BSSID 智能合并
+- 菜单中可查看和清除历史记录
+
 v1.10 图标修复
 - 修复应用图标显示问题（标准 WiFi 信号图案：3 条弧线 + 中心圆点）
 
@@ -401,6 +424,193 @@ v1.0 初始版本
      */
     private fun getAuthorText(): String {
         return "作者：james@ustc.edu.cn \n2026"
+    }
+
+    /**
+     * 显示历史记录对话框
+     */
+    private fun showHistoryDialog() {
+        val history = getHistoryList()
+
+        val dialogView = layoutInflater.inflate(R.layout.dialog_history, null)
+        val rvHistory = dialogView.findViewById<RecyclerView>(R.id.rvHistory)
+        val tvEmpty = dialogView.findViewById<TextView>(R.id.tvHistoryEmpty)
+        val btnClear = dialogView.findViewById<Button>(R.id.btnClearHistory)
+
+        if (history.isEmpty()) {
+            rvHistory.visibility = android.view.View.GONE
+            tvEmpty.visibility = android.view.View.VISIBLE
+            btnClear.isEnabled = false
+        } else {
+            rvHistory.visibility = android.view.View.VISIBLE
+            tvEmpty.visibility = android.view.View.GONE
+            rvHistory.layoutManager = LinearLayoutManager(this)
+            rvHistory.adapter = HistoryAdapter(history)
+        }
+
+        AlertDialog.Builder(this)
+            .setView(dialogView)
+            .setPositiveButton(android.R.string.ok, null)
+            .setNegativeButton(R.string.history_clear) { _, _ ->
+                clearHistory()
+                Toast.makeText(this, R.string.history_cleared, Toast.LENGTH_SHORT).show()
+            }
+            .show()
+
+        // 清除按钮点击事件
+        btnClear.setOnClickListener {
+            AlertDialog.Builder(this)
+                .setTitle(R.string.history_clear)
+                .setMessage(R.string.history_clear_confirm)
+                .setPositiveButton(android.R.string.ok) { _, _ ->
+                    clearHistory()
+                    Toast.makeText(this, R.string.history_cleared, Toast.LENGTH_SHORT).show()
+                    // 刷新列表
+                    val newHistory = getHistoryList()
+                    if (newHistory.isEmpty()) {
+                        rvHistory.visibility = android.view.View.GONE
+                        tvEmpty.visibility = android.view.View.VISIBLE
+                        btnClear.isEnabled = false
+                    } else {
+                        rvHistory.adapter = HistoryAdapter(newHistory)
+                    }
+                }
+                .setNegativeButton(android.R.string.cancel, null)
+                .show()
+        }
+    }
+
+    /**
+     * 获取历史记录列表
+     */
+    private fun getHistoryList(): List<QueryHistory> {
+        val json = prefs.getString(KEY_HISTORY, "") ?: return emptyList()
+        if (json.isEmpty()) return emptyList()
+
+        return try {
+            val array = JSONArray(json)
+            val list = mutableListOf<QueryHistory>()
+            for (i in 0 until array.length()) {
+                val obj = array.getJSONObject(i)
+                list.add(
+                    QueryHistory(
+                        timestamp = obj.getLong("timestamp"),
+                        bssid = obj.getString("bssid"),
+                        apName = obj.getString("apName"),
+                        building = obj.getString("building")
+                    )
+                )
+            }
+            list
+        } catch (e: Exception) {
+            emptyList()
+        }
+    }
+
+    /**
+     * 保存历史记录列表
+     */
+    private fun saveHistoryList(list: List<QueryHistory>) {
+        val array = JSONArray()
+        for (item in list) {
+            val obj = JSONObject()
+            obj.put("timestamp", item.timestamp)
+            obj.put("bssid", item.bssid)
+            obj.put("apName", item.apName)
+            obj.put("building", item.building)
+            array.put(obj)
+        }
+        prefs.edit().putString(KEY_HISTORY, array.toString()).apply()
+    }
+
+    /**
+     * 清除历史记录
+     */
+    private fun clearHistory() {
+        prefs.edit().remove(KEY_HISTORY).apply()
+    }
+
+    /**
+     * 添加历史记录
+     */
+    private fun addHistoryRecord(bssid: String, apName: String, building: String) {
+        val list = getHistoryList().toMutableList()
+
+        // 检查是否与上一条记录 BSSID 相同
+        val lastRecord = list.lastOrNull()
+        if (lastRecord != null && lastRecord.bssid == bssid) {
+            // 如果上一条没有 AP 名字，而这次有，则替换
+            if (lastRecord.apName.isEmpty() && apName.isNotEmpty()) {
+                list.removeAt(list.size - 1)
+                list.add(
+                    QueryHistory(
+                        timestamp = System.currentTimeMillis(),
+                        bssid = bssid,
+                        apName = apName,
+                        building = building
+                    )
+                )
+                saveHistoryList(list)
+                return
+            }
+            // 如果上一条已经有 AP 名字，这次也有，则不添加（避免重复）
+            if (lastRecord.apName.isNotEmpty() && apName.isNotEmpty()) {
+                return
+            }
+            // 如果两条都没有 AP 名字，不添加
+            if (lastRecord.apName.isEmpty() && apName.isEmpty()) {
+                return
+            }
+        }
+
+        // 添加新记录
+        list.add(
+            QueryHistory(
+                timestamp = System.currentTimeMillis(),
+                bssid = bssid,
+                apName = apName,
+                building = building
+            )
+        )
+
+        // 限制最多 50 条
+        if (list.size > MAX_HISTORY_COUNT) {
+            list.removeAt(0)
+        }
+
+        saveHistoryList(list)
+    }
+
+    /**
+     * 历史记录适配器
+     */
+    private class HistoryAdapter(private val historyList: List<QueryHistory>) :
+        RecyclerView.Adapter<HistoryAdapter.ViewHolder>() {
+
+        private val dateFormat = SimpleDateFormat("MM-dd HH:mm", Locale.getDefault())
+
+        class ViewHolder(view: android.view.View) : RecyclerView.ViewHolder(view) {
+            val tvTime: TextView = view.findViewById(R.id.tvHistoryTime)
+            val tvBssid: TextView = view.findViewById(R.id.tvHistoryBssid)
+            val tvApName: TextView = view.findViewById(R.id.tvHistoryApName)
+            val tvBuilding: TextView = view.findViewById(R.id.tvHistoryBuilding)
+        }
+
+        override fun onCreateViewHolder(parent: android.view.ViewGroup, viewType: Int): ViewHolder {
+            val view = LayoutInflater.from(parent.context)
+                .inflate(R.layout.item_history, parent, false)
+            return ViewHolder(view)
+        }
+
+        override fun onBindViewHolder(holder: ViewHolder, position: Int) {
+            val item = historyList[position]
+            holder.tvTime.text = dateFormat.format(Date(item.timestamp))
+            holder.tvBssid.text = item.bssid
+            holder.tvApName.text = item.apName.ifEmpty { "-" }
+            holder.tvBuilding.text = item.building.ifEmpty { "" }
+        }
+
+        override fun getItemCount() = historyList.size
     }
 
     /**
@@ -547,6 +757,10 @@ v1.0 初始版本
                 showAboutDialog()
                 true
             }
+            R.id.menu_history -> {
+                showHistoryDialog()
+                true
+            }
             else -> super.onOptionsItemSelected(item)
         }
     }
@@ -672,12 +886,26 @@ v1.0 初始版本
             val data = json.optJSONArray("data")
             if (data != null && data.length() > 0) {
                 val item = data.getJSONObject(0)
-                binding.tvBssMac.text = item.optString("BSS_MAC", "-")
+                val bssMac = item.optString("BSS_MAC", "-")
+                val apName = item.optString("AP_NAME", "-")
+                val apBuilding = item.optString("AP_Building", "-")
+
+                binding.tvBssMac.text = bssMac
                 binding.tvAcIp.text = item.optString("AC_IP", "-")
                 binding.tvApIp.text = item.optString("AP_IP", "-")
-                binding.tvApName.text = item.optString("AP_NAME", "-")
+                binding.tvApName.text = apName
                 binding.tvApSn.text = item.optString("AP_SN", "-")
-                binding.tvApBuilding.text = item.optString("AP_Building", "-")
+                binding.tvApBuilding.text = apBuilding
+
+                // 添加历史记录（只在查询成功时）
+                val currentBssid = getFormattedBssid()
+                if (currentBssid != null && currentBssid.length == 12) {
+                    addHistoryRecord(
+                        bssid = currentBssid,
+                        apName = if (apName != "-") apName else "",
+                        building = if (apBuilding != "-") apBuilding else ""
+                    )
+                }
             }
         } catch (e: Exception) {
             // JSON 解析失败，可能是返回的数据格式不对

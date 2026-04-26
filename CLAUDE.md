@@ -43,13 +43,15 @@ Release 构建使用 `wifi-bss-key.jks` 签名。密钥库凭据在 `keystore.pr
 ```kotlin
 // MainActivity.kt
 private fun getVersionInfo(): String {
-    return "版本：1.10"  // 与 versionName 一致
+    return "版本：1.11"  // 与 versionName 一致
 }
 
 private fun getChangesText(): String {
     return """
-v1.10 图标修复
-- 修复应用图标显示问题（标准 WiFi 信号图案：3 条弧线 + 中心圆点）
+v1.11 历史记录功能
+- 新增查询历史记录，保存 BSSID、AP 名字、楼名和查询时间
+- BSSID 变化时自动记录，相同 BSSID 智能合并
+- 菜单中可查看和清除历史记录
     """.trimIndent()
 }
 ```

@@ -28,6 +28,12 @@
     <string name="update_check_failed">检查更新失败</string>
     <string name="menu_settings">设置</string>
     <string name="menu_about">关于</string>
+    <string name="menu_history">历史记录</string>
+    <string name="history_title">查询历史</string>
+    <string name="history_empty">暂无查询记录</string>
+    <string name="history_clear">清除记录</string>
+    <string name="history_clear_confirm">确定要清除所有历史记录吗？</string>
+    <string name="history_cleared">历史记录已清除</string>
     <string name="settings_title">设置</string>
     <string name="query_url_label">查询 URL:</string>
     <string name="query_key_label">查询 KEY:</string>
