@@ -334,7 +334,7 @@ class MainActivity : AppCompatActivity() {
      * 获取版本信息
      */
     private fun getVersionInfo(): String {
-        return "版本：1.9"
+        return "版本：1.10"
     }
 
     /**
@@ -349,6 +349,9 @@ class MainActivity : AppCompatActivity() {
      */
     private fun getChangesText(): String {
         return """
+v1.10 图标修复
+- 修复应用图标显示问题（标准 WiFi 信号图案：3 条弧线 + 中心圆点）
+
 v1.9 应用图标更新
 - 更换为 WiFi 信号主题图标（青绿色背景 + 白色信号弧线）
 

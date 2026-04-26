@@ -5,14 +5,16 @@
 ## 构建
 
 ```bash
-./gradlew assembleDebug      # 构建 Debug APK
-./gradlew assembleRelease    # 构建 Release (签名) APK
+./gradlew assembleRelease    # 构建 Release (签名) APK - 默认构建正式版
+./gradlew assembleDebug      # 仅需要 Debug APK 时使用
 ./gradlew lint               # 运行 Lint 检查
 ./gradlew test               # 运行单元测试
 ./gradlew connectedAndroidTest  # 运行仪器测试（需要设备/模拟器）
 ```
 
 输出位置：`app/build/outputs/apk/release/app-release.apk`
+
+**默认构建正式版**：每次编译都使用 `assembleRelease` 生成签名的 Release APK。
 
 ## 架构
 
@@ -41,13 +43,13 @@ Release 构建使用 `wifi-bss-key.jks` 签名。密钥库凭据在 `keystore.pr
 ```kotlin
 // MainActivity.kt
 private fun getVersionInfo(): String {
-    return "版本：1.9"  // 与 versionName 一致
+    return "版本：1.10"  // 与 versionName 一致
 }
 
 private fun getChangesText(): String {
     return """
-v1.9 应用图标更新
-- 更换为 WiFi 信号主题图标（青绿色背景 + 白色信号弧线）
+v1.10 图标修复
+- 修复应用图标显示问题（标准 WiFi 信号图案：3 条弧线 + 中心圆点）
     """.trimIndent()
 }
 ```
