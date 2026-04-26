@@ -224,11 +224,13 @@ class MainActivity : AppCompatActivity() {
         val freq = wifiInfo.frequency
         val channel = frequencyToChannel(freq)
         val band = when {
+            freq <= 0 -> ""
             freq < 2500 -> "2.4GHz"
-            freq < 5000 -> "5GHz"
+            freq < 5925 -> "5GHz"
             else -> "6GHz"
         }
-        binding.tvFrequency.text = "$freq MHz (信道 $channel, $band)"
+        val bandText = if (band.isNotEmpty()) " ($band)" else ""
+        binding.tvFrequency.text = "$freq MHz (信道 $channel)$bandText"
 
         // 链路速度
         binding.tvLinkSpeed.text = "${wifiInfo.linkSpeed} Mbps"
@@ -332,7 +334,7 @@ class MainActivity : AppCompatActivity() {
      * 获取版本信息
      */
     private fun getVersionInfo(): String {
-        return "版本：1.6"
+        return "版本：1.7"
     }
 
     /**
@@ -347,6 +349,10 @@ class MainActivity : AppCompatActivity() {
      */
     private fun getChangesText(): String {
         return """
+v1.7 修正频段显示
+- 修正 5GHz/6GHz 频段判断逻辑（5925MHz 以上为 6GHz）
+- 无效频率时不显示频段标识
+
 v1.6 自动刷新 WiFi 信息
 - 设置中增加自动刷新时间选项（不刷新/1s/5s/10s）
 - 按设定间隔自动刷新 WiFi 信息（RSSI、频率/信道等）
