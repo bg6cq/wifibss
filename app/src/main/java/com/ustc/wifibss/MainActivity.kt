@@ -24,6 +24,7 @@ import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.lifecycleScope
 import com.ustc.wifibss.databinding.ActivityMainBinding
+import com.ustc.wifibss.RssiChartView
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -72,6 +73,7 @@ class MainActivity : AppCompatActivity() {
     private var autoQueryRetryCount = 0
     private var autoRefreshJob: kotlinx.coroutines.Job? = null
     private var autoRefreshIntervalMs: Int = 0 // 0 = 不刷新
+    private var bssidChangedForChart: Boolean = false // 标记当前刷新是否 BSSID 变化
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -85,6 +87,7 @@ class MainActivity : AppCompatActivity() {
         autoRefreshIntervalMs = getAutoRefreshInterval()
 
         setupUI()
+        setupRssiChart()
         checkUpdate()
     }
 
@@ -219,7 +222,9 @@ class MainActivity : AppCompatActivity() {
         // BSSID
         val bssid = getFormattedBssid()
         binding.tvBssidValue.text = bssid ?: getString(R.string.no_wifi_connection)
-        binding.tvWifiBssid.text = bssid ?: getString(R.string.no_wifi_connection)
+
+        // 检测 BSSID 变化
+        bssidChangedForChart = (bssid != null && bssid != lastBssid)
 
         // 检测 BSSID 变化，自动查询
         if (bssid != null && bssid != lastBssid) {
@@ -237,6 +242,9 @@ class MainActivity : AppCompatActivity() {
         // 信号强度 RSSI
         val rssi = wifiInfo.rssi
         binding.tvRssi.text = "$rssi dBm (${getSignalLevel(rssi)})"
+
+        // 添加 RSSI 数据点到图表
+        addRssiDataPoint(rssi)
 
         // 频率/信道
         val freq = wifiInfo.frequency
@@ -259,7 +267,7 @@ class MainActivity : AppCompatActivity() {
      */
     private fun clearWifiInfo() {
         binding.tvSsid.text = getString(R.string.no_wifi_connection)
-        binding.tvWifiBssid.text = getString(R.string.no_wifi_connection)
+        binding.tvBssidValue.text = getString(R.string.no_wifi_connection)
         binding.tvIp.text = "-"
         binding.tvRssi.text = "-"
         binding.tvFrequency.text = "-"
@@ -328,6 +336,22 @@ class MainActivity : AppCompatActivity() {
     }
 
     /**
+     * 设置 RSSI 图表
+     */
+    private fun setupRssiChart() {
+        // 初始隐藏空数据提示
+        binding.tvRssiEmpty.visibility = android.view.View.GONE
+    }
+
+    /**
+     * 添加 RSSI 数据点到图表
+     */
+    private fun addRssiDataPoint(rssi: Int) {
+        binding.rssiChart.addDataPoint(rssi, bssidChangedForChart)
+        binding.tvRssiEmpty.visibility = android.view.View.GONE
+    }
+
+    /**
      * 显示关于对话框
      */
     private fun showAboutDialog() {
@@ -352,7 +376,7 @@ class MainActivity : AppCompatActivity() {
      * 获取版本信息
      */
     private fun getVersionInfo(): String {
-        return "版本：1.11"
+        return "版本：1.12"
     }
 
     /**
@@ -367,6 +391,11 @@ class MainActivity : AppCompatActivity() {
      */
     private fun getChangesText(): String {
         return """
+v1.12 信号强度图表
+- 新增 RSSI 信号强度曲线图，显示最近 5 分钟变化
+- BSSID 切换时用红色大圆点标记
+- 优化布局：BSSID 合并为一行，删除冗余标题
+
 v1.11 历史记录功能
 - 新增查询历史记录，保存 BSSID、AP 名字、楼名和查询时间
 - BSSID 变化时自动记录，相同 BSSID 智能合并

@@ -7,29 +7,32 @@
     android:padding="16dp"
     tools:context=".MainActivity">
 
-    <!-- BSSID 显示（居中） -->
-    <TextView
-        android:id="@+id/tvBssidLabel"
+    <!-- BSSID 显示（合并为一行） -->
+    <LinearLayout
+        android:id="@+id/llBssid"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="@string/bssid_label"
-        android:textSize="16sp"
-        android:textStyle="bold"
+        android:orientation="horizontal"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintTop_toTopOf="parent" />
+        app:layout_constraintTop_toTopOf="parent">
 
-    <TextView
-        android:id="@+id/tvBssidValue"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="@string/bssid_value"
-        android:textSize="20sp"
-        android:fontFamily="monospace"
-        android:layout_marginTop="4dp"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/tvBssidLabel" />
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/bssid_label"
+            android:textSize="16sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/tvBssidValue"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="8dp"
+            android:text="@string/bssid_value"
+            android:textSize="20sp"
+            android:fontFamily="monospace" />
+    </LinearLayout>
 
     <!-- WiFi 信息卡片 -->
     <com.google.android.material.card.MaterialCardView
@@ -41,7 +44,7 @@
         app:cardElevation="2dp"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/tvBssidValue">
+        app:layout_constraintTop_toBottomOf="@id/llBssid">
 
         <LinearLayout
             android:layout_width="match_parent"
@@ -49,18 +52,10 @@
             android:orientation="vertical"
             android:padding="16dp">
 
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="@string/wifi_info_title"
-                android:textSize="16sp"
-                android:textStyle="bold" />
-
             <!-- SSID -->
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="12dp"
                 android:orientation="horizontal">
 
                 <TextView
@@ -77,30 +72,6 @@
                     android:layout_weight="1"
                     android:text="@string/result_default"
                     android:textSize="14sp" />
-            </LinearLayout>
-
-            <!-- BSSID -->
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="8dp"
-                android:orientation="horizontal">
-
-                <TextView
-                    android:layout_width="100dp"
-                    android:layout_height="wrap_content"
-                    android:text="@string/wifi_bssid_label"
-                    android:textSize="14sp"
-                    android:textStyle="bold" />
-
-                <TextView
-                    android:id="@+id/tvWifiBssid"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:text="@string/result_default"
-                    android:textSize="14sp"
-                    android:fontFamily="monospace" />
             </LinearLayout>
 
             <!-- IP 地址 -->
@@ -211,7 +182,7 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@id/wifiInfoCard" />
 
-    <!-- AP 信息显示（卡片形式，与 WiFi 信息一致） -->
+    <!-- AP 信息显示（卡片形式） -->
     <com.google.android.material.card.MaterialCardView
         android:id="@+id/apInfoCard"
         android:layout_width="0dp"
@@ -229,18 +200,10 @@
             android:orientation="vertical"
             android:padding="16dp">
 
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="BSS 信息"
-                android:textSize="16sp"
-                android:textStyle="bold" />
-
             <!-- BSS MAC -->
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="12dp"
                 android:orientation="horizontal">
 
                 <TextView
@@ -384,6 +347,56 @@
 
     </com.google.android.material.card.MaterialCardView>
 
+    <!-- RSSI 信号强度图表 -->
+    <com.google.android.material.card.MaterialCardView
+        android:id="@+id/rssiCard"
+        android:layout_width="0dp"
+        android:layout_height="150dp"
+        android:layout_marginTop="16dp"
+        app:cardCornerRadius="8dp"
+        app:cardElevation="2dp"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/apInfoCard">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:orientation="vertical"
+            android:padding="12dp">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="信号强度（最近 5 分钟）"
+                android:textSize="14sp"
+                android:textStyle="bold" />
+
+            <FrameLayout
+                android:layout_width="match_parent"
+                android:layout_height="0dp"
+                android:layout_weight="1">
+
+                <!-- 自定义图表视图 -->
+                <com.ustc.wifibss.RssiChartView
+                    android:id="@+id/rssiChart"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent" />
+
+                <!-- 空数据提示 -->
+                <TextView
+                    android:id="@+id/tvRssiEmpty"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:gravity="center"
+                    android:text="正在收集信号数据..."
+                    android:textSize="12sp"
+                    android:textColor="#999999" />
+            </FrameLayout>
+        </LinearLayout>
+
+    </com.google.android.material.card.MaterialCardView>
+
     <!-- 查询结果 -->
     <TextView
         android:id="@+id/tvResultLabel"
@@ -394,7 +407,7 @@
         android:textSize="16sp"
         android:textStyle="bold"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/apInfoCard" />
+        app:layout_constraintTop_toBottomOf="@id/rssiCard" />
 
     <ScrollView
         android:layout_width="0dp"

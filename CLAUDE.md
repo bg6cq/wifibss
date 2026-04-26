@@ -43,11 +43,16 @@ Release 构建使用 `wifi-bss-key.jks` 签名。密钥库凭据在 `keystore.pr
 ```kotlin
 // MainActivity.kt
 private fun getVersionInfo(): String {
-    return "版本：1.11"  // 与 versionName 一致
+    return "版本：1.12"  // 与 versionName 一致
 }
 
 private fun getChangesText(): String {
     return """
+v1.12 信号强度图表
+- 新增 RSSI 信号强度曲线图，显示最近 5 分钟变化
+- BSSID 切换时用红色大圆点标记
+- 优化布局：BSSID 合并为一行，删除冗余标题
+
 v1.11 历史记录功能
 - 新增查询历史记录，保存 BSSID、AP 名字、楼名和查询时间
 - BSSID 变化时自动记录，相同 BSSID 智能合并
