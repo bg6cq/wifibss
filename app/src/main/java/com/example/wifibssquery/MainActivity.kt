@@ -1,10 +1,15 @@
 package com.example.wifibssquery
 
 import android.Manifest
+import android.content.Context
+import android.content.SharedPreferences
 import android.content.pm.PackageManager
 import android.net.wifi.WifiManager
 import android.os.Build
 import android.os.Bundle
+import android.view.Menu
+import android.view.MenuItem
+import android.widget.EditText
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
@@ -25,6 +30,7 @@ class MainActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityMainBinding
     private lateinit var wifiManager: WifiManager
+    private lateinit var prefs: SharedPreferences
     private val httpClient = OkHttpClient.Builder()
         .connectTimeout(10, TimeUnit.SECONDS)
         .readTimeout(10, TimeUnit.SECONDS)
@@ -33,6 +39,10 @@ class MainActivity : AppCompatActivity() {
     companion object {
         private const val LOCATION_PERMISSION_CODE = 1001
         private const val WIFI_PERMISSION_CODE = 1002
+        private const val PREFS_NAME = "app_settings"
+        private const val KEY_QUERY_URL = "query_url"
+        private const val KEY_QUERY_KEY = "query_key"
+        private const val DEFAULT_QUERY_URL = "https://linux.ustc.edu.cn/api/bssinfo.php"
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -41,6 +51,7 @@ class MainActivity : AppCompatActivity() {
         setContentView(binding.root)
 
         wifiManager = applicationContext.getSystemService(WIFI_SERVICE) as WifiManager
+        prefs = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
 
         setupUI()
         checkUpdate()
@@ -143,7 +154,119 @@ class MainActivity : AppCompatActivity() {
 
     override fun onResume() {
         super.onResume()
-        updateBssid()
+        updateWifiInfo()
+    }
+
+    /**
+     * 更新所有 WiFi 信息显示
+     */
+    private fun updateWifiInfo() {
+        if (!checkPermissions()) {
+            requestPermissions()
+            clearWifiInfo()
+            return
+        }
+
+        val wifiInfo = wifiManager.connectionInfo
+        if (wifiInfo == null || wifiInfo.bssid == null) {
+            clearWifiInfo()
+            return
+        }
+
+        // SSID
+        val ssid = wifiInfo.ssid.removeSurroundingQuotes()
+        binding.tvSsid.text = ssid.ifEmpty { getString(R.string.no_wifi_connection) }
+
+        // BSSID
+        val bssid = getFormattedBssid()
+        binding.tvBssidValue.text = bssid ?: getString(R.string.no_wifi_connection)
+        binding.tvWifiBssid.text = bssid ?: getString(R.string.no_wifi_connection)
+
+        // IP 地址
+        val ip = formatIpAddress(wifiInfo.ipAddress)
+        binding.tvIp.text = ip
+
+        // 信号强度 RSSI
+        val rssi = wifiInfo.rssi
+        binding.tvRssi.text = "$rssi dBm (${getSignalLevel(rssi)})"
+
+        // 频率/信道
+        val freq = wifiInfo.frequency
+        val channel = frequencyToChannel(freq)
+        val band = when {
+            freq < 2500 -> "2.4GHz"
+            freq < 5000 -> "5GHz"
+            else -> "6GHz"
+        }
+        binding.tvFrequency.text = "$freq MHz (信道 $channel, $band)"
+
+        // 链路速度
+        binding.tvLinkSpeed.text = "${wifiInfo.linkSpeed} Mbps"
+
+        // 设备 MAC
+        val mac = wifiInfo.macAddress
+        binding.tvMac.text = mac ?: "N/A"
+    }
+
+    /**
+     * 清空 WiFi 信息显示
+     */
+    private fun clearWifiInfo() {
+        binding.tvSsid.text = getString(R.string.no_wifi_connection)
+        binding.tvWifiBssid.text = getString(R.string.no_wifi_connection)
+        binding.tvIp.text = "-"
+        binding.tvRssi.text = "-"
+        binding.tvFrequency.text = "-"
+        binding.tvLinkSpeed.text = "-"
+        binding.tvMac.text = "-"
+    }
+
+    /**
+     * 格式化 IP 地址 (int 转 IPv4)
+     */
+    private fun formatIpAddress(ip: Int): String {
+        if (ip == 0) return "-"
+        return "${ip and 0xFF}.${(ip shr 8) and 0xFF}.${(ip shr 16) and 0xFF}.${(ip shr 24) and 0xFF}"
+    }
+
+    /**
+     * 频率转信道
+     */
+    private fun frequencyToChannel(freq: Int): Int {
+        return when {
+            freq <= 0 -> -1
+            freq <= 2484 -> when (freq) {
+                2484 -> 14
+                else -> (freq - 2407) / 5
+            }
+            freq in 5000..5900 -> (freq - 5000) / 5
+            freq in 5925..7125 -> (freq - 5950) / 5 + 1
+            else -> -1
+        }
+    }
+
+    /**
+     * 获取信号强度等级
+     */
+    private fun getSignalLevel(rssi: Int): String {
+        return when {
+            rssi >= -50 -> getString(R.string.signal_excellent)
+            rssi >= -60 -> getString(R.string.signal_good)
+            rssi >= -70 -> getString(R.string.signal_fair)
+            rssi >= -80 -> getString(R.string.signal_weak)
+            else -> getString(R.string.signal_poor)
+        }
+    }
+
+    /**
+     * 移除 SSID 周围的引号
+     */
+    private fun String.removeSurroundingQuotes(): String {
+        return if (startsWith("\"") && endsWith("\"")) {
+            substring(1, length - 1)
+        } else {
+            this
+        }
     }
 
     private fun setupUI() {
@@ -156,10 +279,6 @@ class MainActivity : AppCompatActivity() {
             } else {
                 binding.tvResult.text = getString(R.string.no_wifi_connection)
             }
-        }
-
-        binding.btnAbout.setOnClickListener {
-            showAboutDialog()
         }
     }
 
@@ -182,11 +301,13 @@ class MainActivity : AppCompatActivity() {
      * 获取关于内容
      */
     private fun getAboutContent(): String {
-        return """
-WiFi BSS 查询
-版本：1.1
+        val description = getString(R.string.about_description)
+        val versionInfo = """
+版本：1.2
 
 开发信息:
+[菜单功能] 添加设置和关于菜单
+[WiFi 增强] 显示 SSID、IP、RSSI、频率/信道、链路速度等信息
 [f3074e9] 添加启动时自动检查更新功能
 [b817304] 添加 AP 信息显示和签名配置
 [2d41675] 添加 gradle wrapper zip 文件到.gitignore
@@ -197,6 +318,80 @@ WiFi BSS 查询
 作者：Zhang Huanjie
 USTC 2026
         """.trimIndent()
+        return "$description\n\n$versionInfo"
+    }
+
+    /**
+     * 显示设置对话框
+     */
+    private fun showSettingsDialog() {
+        val dialogView = layoutInflater.inflate(R.layout.dialog_settings, null)
+        val etQueryUrl = dialogView.findViewById<EditText>(R.id.etQueryUrl)
+        val etQueryKey = dialogView.findViewById<EditText>(R.id.etQueryKey)
+
+        // 加载当前设置
+        etQueryUrl.setText(getQueryUrl())
+        etQueryKey.setText(getQueryKey())
+
+        AlertDialog.Builder(this)
+            .setTitle(R.string.settings_title)
+            .setView(dialogView)
+            .setPositiveButton(R.string.save) { _, _ ->
+                // 保存设置
+                saveSettings(etQueryUrl.text.toString(), etQueryKey.text.toString())
+                Toast.makeText(this, R.string.save, Toast.LENGTH_SHORT).show()
+            }
+            .setNegativeButton(R.string.cancel, null)
+            .show()
+    }
+
+    /**
+     * 获取查询 URL
+     */
+    private fun getQueryUrl(): String {
+        return prefs.getString(KEY_QUERY_URL, DEFAULT_QUERY_URL) ?: DEFAULT_QUERY_URL
+    }
+
+    /**
+     * 获取查询 KEY
+     */
+    private fun getQueryKey(): String {
+        return prefs.getString(KEY_QUERY_KEY, "") ?: ""
+    }
+
+    /**
+     * 保存设置
+     */
+    private fun saveSettings(url: String, key: String) {
+        prefs.edit()
+            .putString(KEY_QUERY_URL, url.ifEmpty { DEFAULT_QUERY_URL })
+            .putString(KEY_QUERY_KEY, key)
+            .apply()
+    }
+
+    /**
+     * 创建菜单
+     */
+    override fun onCreateOptionsMenu(menu: Menu): Boolean {
+        menuInflater.inflate(R.menu.menu_main, menu)
+        return true
+    }
+
+    /**
+     * 处理菜单点击
+     */
+    override fun onOptionsItemSelected(item: MenuItem): Boolean {
+        return when (item.itemId) {
+            R.id.menu_settings -> {
+                showSettingsDialog()
+                true
+            }
+            R.id.menu_about -> {
+                showAboutDialog()
+                true
+            }
+            else -> super.onOptionsItemSelected(item)
+        }
     }
 
     /**
@@ -293,11 +488,18 @@ USTC 2026
      * 调用 API 获取 BSS 信息
      */
     private suspend fun fetchBssInfo(bssid: String): String = withContext(Dispatchers.IO) {
-        val url = "https://linux.ustc.edu.cn/api/bssinfo.php?bssid=$bssid"
+        val baseUrl = getQueryUrl()
+        val queryKey = getQueryKey()
+        val url = "$baseUrl?bssid=$bssid"
 
-        val request = Request.Builder()
-            .url(url)
-            .build()
+        val requestBuilder = Request.Builder().url(url)
+
+        // 如果设置了查询 KEY，添加 Authorization 头
+        if (queryKey.isNotEmpty()) {
+            requestBuilder.addHeader("Authorization", "Bearer $queryKey")
+        }
+
+        val request = requestBuilder.build()
 
         httpClient.newCall(request).execute().use { response ->
             if (!response.isSuccessful) {

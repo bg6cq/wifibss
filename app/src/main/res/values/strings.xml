@@ -25,4 +25,26 @@
     <string name="download_now">立即下载</string>
     <string name="no_update">已是最新版本</string>
     <string name="update_check_failed">检查更新失败</string>
+    <string name="menu_settings">设置</string>
+    <string name="menu_about">关于</string>
+    <string name="settings_title">设置</string>
+    <string name="query_url_label">查询 URL:</string>
+    <string name="query_key_label">查询 KEY:</string>
+    <string name="query_key_hint">可选，如设置将添加到 Authorization 头</string>
+    <string name="save">保存</string>
+    <string name="cancel">取消</string>
+    <string name="about_description">为方便了解园区 WiFi 的使用状态，安卓手机可以运行本程序获取连接的 WiFi BSS 信息，并将 BSS 的 MAC 地址（去掉中间的 -: 字符）通过参数 bssid=XXXXXXXXXXX 发送给配置的查询 URL。如果设置了查询 KEY，放在 HTTP 请求头 Authorization: Bearer 后送给查询 URL。查询 URL 可以选择性返回 {\"status\":\"ok\",\"data\":[{\"BSS_MAC\":\"19c97ad55e00\",\"AP_NAME\":\"wlzx-13895-207\",\"AP_SN\":\"219801A6M28257E00XXX\",\"AP_MAC\":\"19c97ad55e00\",\"AC_IP\":\"x.x.x.x\",\"BAND\":\"2\",\"SSID\":\"ssid\",\"AP_Building\":\"东区 - 网络信息中心\",\"AP_IP\":\"x.x.x.x\"}]}。APP 会显示这些信息方便了解 WiFi 工作状态。</string>
+    <string name="wifi_info_title">WiFi 连接信息</string>
+    <string name="wifi_ssid_label">SSID:</string>
+    <string name="wifi_bssid_label">BSSID:</string>
+    <string name="wifi_ip_label">IP 地址:</string>
+    <string name="wifi_rssi_label">信号强度:</string>
+    <string name="wifi_frequency_label">频率/信道:</string>
+    <string name="wifi_linkspeed_label">链路速度:</string>
+    <string name="wifi_mac_label">设备 MAC:</string>
+    <string name="signal_excellent">优秀</string>
+    <string name="signal_good">良好</string>
+    <string name="signal_fair">一般</string>
+    <string name="signal_weak">较差</string>
+    <string name="signal_poor">弱</string>
 </resources>
