@@ -304,7 +304,7 @@ class MainActivity : AppCompatActivity() {
      * 获取版本信息
      */
     private fun getVersionInfo(): String {
-        return "版本：1.3"
+        return "版本：1.5"
     }
 
     /**
@@ -319,6 +319,18 @@ class MainActivity : AppCompatActivity() {
      */
     private fun getChangesText(): String {
         return """
+v1.5 更新说明
+- 优化关于对话框内容和布局
+
+v1.4 布局优化
+- BSSID 居中显示
+- BSS 信息使用卡片展示，与 WiFi 信息样式一致
+
+v1.3 关于对话框优化
+- 支持滚动显示
+- 分段展示：功能说明、重大更新、开发信息
+- 增加各版本重大变化说明
+
 v1.2 新增 BSS MAC 显示
 - 在查询结果最上方显示返回的 BSS MAC 地址
 
@@ -331,7 +343,7 @@ v1.1 菜单功能和 WiFi 信息增强
 
 v1.0 初始版本
 - 获取当前 WiFi BSSID
-- 查询 USTC BSS 信息并显示
+- 查询 BSS 信息并显示
         """.trimIndent()
     }
 
@@ -353,7 +365,7 @@ v1.0 初始版本
      * 获取作者信息
      */
     private fun getAuthorText(): String {
-        return "作者：Zhang Huanjie\nUSTC 2026"
+        return "作者：james@ustc.edu.cn \n2026"
     }
 
     /**
