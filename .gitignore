@@ -10,3 +10,5 @@
 local.properties
 keystore.properties
 gradle/wrapper/*.zip
+*.zip
+*.jks
