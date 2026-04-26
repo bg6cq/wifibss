@@ -285,13 +285,11 @@ class MainActivity : AppCompatActivity() {
         val tvVersion = dialogView.findViewById<TextView>(R.id.tvVersion)
         val tvDescription = dialogView.findViewById<TextView>(R.id.tvDescription)
         val tvChanges = dialogView.findViewById<TextView>(R.id.tvChanges)
-        val tvCommits = dialogView.findViewById<TextView>(R.id.tvCommits)
         val tvAuthor = dialogView.findViewById<TextView>(R.id.tvAuthor)
 
         tvVersion.text = getVersionInfo()
         tvDescription.text = getDescriptionText()
         tvChanges.text = getChangesText()
-        tvCommits.text = getCommitsText()
         tvAuthor.text = getAuthorText()
 
         AlertDialog.Builder(this)
@@ -344,20 +342,6 @@ v1.1 菜单功能和 WiFi 信息增强
 v1.0 初始版本
 - 获取当前 WiFi BSSID
 - 查询 BSS 信息并显示
-        """.trimIndent()
-    }
-
-    /**
-     * 获取开发信息
-     */
-    private fun getCommitsText(): String {
-        return """
-[f3074e9] 添加启动时自动检查更新功能
-[b817304] 添加 AP 信息显示和签名配置
-[2d41675] 添加 gradle wrapper zip 文件到.gitignore
-[322b577] 修复 Gradle 配置以兼容 Java 11
-[e8ce5ac] 添加 Gradle Wrapper 文件
-[3f2eeeb] 初始化 Android WiFi BSS 查询应用
         """.trimIndent()
     }
 

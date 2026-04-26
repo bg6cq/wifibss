@@ -63,24 +63,6 @@
             android:lineSpacingExtra="4dp"
             android:layout_marginBottom="16dp" />
 
-        <!-- 开发信息 -->
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="开发信息"
-            android:textSize="15sp"
-            android:textStyle="bold"
-            android:layout_marginBottom="8dp" />
-
-        <TextView
-            android:id="@+id/tvCommits"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:textSize="12sp"
-            android:fontFamily="monospace"
-            android:lineSpacingExtra="3dp"
-            android:layout_marginBottom="16dp" />
-
         <!-- 作者信息 -->
         <TextView
             android:id="@+id/tvAuthor"
