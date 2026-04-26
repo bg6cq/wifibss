@@ -332,7 +332,7 @@ class MainActivity : AppCompatActivity() {
      * 获取版本信息
      */
     private fun getVersionInfo(): String {
-        return "版本：1.5"
+        return "版本：1.6"
     }
 
     /**
@@ -347,6 +347,12 @@ class MainActivity : AppCompatActivity() {
      */
     private fun getChangesText(): String {
         return """
+v1.6 自动刷新 WiFi 信息
+- 设置中增加自动刷新时间选项（不刷新/1s/5s/10s）
+- 按设定间隔自动刷新 WiFi 信息（RSSI、频率/信道等）
+- 刷新后 BSSID 变化时触发自动查询（如果已开启）
+- 自动查询失败时 1 秒后重试，最多 3 次
+
 v1.5 更新说明
 - 优化关于对话框内容和布局
 
@@ -356,7 +362,7 @@ v1.4 布局优化
 
 v1.3 关于对话框优化
 - 支持滚动显示
-- 分段展示：功能说明、重大更新、开发信息
+- 分段展示：功能说明、重大更新
 - 增加各版本重大变化说明
 
 v1.2 新增 BSS MAC 显示
