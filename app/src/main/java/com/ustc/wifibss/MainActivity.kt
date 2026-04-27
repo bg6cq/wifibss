@@ -290,7 +290,7 @@ class MainActivity : AppCompatActivity() {
      */
     private fun getWifiStandard(wifiInfo: android.net.wifi.WifiInfo): String {
         // Android 11+ (API 30) 使用官方 API
-        if (Build.VERSION.SDK_INT >= 30) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
             return try {
                 val standard = wifiInfo.wifiStandard
                 when (standard) {
@@ -302,7 +302,7 @@ class MainActivity : AppCompatActivity() {
                     5 -> "802.11ac (WiFi 5)"
                     6 -> "802.11ax (WiFi 6)"
                     7 -> "802.11be (WiFi 7)"
-                    else -> ""
+                    else -> "WiFi $standard"
                 }
             } catch (e: Exception) {
                 ""
@@ -425,7 +425,7 @@ class MainActivity : AppCompatActivity() {
      * 获取版本信息
      */
     private fun getVersionInfo(): String {
-        return "版本：1.20"
+        return "版本：1.21"
     }
 
     /**
@@ -652,7 +652,7 @@ v1.0 初始版本
                 tvEmpty.visibility = android.view.View.GONE
                 rvBssLocal.layoutManager = LinearLayoutManager(this)
                 rvBssLocal.adapter = BssLocalAdapter(bssList) { entry ->
-                    showEditBssDialog(entry, bssList)
+                    showEditBssDialog(entry, bssList, ::updateAdapter)
                 }
             }
         }
@@ -731,7 +731,7 @@ v1.0 初始版本
     /**
      * 显示编辑 BSSMAC 对话框
      */
-    private fun showEditBssDialog(entry: BssLocalEntry, bssList: MutableList<BssLocalEntry>) {
+    private fun showEditBssDialog(entry: BssLocalEntry, bssList: MutableList<BssLocalEntry>, updateAdapter: () -> Unit) {
         val dialogView = layoutInflater.inflate(R.layout.dialog_edit_bss, null)
         val etBssMac = dialogView.findViewById<EditText>(R.id.etBssMac)
         val etApName = dialogView.findViewById<EditText>(R.id.etApName)
@@ -756,8 +756,7 @@ v1.0 初始版本
                         val newList = getBssLocalList().toMutableList()
                         bssList.clear()
                         bssList.addAll(newList)
-                        // 注意：这里无法直接刷新 RecyclerView，因为对话框已关闭
-                        // 用户需要重新打开对话框查看更新
+                        updateAdapter()
                     } else {
                         Toast.makeText(this, "BSS MAC 格式错误", Toast.LENGTH_SHORT).show()
                     }

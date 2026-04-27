@@ -43,11 +43,14 @@ Release 构建使用 `wifi-bss-key.jks` 签名。密钥库凭据在 `keystore.pr
 ```kotlin
 // MainActivity.kt
 private fun getVersionInfo(): String {
-    return "版本：1.20"  // 与 versionName 一致
+    return "版本：1.21"  // 与 versionName 一致
 }
 
 private fun getChangesText(): String {
     return """
+v1.21 BSSMAC 编辑修复
+- 修复 BSSMAC 信息编辑后列表不刷新的问题
+
 v1.20 修复 BSSID 显示
 - 恢复位置权限以获取真实 BSSID（Android 10+ 需要）
 
