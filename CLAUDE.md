@@ -43,11 +43,14 @@ Release 构建使用 `wifi-bss-key.jks` 签名。密钥库凭据在 `keystore.pr
 ```kotlin
 // MainActivity.kt
 private fun getVersionInfo(): String {
-    return "版本：1.19"  // 与 versionName 一致
+    return "版本：1.20"  // 与 versionName 一致
 }
 
 private fun getChangesText(): String {
     return """
+v1.20 修复 BSSID 显示
+- 恢复位置权限以获取真实 BSSID（Android 10+ 需要）
+
 v1.19 权限和体验优化
 - 移除 GPS 定位权限要求，仅保留 Android 13+ 近场设备权限
 - 添加屏幕唤醒保持，APP 运行时屏幕不会休眠

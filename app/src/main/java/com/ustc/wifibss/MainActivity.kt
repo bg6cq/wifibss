@@ -425,7 +425,7 @@ class MainActivity : AppCompatActivity() {
      * 获取版本信息
      */
     private fun getVersionInfo(): String {
-        return "版本：1.19"
+        return "版本：1.20"
     }
 
     /**
@@ -440,6 +440,9 @@ class MainActivity : AppCompatActivity() {
      */
     private fun getChangesText(): String {
         return """
+v1.20 修复 BSSID 显示
+- 恢复位置权限以获取真实 BSSID（Android 10+ 需要）
+
 v1.19 权限和体验优化
 - 移除 GPS 定位权限要求，仅保留 Android 13+ 近场设备权限
 - 添加屏幕唤醒保持，APP 运行时屏幕不会休眠
@@ -1431,29 +1434,43 @@ v1.0 初始版本
     }
 
     /**
-     * 检查所需权限（Android 13+ 需要近场设备权限）
+     * 检查所需权限
+     * Android 10-12: 需要位置权限
+     * Android 13+: 需要位置权限 + 近场设备权限
      */
     private fun checkPermissions(): Boolean {
+        val locationGranted = ContextCompat.checkSelfPermission(
+            this, Manifest.permission.ACCESS_FINE_LOCATION
+        ) == PackageManager.PERMISSION_GRANTED
+
         return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            ContextCompat.checkSelfPermission(
+            val nearbyGranted = ContextCompat.checkSelfPermission(
                 this, Manifest.permission.NEARBY_WIFI_DEVICES
             ) == PackageManager.PERMISSION_GRANTED
+            locationGranted && nearbyGranted
         } else {
-            true // Android 12 及以下不需要额外权限
+            locationGranted
         }
     }
 
     /**
-     * 请求权限（仅 Android 13+ 需要）
+     * 请求权限
      */
     private fun requestPermissions() {
+        val permissions = mutableListOf(
+            Manifest.permission.ACCESS_FINE_LOCATION,
+            Manifest.permission.ACCESS_COARSE_LOCATION
+        )
+
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            ActivityCompat.requestPermissions(
-                this,
-                arrayOf(Manifest.permission.NEARBY_WIFI_DEVICES),
-                LOCATION_PERMISSION_CODE
-            )
+            permissions.add(Manifest.permission.NEARBY_WIFI_DEVICES)
         }
+
+        ActivityCompat.requestPermissions(
+            this,
+            permissions.toTypedArray(),
+            LOCATION_PERMISSION_CODE
+        )
     }
 
     override fun onRequestPermissionsResult(
