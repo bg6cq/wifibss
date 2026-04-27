@@ -57,27 +57,12 @@
         android:textSize="12sp"
         android:fontFamily="monospace" />
 
-    <!-- 按钮区域 -->
-    <LinearLayout
+    <!-- 添加按钮 -->
+    <Button
+        android:id="@+id/btnBulkAdd"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="8dp"
-        android:orientation="horizontal">
-
-        <Button
-            android:id="@+id/btnBulkAdd"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:text="@string/bssmac_add" />
-
-        <Button
-            android:id="@+id/btnClearBss"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_marginStart="8dp"
-            android:layout_weight="1"
-            android:text="@string/bssmac_clear" />
-    </LinearLayout>
+        android:text="@string/bssmac_add" />
 
 </LinearLayout>

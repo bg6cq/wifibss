@@ -92,6 +92,9 @@ class MainActivity : AppCompatActivity() {
         wifiManager = applicationContext.getSystemService(WIFI_SERVICE) as WifiManager
         prefs = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
 
+        // 保持屏幕唤醒
+        window.addFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+
         // 加载自动刷新设置
         autoRefreshIntervalMs = getAutoRefreshInterval()
 
@@ -235,12 +238,18 @@ class MainActivity : AppCompatActivity() {
         // 检测 BSSID 变化
         bssidChangedForChart = (bssid != null && bssid != lastBssid)
 
-        // 检测 BSSID 变化，自动查询
+        // 检测 BSSID 变化
         if (bssid != null && bssid != lastBssid) {
             lastBssid = bssid
             // 记录历史（即使没有查询到数据）
             addHistoryRecord(bssid, "", "")
-            if (getAutoQuery() && bssid.length == 12) {
+
+            // 无论自动查询是否开启，都先检查本地数据库
+            val localData = getBssLocalList().find { it.bssMac == bssid }
+            if (localData != null) {
+                displayLocalBssInfo(localData)
+            } else if (getAutoQuery() && bssid.length == 12) {
+                // 本地无数据且开启了自动查询，才调用远程 API
                 autoQueryRetryCount = 0
                 queryBssInfoWithRetry(bssid)
             }
@@ -277,14 +286,14 @@ class MainActivity : AppCompatActivity() {
 
     /**
      * 获取 WiFi 技术标准 (802.11 a/b/g/n/ac/ax/be)
+     * Android 11+ 使用官方 API，旧版本不显示
      */
     private fun getWifiStandard(wifiInfo: android.net.wifi.WifiInfo): String {
-        // Android 11+ 使用官方 API
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-            try {
-                val method = wifiInfo.javaClass.getMethod("getWifiStandard")
-                val standard = method.invoke(wifiInfo) as Int
-                return when (standard) {
+        // Android 11+ (API 30) 使用官方 API
+        if (Build.VERSION.SDK_INT >= 30) {
+            return try {
+                val standard = wifiInfo.wifiStandard
+                when (standard) {
                     0 -> "" // WIFI_STANDARD_UNKNOWN
                     1 -> "802.11a"
                     2 -> "802.11b"
@@ -296,29 +305,9 @@ class MainActivity : AppCompatActivity() {
                     else -> ""
                 }
             } catch (e: Exception) {
-                // 方法不存在或调用失败，回退到手动判断
+                ""
             }
         }
-
-        // Android 10 及以下：根据频率和速率估算
-        val freq = wifiInfo.frequency
-        val speed = wifiInfo.linkSpeed
-
-        // 6GHz 频段 = WiFi 6E 或 WiFi 7
-        if (freq >= 5925) {
-            return if (speed > 10000) "802.11be (WiFi 7)" else "802.11ax (WiFi 6E)"
-        }
-
-        // 5GHz 高速 = WiFi 5 或 WiFi 6
-        if (freq >= 5000) {
-            return if (speed > 2000) "802.11ax (WiFi 6)" else "802.11ac (WiFi 5)"
-        }
-
-        // 2.4GHz
-        if (freq > 0 && freq < 2500) {
-            return if (speed > 150) "802.11n (WiFi 4)" else "802.11g"
-        }
-
         return ""
     }
 
@@ -436,7 +425,7 @@ class MainActivity : AppCompatActivity() {
      * 获取版本信息
      */
     private fun getVersionInfo(): String {
-        return "版本：1.18"
+        return "版本：1.19"
     }
 
     /**
@@ -451,6 +440,12 @@ class MainActivity : AppCompatActivity() {
      */
     private fun getChangesText(): String {
         return """
+v1.19 权限和体验优化
+- 移除 GPS 定位权限要求，仅保留 Android 13+ 近场设备权限
+- 添加屏幕唤醒保持，APP 运行时屏幕不会休眠
+- 自动查询关闭时也会检查本地数据库
+- WiFi 标准显示使用 Android 11+ 官方 API
+
 v1.18 WiFi 技术标准显示
 - 链路速度后显示 WiFi 技术标准（WiFi 4/WiFi 5/WiFi 6/WiFi 6E/WiFi 7）
 - Android 11+ 使用系统 API 获取准确标准
@@ -565,8 +560,8 @@ v1.0 初始版本
                 tvEmpty.visibility = android.view.View.GONE
                 rvHistory.layoutManager = LinearLayoutManager(this)
                 rvHistory.adapter = HistoryAdapter(history) { entry ->
-                    // 点击编辑：将当前记录添加到本地 BSS MAC 数据库
-                    saveHistoryToLocalBss(entry)
+                    // 单击编辑：显示编辑对话框
+                    showEditHistoryDialog(entry)
                 }
             }
         }
@@ -590,46 +585,6 @@ v1.0 初始版本
                 .show()
         }
 
-        // 添加滑动支持：左滑删除，右滑保存到本地 BSS MAC 数据库
-        val touchCallback = object : androidx.recyclerview.widget.ItemTouchHelper.SimpleCallback(
-            0,
-            androidx.recyclerview.widget.ItemTouchHelper.LEFT or androidx.recyclerview.widget.ItemTouchHelper.RIGHT
-        ) {
-            override fun onMove(
-                rv: RecyclerView,
-                vh: RecyclerView.ViewHolder,
-                target: RecyclerView.ViewHolder
-            ): Boolean {
-                return false
-            }
-
-            override fun onSwiped(vh: RecyclerView.ViewHolder, direction: Int) {
-                val position = vh.adapterPosition
-                if (position >= 0 && position < history.size) {
-                    val entry = history[position]
-                    if (direction == ItemTouchHelper.LEFT) {
-                        // 左滑：删除历史记录
-                        deleteHistoryAtPosition(position)
-                        history.removeAt(position)
-                        rvHistory.adapter?.notifyItemRemoved(position)
-                        Toast.makeText(
-                            this@MainActivity,
-                            "已删除 ${entry.bssid}",
-                            Toast.LENGTH_SHORT
-                        ).show()
-                        if (history.isEmpty()) {
-                            updateAdapter()
-                        }
-                    } else {
-                        // 右滑：保存到本地 BSS MAC 数据库
-                        saveHistoryToLocalBss(entry)
-                        rvHistory.adapter?.notifyItemChanged(position)
-                    }
-                }
-            }
-        }
-        ItemTouchHelper(touchCallback).attachToRecyclerView(rvHistory)
-
         AlertDialog.Builder(this)
             .setView(dialogView)
             .setPositiveButton(android.R.string.ok, null)
@@ -637,37 +592,40 @@ v1.0 初始版本
     }
 
     /**
-     * 删除指定位置的历史记录
+     * 显示编辑历史记录对话框
      */
-    private fun deleteHistoryAtPosition(position: Int) {
-        val list = getHistoryList().toMutableList()
-        if (position >= 0 && position < list.size) {
-            list.removeAt(position)
-            saveHistoryList(list)
-        }
+    private fun showEditHistoryDialog(history: QueryHistory) {
+        val dialogView = layoutInflater.inflate(R.layout.dialog_edit_history, null)
+        val etBssid = dialogView.findViewById<EditText>(R.id.etBssid)
+        val etApName = dialogView.findViewById<EditText>(R.id.etApName)
+        val etBuilding = dialogView.findViewById<EditText>(R.id.etBuilding)
+
+        etBssid.setText(history.bssid)
+        etApName.setText(history.apName)
+        etBuilding.setText(history.building)
+
+        AlertDialog.Builder(this)
+            .setTitle("编辑记录")
+            .setView(dialogView)
+            .setPositiveButton(R.string.bssmac_save) { _, _ ->
+                val newBssid = etBssid.text.toString()
+                val newApName = etApName.text.toString()
+                val newBuilding = etBuilding.text.toString()
+
+                if (newBssid.isNotBlank() && newApName.isNotBlank()) {
+                    // 保存到本地 BSS MAC 数据库
+                    val success = addBssLocal(newBssid, newApName, newBuilding)
+                    if (success) {
+                        Toast.makeText(this, "已保存到本地 BSS MAC 数据库", Toast.LENGTH_SHORT).show()
+                    } else {
+                        Toast.makeText(this, "保存失败：BSS MAC 格式错误", Toast.LENGTH_SHORT).show()
+                    }
+                }
+            }
+            .setNegativeButton(R.string.bssmac_cancel, null)
+            .show()
     }
 
-    /**
-     * 将历史记录保存到本地 BSS MAC 数据库
-     */
-    private fun saveHistoryToLocalBss(history: QueryHistory) {
-        if (history.apName.isEmpty()) {
-            Toast.makeText(this, "该记录没有 AP 信息，无法保存", Toast.LENGTH_SHORT).show()
-            return
-        }
-
-        // 使用 BSSID 作为 BSS MAC 保存
-        val success = addBssLocal(history.bssid, history.apName, history.building)
-        if (success) {
-            Toast.makeText(
-                this,
-                "已保存到本地 BSS MAC 数据库",
-                Toast.LENGTH_SHORT
-            ).show()
-        } else {
-            Toast.makeText(this, "保存失败：BSS MAC 格式错误", Toast.LENGTH_SHORT).show()
-        }
-    }
 
     /**
      * 显示本地 BSSMAC 对话框
@@ -680,7 +638,6 @@ v1.0 初始版本
         val tvEmpty = dialogView.findViewById<TextView>(R.id.tvBssLocalEmpty)
         val etBulkAdd = dialogView.findViewById<EditText>(R.id.etBulkAdd)
         val btnBulkAdd = dialogView.findViewById<Button>(R.id.btnBulkAdd)
-        val btnClear = dialogView.findViewById<Button>(R.id.btnClearBss)
 
         // 设置适配器
         fun updateAdapter() {
@@ -725,22 +682,7 @@ v1.0 初始版本
             }
         }
 
-        // 清除所有
-        btnClear.setOnClickListener {
-            AlertDialog.Builder(this)
-                .setTitle(R.string.bssmac_clear)
-                .setMessage(R.string.bssmac_clear_confirm)
-                .setPositiveButton(android.R.string.ok) { _, _ ->
-                    clearBssLocal()
-                    Toast.makeText(this, R.string.bssmac_cleared, Toast.LENGTH_SHORT).show()
-                    bssList.clear()
-                    updateAdapter()
-                }
-                .setNegativeButton(android.R.string.cancel, null)
-                .show()
-        }
-
-        // 添加滑动删除支持
+        // 添加滑动删除支持（带确认）
         val touchCallback = object : androidx.recyclerview.widget.ItemTouchHelper.SimpleCallback(0, androidx.recyclerview.widget.ItemTouchHelper.LEFT) {
             override fun onMove(rv: RecyclerView, vh: RecyclerView.ViewHolder, target: RecyclerView.ViewHolder): Boolean {
                 return false
@@ -750,13 +692,28 @@ v1.0 初始版本
                 val position = vh.adapterPosition
                 if (position >= 0 && position < bssList.size) {
                     val entry = bssList[position]
-                    deleteBssLocal(entry.bssMac)
-                    bssList.removeAt(position)
-                    rvBssLocal.adapter?.notifyItemRemoved(position)
-                    Toast.makeText(this@MainActivity, "已删除 ${entry.bssMac}", Toast.LENGTH_SHORT).show()
-                    if (bssList.isEmpty()) {
-                        updateAdapter()
-                    }
+                    // 显示确认对话框
+                    AlertDialog.Builder(this@MainActivity)
+                        .setTitle(R.string.bssmac_delete)
+                        .setMessage("确定要删除 ${entry.bssMac} 吗？")
+                        .setPositiveButton(R.string.bssmac_delete) { _, _ ->
+                            deleteBssLocal(entry.bssMac)
+                            bssList.removeAt(position)
+                            rvBssLocal.adapter?.notifyItemRemoved(position)
+                            Toast.makeText(this@MainActivity, "已删除 ${entry.bssMac}", Toast.LENGTH_SHORT).show()
+                            if (bssList.isEmpty()) {
+                                updateAdapter()
+                            }
+                        }
+                        .setNegativeButton(R.string.bssmac_cancel) { _, _ ->
+                            // 取消删除，恢复 item
+                            rvBssLocal.adapter?.notifyItemChanged(position)
+                        }
+                        .setOnCancelListener {
+                            // 对话框取消，恢复 item
+                            rvBssLocal.adapter?.notifyItemChanged(position)
+                        }
+                        .show()
                 }
             }
         }
@@ -1474,41 +1431,29 @@ v1.0 初始版本
     }
 
     /**
-     * 检查所需权限
+     * 检查所需权限（Android 13+ 需要近场设备权限）
      */
     private fun checkPermissions(): Boolean {
-        val locationGranted = ContextCompat.checkSelfPermission(
-            this, Manifest.permission.ACCESS_FINE_LOCATION
-        ) == PackageManager.PERMISSION_GRANTED
-
         return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            val wifiPermission = ContextCompat.checkSelfPermission(
+            ContextCompat.checkSelfPermission(
                 this, Manifest.permission.NEARBY_WIFI_DEVICES
             ) == PackageManager.PERMISSION_GRANTED
-            locationGranted && wifiPermission
         } else {
-            locationGranted
+            true // Android 12 及以下不需要额外权限
         }
     }
 
     /**
-     * 请求权限
+     * 请求权限（仅 Android 13+ 需要）
      */
     private fun requestPermissions() {
-        val permissions = mutableListOf(
-            Manifest.permission.ACCESS_FINE_LOCATION,
-            Manifest.permission.ACCESS_COARSE_LOCATION
-        )
-
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            permissions.add(Manifest.permission.NEARBY_WIFI_DEVICES)
+            ActivityCompat.requestPermissions(
+                this,
+                arrayOf(Manifest.permission.NEARBY_WIFI_DEVICES),
+                LOCATION_PERMISSION_CODE
+            )
         }
-
-        ActivityCompat.requestPermissions(
-            this,
-            permissions.toTypedArray(),
-            LOCATION_PERMISSION_CODE
-        )
     }
 
     override fun onRequestPermissionsResult(

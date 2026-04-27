@@ -43,11 +43,17 @@ Release 构建使用 `wifi-bss-key.jks` 签名。密钥库凭据在 `keystore.pr
 ```kotlin
 // MainActivity.kt
 private fun getVersionInfo(): String {
-    return "版本：1.18"  // 与 versionName 一致
+    return "版本：1.19"  // 与 versionName 一致
 }
 
 private fun getChangesText(): String {
     return """
+v1.19 权限和体验优化
+- 移除 GPS 定位权限要求，仅保留 Android 13+ 近场设备权限
+- 添加屏幕唤醒保持，APP 运行时屏幕不会休眠
+- 自动查询关闭时也会检查本地数据库
+- WiFi 标准显示使用 Android 11+ 官方 API
+
 v1.18 WiFi 技术标准显示
 - 链路速度后显示 WiFi 技术标准（WiFi 4/WiFi 5/WiFi 6/WiFi 6E/WiFi 7）
 - Android 11+ 使用系统 API 获取准确标准
