@@ -78,4 +78,6 @@
     <string name="bssmac_field_bssmac">BSS MAC</string>
     <string name="bssmac_field_ap_name">AP 名字</string>
     <string name="bssmac_field_building">所在楼</string>
+    <string name="history_swipe_left">左滑删除</string>
+    <string name="history_swipe_right">右滑保存到本地</string>
 </resources>

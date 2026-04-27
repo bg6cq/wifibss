@@ -43,11 +43,15 @@ Release 构建使用 `wifi-bss-key.jks` 签名。密钥库凭据在 `keystore.pr
 ```kotlin
 // MainActivity.kt
 private fun getVersionInfo(): String {
-    return "版本：1.15"  // 与 versionName 一致
+    return "版本：1.16"  // 与 versionName 一致
 }
 
 private fun getChangesText(): String {
     return """
+v1.16 历史记录增强
+- 历史记录支持滑动操作：左滑删除，右滑保存到本地 BSS MAC 数据库
+- 点击历史记录可快速保存到本地
+
 v1.15 本地 BSS MAC 数据库
 - 新增本地 BSSMAC 信息编辑功能（设置 → BSSMAC 信息）
 - 支持批量添加：每行格式"BSSMAC AP 名字 所在楼"

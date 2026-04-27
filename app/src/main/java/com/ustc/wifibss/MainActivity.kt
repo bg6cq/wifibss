@@ -387,7 +387,7 @@ class MainActivity : AppCompatActivity() {
      * 获取版本信息
      */
     private fun getVersionInfo(): String {
-        return "版本：1.15"
+        return "版本：1.16"
     }
 
     /**
@@ -402,6 +402,10 @@ class MainActivity : AppCompatActivity() {
      */
     private fun getChangesText(): String {
         return """
+v1.16 历史记录增强
+- 历史记录支持滑动操作：左滑删除，右滑保存到本地 BSS MAC 数据库
+- 点击历史记录可快速保存到本地
+
 v1.15 本地 BSS MAC 数据库
 - 新增本地 BSSMAC 信息编辑功能（设置 → BSSMAC 信息）
 - 支持批量添加：每行格式"BSSMAC AP 名字 所在楼"
@@ -485,28 +489,30 @@ v1.0 初始版本
      * 显示历史记录对话框
      */
     private fun showHistoryDialog() {
-        val history = getHistoryList()
+        val history = getHistoryList().toMutableList()
 
         val dialogView = layoutInflater.inflate(R.layout.dialog_history, null)
         val rvHistory = dialogView.findViewById<RecyclerView>(R.id.rvHistory)
         val tvEmpty = dialogView.findViewById<TextView>(R.id.tvHistoryEmpty)
         val btnClear = dialogView.findViewById<Button>(R.id.btnClearHistory)
 
-        if (history.isEmpty()) {
-            rvHistory.visibility = android.view.View.GONE
-            tvEmpty.visibility = android.view.View.VISIBLE
-            btnClear.isEnabled = false
-        } else {
-            rvHistory.visibility = android.view.View.VISIBLE
-            tvEmpty.visibility = android.view.View.GONE
-            rvHistory.layoutManager = LinearLayoutManager(this)
-            rvHistory.adapter = HistoryAdapter(history)
+        // 设置适配器
+        fun updateAdapter() {
+            if (history.isEmpty()) {
+                rvHistory.visibility = android.view.View.GONE
+                tvEmpty.visibility = android.view.View.VISIBLE
+                btnClear.isEnabled = false
+            } else {
+                rvHistory.visibility = android.view.View.VISIBLE
+                tvEmpty.visibility = android.view.View.GONE
+                rvHistory.layoutManager = LinearLayoutManager(this)
+                rvHistory.adapter = HistoryAdapter(history) { entry ->
+                    // 点击编辑：将当前记录添加到本地 BSS MAC 数据库
+                    saveHistoryToLocalBss(entry)
+                }
+            }
         }
-
-        AlertDialog.Builder(this)
-            .setView(dialogView)
-            .setPositiveButton(android.R.string.ok, null)
-            .show()
+        updateAdapter()
 
         // 清除按钮点击事件
         btnClear.setOnClickListener {
@@ -518,16 +524,90 @@ v1.0 初始版本
                     Toast.makeText(this, R.string.history_cleared, Toast.LENGTH_SHORT).show()
                     // 刷新列表
                     val newHistory = getHistoryList()
-                    if (newHistory.isEmpty()) {
-                        rvHistory.visibility = android.view.View.GONE
-                        tvEmpty.visibility = android.view.View.VISIBLE
-                        btnClear.isEnabled = false
-                    } else {
-                        rvHistory.adapter = HistoryAdapter(newHistory)
-                    }
+                    history.clear()
+                    history.addAll(newHistory)
+                    updateAdapter()
                 }
                 .setNegativeButton(android.R.string.cancel, null)
                 .show()
+        }
+
+        // 添加滑动支持：左滑删除，右滑保存到本地 BSS MAC 数据库
+        val touchCallback = object : androidx.recyclerview.widget.ItemTouchHelper.SimpleCallback(
+            0,
+            androidx.recyclerview.widget.ItemTouchHelper.LEFT or androidx.recyclerview.widget.ItemTouchHelper.RIGHT
+        ) {
+            override fun onMove(
+                rv: RecyclerView,
+                vh: RecyclerView.ViewHolder,
+                target: RecyclerView.ViewHolder
+            ): Boolean {
+                return false
+            }
+
+            override fun onSwiped(vh: RecyclerView.ViewHolder, direction: Int) {
+                val position = vh.adapterPosition
+                if (position >= 0 && position < history.size) {
+                    val entry = history[position]
+                    if (direction == ItemTouchHelper.LEFT) {
+                        // 左滑：删除历史记录
+                        deleteHistoryAtPosition(position)
+                        history.removeAt(position)
+                        rvHistory.adapter?.notifyItemRemoved(position)
+                        Toast.makeText(
+                            this@MainActivity,
+                            "已删除 ${entry.bssid}",
+                            Toast.LENGTH_SHORT
+                        ).show()
+                        if (history.isEmpty()) {
+                            updateAdapter()
+                        }
+                    } else {
+                        // 右滑：保存到本地 BSS MAC 数据库
+                        saveHistoryToLocalBss(entry)
+                        rvHistory.adapter?.notifyItemChanged(position)
+                    }
+                }
+            }
+        }
+        ItemTouchHelper(touchCallback).attachToRecyclerView(rvHistory)
+
+        AlertDialog.Builder(this)
+            .setView(dialogView)
+            .setPositiveButton(android.R.string.ok, null)
+            .show()
+    }
+
+    /**
+     * 删除指定位置的历史记录
+     */
+    private fun deleteHistoryAtPosition(position: Int) {
+        val list = getHistoryList().toMutableList()
+        if (position >= 0 && position < list.size) {
+            list.removeAt(position)
+            saveHistoryList(list)
+        }
+    }
+
+    /**
+     * 将历史记录保存到本地 BSS MAC 数据库
+     */
+    private fun saveHistoryToLocalBss(history: QueryHistory) {
+        if (history.apName.isEmpty()) {
+            Toast.makeText(this, "该记录没有 AP 信息，无法保存", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        // 使用 BSSID 作为 BSS MAC 保存
+        val success = addBssLocal(history.bssid, history.apName, history.building)
+        if (success) {
+            Toast.makeText(
+                this,
+                "已保存到本地 BSS MAC 数据库",
+                Toast.LENGTH_SHORT
+            ).show()
+        } else {
+            Toast.makeText(this, "保存失败：BSS MAC 格式错误", Toast.LENGTH_SHORT).show()
         }
     }
 
@@ -909,8 +989,10 @@ v1.0 初始版本
     /**
      * 历史记录适配器
      */
-    private class HistoryAdapter(private val historyList: List<QueryHistory>) :
-        RecyclerView.Adapter<HistoryAdapter.ViewHolder>() {
+    private class HistoryAdapter(
+        private val historyList: List<QueryHistory>,
+        private val onItemClick: (QueryHistory) -> Unit
+    ) : RecyclerView.Adapter<HistoryAdapter.ViewHolder>() {
 
         private val dateFormat = SimpleDateFormat("MM-dd HH:mm:ss", Locale.getDefault())
 
@@ -933,6 +1015,11 @@ v1.0 初始版本
             holder.tvBssid.text = item.bssid
             holder.tvApName.text = item.apName.ifEmpty { "-" }
             holder.tvBuilding.text = item.building.ifEmpty { "" }
+
+            // 点击保存本地
+            holder.itemView.setOnClickListener {
+                onItemClick(item)
+            }
         }
 
         override fun getItemCount() = historyList.size
