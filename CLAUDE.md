@@ -43,11 +43,16 @@ Release 构建使用 `wifi-bss-key.jks` 签名。密钥库凭据在 `keystore.pr
 ```kotlin
 // MainActivity.kt
 private fun getVersionInfo(): String {
-    return "版本：1.17"  // 与 versionName 一致
+    return "版本：1.18"  // 与 versionName 一致
 }
 
 private fun getChangesText(): String {
     return """
+v1.18 WiFi 技术标准显示
+- 链路速度后显示 WiFi 技术标准（WiFi 4/WiFi 5/WiFi 6/WiFi 6E/WiFi 7）
+- Android 11+ 使用系统 API 获取准确标准
+- 旧版本根据频段和速率估算
+
 v1.17 RSSI 图表优化
 - 图表时间范围从 5 分钟扩展到 10 分钟
 - 添加每分钟一条的竖向虚线网格，方便查看时间

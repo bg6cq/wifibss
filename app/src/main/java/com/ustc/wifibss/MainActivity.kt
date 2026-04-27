@@ -269,8 +269,57 @@ class MainActivity : AppCompatActivity() {
         val bandText = if (band.isNotEmpty()) " ($band)" else ""
         binding.tvFrequency.text = "$freq MHz (信道 $channel)$bandText"
 
-        // 链路速度
-        binding.tvLinkSpeed.text = "${wifiInfo.linkSpeed} Mbps"
+        // 链路速度和 WiFi 标准
+        val wifiStandard = getWifiStandard(wifiInfo)
+        val standardText = if (wifiStandard.isNotEmpty()) " ($wifiStandard)" else ""
+        binding.tvLinkSpeed.text = "${wifiInfo.linkSpeed} Mbps$standardText"
+    }
+
+    /**
+     * 获取 WiFi 技术标准 (802.11 a/b/g/n/ac/ax/be)
+     */
+    private fun getWifiStandard(wifiInfo: android.net.wifi.WifiInfo): String {
+        // Android 11+ 使用官方 API
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            try {
+                val method = wifiInfo.javaClass.getMethod("getWifiStandard")
+                val standard = method.invoke(wifiInfo) as Int
+                return when (standard) {
+                    0 -> "" // WIFI_STANDARD_UNKNOWN
+                    1 -> "802.11a"
+                    2 -> "802.11b"
+                    3 -> "802.11g"
+                    4 -> "802.11n (WiFi 4)"
+                    5 -> "802.11ac (WiFi 5)"
+                    6 -> "802.11ax (WiFi 6)"
+                    7 -> "802.11be (WiFi 7)"
+                    else -> ""
+                }
+            } catch (e: Exception) {
+                // 方法不存在或调用失败，回退到手动判断
+            }
+        }
+
+        // Android 10 及以下：根据频率和速率估算
+        val freq = wifiInfo.frequency
+        val speed = wifiInfo.linkSpeed
+
+        // 6GHz 频段 = WiFi 6E 或 WiFi 7
+        if (freq >= 5925) {
+            return if (speed > 10000) "802.11be (WiFi 7)" else "802.11ax (WiFi 6E)"
+        }
+
+        // 5GHz 高速 = WiFi 5 或 WiFi 6
+        if (freq >= 5000) {
+            return if (speed > 2000) "802.11ax (WiFi 6)" else "802.11ac (WiFi 5)"
+        }
+
+        // 2.4GHz
+        if (freq > 0 && freq < 2500) {
+            return if (speed > 150) "802.11n (WiFi 4)" else "802.11g"
+        }
+
+        return ""
     }
 
     /**
@@ -387,7 +436,7 @@ class MainActivity : AppCompatActivity() {
      * 获取版本信息
      */
     private fun getVersionInfo(): String {
-        return "版本：1.17"
+        return "版本：1.18"
     }
 
     /**
@@ -402,6 +451,11 @@ class MainActivity : AppCompatActivity() {
      */
     private fun getChangesText(): String {
         return """
+v1.18 WiFi 技术标准显示
+- 链路速度后显示 WiFi 技术标准（WiFi 4/WiFi 5/WiFi 6/WiFi 6E/WiFi 7）
+- Android 11+ 使用系统 API 获取准确标准
+- 旧版本根据频段和速率估算
+
 v1.17 RSSI 图表优化
 - 图表时间范围从 5 分钟扩展到 10 分钟
 - 添加每分钟一条的竖向虚线网格，方便查看时间
