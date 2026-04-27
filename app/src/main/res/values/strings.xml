@@ -29,7 +29,7 @@
     <string name="menu_settings">设置</string>
     <string name="menu_about">关于</string>
     <string name="menu_history">历史记录</string>
-    <string name="history_title">查询历史</string>
+    <string name="history_title">历史记录</string>
     <string name="history_empty">暂无查询记录</string>
     <string name="history_clear">清除记录</string>
     <string name="history_clear_confirm">确定要清除所有历史记录吗？</string>
@@ -59,4 +59,23 @@
     <string name="signal_fair">一般</string>
     <string name="signal_weak">较差</string>
     <string name="signal_poor">弱</string>
+
+    <!-- BSSMAC 本地数据库 -->
+    <string name="bssmac_menu">BSSMAC 信息</string>
+    <string name="bssmac_title">BSSMAC 信息</string>
+    <string name="bssmac_empty">暂无本地记录</string>
+    <string name="bssmac_clear">清除记录</string>
+    <string name="bssmac_clear_confirm">确定要清除所有记录吗？</string>
+    <string name="bssmac_cleared">记录已清除</string>
+    <string name="bssmac_bulk_add">批量添加</string>
+    <string name="bssmac_input_hint">每行格式：BSSMAC AP 名字 所在楼（BSSMAC 支持 xx:xx:xx:xx:xx:xx 或 xxxx-xxxx-xxxx 格式）</string>
+    <string name="bssmac_add">添加</string>
+    <string name="bssmac_edit">编辑</string>
+    <string name="bssmac_delete">删除</string>
+    <string name="bssmac_save">保存</string>
+    <string name="bssmac_cancel">取消</string>
+    <string name="bssmac_edit_title">编辑记录</string>
+    <string name="bssmac_field_bssmac">BSS MAC</string>
+    <string name="bssmac_field_ap_name">AP 名字</string>
+    <string name="bssmac_field_building">所在楼</string>
 </resources>

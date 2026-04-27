@@ -18,6 +18,7 @@ import android.widget.TextView
 import android.widget.Toast
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import androidx.recyclerview.widget.ItemTouchHelper
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
@@ -57,6 +58,7 @@ class MainActivity : AppCompatActivity() {
         private const val KEY_AUTO_QUERY = "auto_query"
         private const val KEY_AUTO_REFRESH = "auto_refresh"
         private const val KEY_HISTORY = "query_history"
+        private const val KEY_BSS_LOCAL = "bss_local_data"
         private const val DEFAULT_QUERY_URL = "https://linux.ustc.edu.cn/api/bssinfo.php"
         private const val MAX_HISTORY_COUNT = 50
     }
@@ -65,6 +67,13 @@ class MainActivity : AppCompatActivity() {
     data class QueryHistory(
         val timestamp: Long,
         val bssid: String,
+        val apName: String,
+        val building: String
+    )
+
+    // 本地 BSS MAC 数据类
+    data class BssLocalEntry(
+        val bssMac: String,
         val apName: String,
         val building: String
     )
@@ -378,7 +387,7 @@ class MainActivity : AppCompatActivity() {
      * 获取版本信息
      */
     private fun getVersionInfo(): String {
-        return "版本：1.14"
+        return "版本：1.15"
     }
 
     /**
@@ -393,6 +402,13 @@ class MainActivity : AppCompatActivity() {
      */
     private fun getChangesText(): String {
         return """
+v1.15 本地 BSS MAC 数据库
+- 新增本地 BSSMAC 信息编辑功能（设置 → BSSMAC 信息）
+- 支持批量添加：每行格式"BSSMAC AP 名字 所在楼"
+- 支持多种 BSSMAC 格式自动识别（xx:xx:xx:xx:xx:xx、xxxx-xxxx-xxxx 等）
+- 左滑删除记录，点击记录可编辑
+- 查询时优先使用本地数据，无数据时调用远程 API
+
 v1.14 布局优化
 - 加宽左侧标签栏（70dp → 90dp），避免文字换行
 
@@ -490,10 +506,6 @@ v1.0 初始版本
         AlertDialog.Builder(this)
             .setView(dialogView)
             .setPositiveButton(android.R.string.ok, null)
-            .setNegativeButton(R.string.history_clear) { _, _ ->
-                clearHistory()
-                Toast.makeText(this, R.string.history_cleared, Toast.LENGTH_SHORT).show()
-            }
             .show()
 
         // 清除按钮点击事件
@@ -517,6 +529,144 @@ v1.0 初始版本
                 .setNegativeButton(android.R.string.cancel, null)
                 .show()
         }
+    }
+
+    /**
+     * 显示本地 BSSMAC 对话框
+     */
+    private fun showBssLocalDialog() {
+        val bssList = getBssLocalList().toMutableList()
+
+        val dialogView = layoutInflater.inflate(R.layout.dialog_bss_local, null)
+        val rvBssLocal = dialogView.findViewById<RecyclerView>(R.id.rvBssLocal)
+        val tvEmpty = dialogView.findViewById<TextView>(R.id.tvBssLocalEmpty)
+        val etBulkAdd = dialogView.findViewById<EditText>(R.id.etBulkAdd)
+        val btnBulkAdd = dialogView.findViewById<Button>(R.id.btnBulkAdd)
+        val btnClear = dialogView.findViewById<Button>(R.id.btnClearBss)
+
+        // 设置适配器
+        fun updateAdapter() {
+            if (bssList.isEmpty()) {
+                rvBssLocal.visibility = android.view.View.GONE
+                tvEmpty.visibility = android.view.View.VISIBLE
+            } else {
+                rvBssLocal.visibility = android.view.View.VISIBLE
+                tvEmpty.visibility = android.view.View.GONE
+                rvBssLocal.layoutManager = LinearLayoutManager(this)
+                rvBssLocal.adapter = BssLocalAdapter(bssList) { entry ->
+                    showEditBssDialog(entry, bssList)
+                }
+            }
+        }
+        updateAdapter()
+
+        // 批量添加
+        btnBulkAdd.setOnClickListener {
+            val text = etBulkAdd.text.toString()
+            if (text.isNotBlank()) {
+                var added = 0
+                text.lines().forEach { line ->
+                    val parts = line.trim().split("\\s+".toRegex(), 3)
+                    if (parts.size >= 3) {
+                        if (addBssLocal(parts[0], parts[1], parts[2])) {
+                            added++
+                        }
+                    }
+                }
+                if (added > 0) {
+                    Toast.makeText(this, "已添加 $added 条记录", Toast.LENGTH_SHORT).show()
+                    // 重新加载列表
+                    val newList = getBssLocalList().toMutableList()
+                    bssList.clear()
+                    bssList.addAll(newList)
+                    updateAdapter()
+                    etBulkAdd.text.clear()
+                } else {
+                    Toast.makeText(this, "格式错误，请检查输入", Toast.LENGTH_SHORT).show()
+                }
+            }
+        }
+
+        // 清除所有
+        btnClear.setOnClickListener {
+            AlertDialog.Builder(this)
+                .setTitle(R.string.bssmac_clear)
+                .setMessage(R.string.bssmac_clear_confirm)
+                .setPositiveButton(android.R.string.ok) { _, _ ->
+                    clearBssLocal()
+                    Toast.makeText(this, R.string.bssmac_cleared, Toast.LENGTH_SHORT).show()
+                    bssList.clear()
+                    updateAdapter()
+                }
+                .setNegativeButton(android.R.string.cancel, null)
+                .show()
+        }
+
+        // 添加滑动删除支持
+        val touchCallback = object : androidx.recyclerview.widget.ItemTouchHelper.SimpleCallback(0, androidx.recyclerview.widget.ItemTouchHelper.LEFT) {
+            override fun onMove(rv: RecyclerView, vh: RecyclerView.ViewHolder, target: RecyclerView.ViewHolder): Boolean {
+                return false
+            }
+
+            override fun onSwiped(vh: RecyclerView.ViewHolder, direction: Int) {
+                val position = vh.adapterPosition
+                if (position >= 0 && position < bssList.size) {
+                    val entry = bssList[position]
+                    deleteBssLocal(entry.bssMac)
+                    bssList.removeAt(position)
+                    rvBssLocal.adapter?.notifyItemRemoved(position)
+                    Toast.makeText(this@MainActivity, "已删除 ${entry.bssMac}", Toast.LENGTH_SHORT).show()
+                    if (bssList.isEmpty()) {
+                        updateAdapter()
+                    }
+                }
+            }
+        }
+        ItemTouchHelper(touchCallback).attachToRecyclerView(rvBssLocal)
+
+        AlertDialog.Builder(this)
+            .setView(dialogView)
+            .setPositiveButton(android.R.string.ok, null)
+            .show()
+    }
+
+    /**
+     * 显示编辑 BSSMAC 对话框
+     */
+    private fun showEditBssDialog(entry: BssLocalEntry, bssList: MutableList<BssLocalEntry>) {
+        val dialogView = layoutInflater.inflate(R.layout.dialog_edit_bss, null)
+        val etBssMac = dialogView.findViewById<EditText>(R.id.etBssMac)
+        val etApName = dialogView.findViewById<EditText>(R.id.etApName)
+        val etBuilding = dialogView.findViewById<EditText>(R.id.etBuilding)
+
+        etBssMac.setText(entry.bssMac)
+        etApName.setText(entry.apName)
+        etBuilding.setText(entry.building)
+
+        AlertDialog.Builder(this)
+            .setTitle(R.string.bssmac_edit_title)
+            .setView(dialogView)
+            .setPositiveButton(R.string.bssmac_save) { _, _ ->
+                val newMac = etBssMac.text.toString()
+                val newApName = etApName.text.toString()
+                val newBuilding = etBuilding.text.toString()
+
+                if (newMac.isNotBlank() && newApName.isNotBlank()) {
+                    if (updateBssLocal(entry.bssMac, newMac, newApName, newBuilding)) {
+                        Toast.makeText(this, R.string.bssmac_save, Toast.LENGTH_SHORT).show()
+                        // 刷新列表
+                        val newList = getBssLocalList().toMutableList()
+                        bssList.clear()
+                        bssList.addAll(newList)
+                        // 注意：这里无法直接刷新 RecyclerView，因为对话框已关闭
+                        // 用户需要重新打开对话框查看更新
+                    } else {
+                        Toast.makeText(this, "BSS MAC 格式错误", Toast.LENGTH_SHORT).show()
+                    }
+                }
+            }
+            .setNegativeButton(R.string.bssmac_cancel, null)
+            .show()
     }
 
     /**
@@ -645,6 +795,118 @@ v1.0 初始版本
     }
 
     /**
+     * 标准化 BSS MAC 格式（支持多种输入格式）
+     */
+    private fun normalizeBssMac(input: String): String? {
+        // 移除所有非十六进制字符
+        val hexOnly = input.replace(Regex("[^0-9a-fA-F]"), "")
+        // 验证是否为 12 位十六进制
+        return if (hexOnly.length == 12) {
+            hexOnly.lowercase()
+        } else {
+            null
+        }
+    }
+
+    /**
+     * 获取本地 BSS MAC 列表
+     */
+    private fun getBssLocalList(): List<BssLocalEntry> {
+        val json = prefs.getString(KEY_BSS_LOCAL, "") ?: return emptyList()
+        if (json.isEmpty()) return emptyList()
+
+        return try {
+            val array = JSONArray(json)
+            val list = mutableListOf<BssLocalEntry>()
+            for (i in 0 until array.length()) {
+                val obj = array.getJSONObject(i)
+                list.add(
+                    BssLocalEntry(
+                        bssMac = obj.getString("bssMac"),
+                        apName = obj.getString("apName"),
+                        building = obj.getString("building")
+                    )
+                )
+            }
+            list
+        } catch (e: Exception) {
+            emptyList()
+        }
+    }
+
+    /**
+     * 保存本地 BSS MAC 列表
+     */
+    private fun saveBssLocalList(list: List<BssLocalEntry>) {
+        val array = JSONArray()
+        for (item in list) {
+            val obj = JSONObject()
+            obj.put("bssMac", item.bssMac)
+            obj.put("apName", item.apName)
+            obj.put("building", item.building)
+            array.put(obj)
+        }
+        prefs.edit().putString(KEY_BSS_LOCAL, array.toString()).apply()
+    }
+
+    /**
+     * 添加本地 BSS MAC 记录
+     */
+    private fun addBssLocal(bssMac: String, apName: String, building: String): Boolean {
+        val normalizedMac = normalizeBssMac(bssMac) ?: return false
+        val list = getBssLocalList().toMutableList()
+
+        // 检查是否已存在
+        val existingIndex = list.indexOfFirst { it.bssMac == normalizedMac }
+        if (existingIndex >= 0) {
+            // 更新已有记录
+            list[existingIndex] = BssLocalEntry(normalizedMac, apName, building)
+        } else {
+            // 添加新记录
+            list.add(BssLocalEntry(normalizedMac, apName, building))
+        }
+
+        saveBssLocalList(list)
+        return true
+    }
+
+    /**
+     * 更新本地 BSS MAC 记录
+     */
+    private fun updateBssLocal(oldMac: String, newMac: String, apName: String, building: String): Boolean {
+        val normalizedOld = normalizeBssMac(oldMac) ?: return false
+        val normalizedNew = normalizeBssMac(newMac) ?: return false
+
+        val list = getBssLocalList().toMutableList()
+
+        // 删除旧记录
+        val removed = list.removeIf { it.bssMac == normalizedOld }
+        if (!removed) return false
+
+        // 添加新记录
+        list.add(BssLocalEntry(normalizedNew, apName, building))
+        saveBssLocalList(list)
+        return true
+    }
+
+    /**
+     * 删除本地 BSS MAC 记录
+     */
+    private fun deleteBssLocal(bssMac: String) {
+        val normalizedMac = normalizeBssMac(bssMac) ?: return
+        val list = getBssLocalList().toMutableList()
+        list.removeAll { it.bssMac == normalizedMac }
+        saveBssLocalList(list)
+    }
+
+    /**
+     * 清除所有本地 BSS MAC 记录
+     */
+    private fun clearBssLocal() {
+        prefs.edit().remove(KEY_BSS_LOCAL).apply()
+    }
+
+    /**
      * 历史记录适配器
      */
     private class HistoryAdapter(private val historyList: List<QueryHistory>) :
@@ -674,6 +936,41 @@ v1.0 初始版本
         }
 
         override fun getItemCount() = historyList.size
+    }
+
+    /**
+     * 本地 BSSMAC 适配器（支持滑动删除/编辑）
+     */
+    private class BssLocalAdapter(
+        private val bssList: MutableList<BssLocalEntry>,
+        private val onEditClick: (BssLocalEntry) -> Unit
+    ) : RecyclerView.Adapter<BssLocalAdapter.ViewHolder>() {
+
+        class ViewHolder(view: android.view.View) : RecyclerView.ViewHolder(view) {
+            val tvBssMac: TextView = view.findViewById(R.id.tvBssMac)
+            val tvApName: TextView = view.findViewById(R.id.tvApName)
+            val tvBuilding: TextView = view.findViewById(R.id.tvBuilding)
+        }
+
+        override fun onCreateViewHolder(parent: android.view.ViewGroup, viewType: Int): ViewHolder {
+            val view = LayoutInflater.from(parent.context)
+                .inflate(R.layout.item_bss_local, parent, false)
+            return ViewHolder(view)
+        }
+
+        override fun onBindViewHolder(holder: ViewHolder, position: Int) {
+            val item = bssList[position]
+            holder.tvBssMac.text = item.bssMac
+            holder.tvApName.text = item.apName.ifEmpty { "-" }
+            holder.tvBuilding.text = item.building.ifEmpty { "-" }
+
+            // 点击编辑
+            holder.itemView.setOnClickListener {
+                onEditClick(item)
+            }
+        }
+
+        override fun getItemCount() = bssList.size
     }
 
     /**
@@ -824,6 +1121,10 @@ v1.0 初始版本
                 showHistoryDialog()
                 true
             }
+            R.id.menu_bssmac -> {
+                showBssLocalDialog()
+                true
+            }
             else -> super.onOptionsItemSelected(item)
         }
     }
@@ -857,6 +1158,13 @@ v1.0 初始版本
      * 查询 BSS 信息（带重试，用于自动查询）
      */
     private fun queryBssInfoWithRetry(bssid: String) {
+        // 先检查本地数据
+        val localData = getBssLocalList().find { it.bssMac == bssid }
+        if (localData != null) {
+            displayLocalBssInfo(localData)
+            return
+        }
+
         binding.tvResult.text = getString(R.string.querying)
         // 清空之前的 AP 信息显示
         binding.tvBssMac.text = "-"
@@ -898,6 +1206,13 @@ v1.0 初始版本
      * 查询 BSS 信息（手动查询，无重试）
      */
     private fun queryBssInfo(bssid: String) {
+        // 先检查本地数据
+        val localData = getBssLocalList().find { it.bssMac == bssid }
+        if (localData != null) {
+            displayLocalBssInfo(localData)
+            return
+        }
+
         binding.tvResult.text = getString(R.string.querying)
         // 清空之前的 AP 信息显示
         binding.tvBssMac.text = "-"
@@ -926,6 +1241,19 @@ v1.0 初始版本
                 }
             }
         }
+    }
+
+    /**
+     * 显示本地 BSS 信息
+     */
+    private fun displayLocalBssInfo(localData: BssLocalEntry) {
+        binding.tvBssMac.text = localData.bssMac
+        binding.tvAcIp.text = "-"
+        binding.tvApIp.text = "-"
+        binding.tvApName.text = localData.apName
+        binding.tvApSn.text = "-"
+        binding.tvApBuilding.text = localData.building
+        binding.tvResult.text = "本地数据"
     }
 
     /**

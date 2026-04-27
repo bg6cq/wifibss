@@ -17,4 +17,9 @@
         android:title="@string/menu_history"
         app:showAsAction="never" />
 
+    <item
+        android:id="@+id/menu_bssmac"
+        android:title="@string/bssmac_menu"
+        app:showAsAction="never" />
+
 </menu>
