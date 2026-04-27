@@ -429,7 +429,7 @@ class MainActivity : AppCompatActivity() {
      * 获取版本信息
      */
     private fun getVersionInfo(): String {
-        return "版本：1.23"
+        return "版本：1.24"
     }
 
     /**
@@ -444,6 +444,9 @@ class MainActivity : AppCompatActivity() {
      */
     private fun getChangesText(): String {
         return """
+v1.24 历史记录修复
+- 修复本地 BSSMAC 数据未更新历史记录的问题
+
 v1.23 功能增强
 - BSSMAC 支持按 MAC/所在楼/AP 名字排序
 - BSSMAC 批量添加时所在楼可选
@@ -1444,6 +1447,16 @@ v1.0 初始版本
         binding.tvApSn.text = "-"
         binding.tvApBuilding.text = localData.building
         binding.tvResult.text = "本地数据"
+
+        // 更新历史记录
+        val currentBssid = getFormattedBssid()
+        if (currentBssid != null && currentBssid.length == 12) {
+            updateHistoryRecord(
+                bssid = currentBssid,
+                apName = localData.apName,
+                building = localData.building
+            )
+        }
     }
 
     /**
