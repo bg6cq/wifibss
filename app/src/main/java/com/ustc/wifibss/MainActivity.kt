@@ -2,8 +2,10 @@ package com.ustc.wifibss
 
 import android.Manifest
 import android.content.Context
+import androidx.activity.result.contract.ActivityResultContracts
 import android.content.SharedPreferences
 import android.content.pm.PackageManager
+import android.net.wifi.ScanResult
 import android.net.wifi.WifiManager
 import android.os.Build
 import android.os.Bundle
@@ -25,7 +27,6 @@ import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.lifecycleScope
 import com.ustc.wifibss.databinding.ActivityMainBinding
-import com.ustc.wifibss.RssiChartView
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -83,6 +84,12 @@ class MainActivity : AppCompatActivity() {
     private var autoRefreshJob: kotlinx.coroutines.Job? = null
     private var autoRefreshIntervalMs: Int = 0 // 0 = 不刷新
     private var bssidChangedForChart: Boolean = false // 标记当前刷新是否 BSSID 变化
+
+    private val exportFileLauncher = registerForActivityResult(ActivityResultContracts.CreateDocument("text/plain")) { uri ->
+        if (uri != null) {
+            exportBssLocalToFile(uri)
+        }
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -215,7 +222,7 @@ class MainActivity : AppCompatActivity() {
      */
     private fun updateWifiInfo() {
         if (!checkPermissions()) {
-            requestPermissions()
+            showPermissionRationale()
             clearWifiInfo()
             return
         }
@@ -294,15 +301,12 @@ class MainActivity : AppCompatActivity() {
             return try {
                 val standard = wifiInfo.wifiStandard
                 when (standard) {
-                    0 -> "" // WIFI_STANDARD_UNKNOWN
-                    1 -> "802.11a"
-                    2 -> "802.11b"
-                    3 -> "802.11g"
-                    4 -> "802.11n (WiFi 4)"
-                    5 -> "802.11ac (WiFi 5)"
-                    6 -> "802.11ax (WiFi 6)"
-                    7 -> "802.11be (WiFi 7)"
-                    else -> "WiFi $standard"
+                    ScanResult.WIFI_STANDARD_LEGACY -> "802.11a/b/g"
+                    ScanResult.WIFI_STANDARD_11N -> "Wi-Fi 4 (802.11n)"
+                    ScanResult.WIFI_STANDARD_11AC -> "Wi-Fi 5 (802.11ac)"
+                    ScanResult.WIFI_STANDARD_11AX -> "Wi-Fi 6 (802.11ax)"
+                    ScanResult.WIFI_STANDARD_11BE -> "Wi-Fi 7 (802.11be)"
+                    else -> "WiFi 代码 $standard"
                 }
             } catch (e: Exception) {
                 ""
@@ -425,7 +429,7 @@ class MainActivity : AppCompatActivity() {
      * 获取版本信息
      */
     private fun getVersionInfo(): String {
-        return "版本：1.21"
+        return "版本：1.23"
     }
 
     /**
@@ -440,6 +444,19 @@ class MainActivity : AppCompatActivity() {
      */
     private fun getChangesText(): String {
         return """
+v1.23 功能增强
+- BSSMAC 支持按 MAC/所在楼/AP 名字排序
+- BSSMAC 批量添加时所在楼可选
+- BSSMAC 信息支持导出到文件
+- WiFi 标准显示支持 Wi-Fi 7 (802.11be)
+- 权限不足时显示详细说明，解释为什么需要各项权限
+
+v1.22 代码清理
+- 移除未使用的 import 和布局元素
+
+v1.21 BSSMAC 编辑修复
+- 修复 BSSMAC 信息编辑后列表不刷新的问题
+
 v1.20 修复 BSSID 显示
 - 恢复位置权限以获取真实 BSSID（Android 10+ 需要）
 
@@ -641,6 +658,35 @@ v1.0 初始版本
         val tvEmpty = dialogView.findViewById<TextView>(R.id.tvBssLocalEmpty)
         val etBulkAdd = dialogView.findViewById<EditText>(R.id.etBulkAdd)
         val btnBulkAdd = dialogView.findViewById<Button>(R.id.btnBulkAdd)
+        val rgBssSort = dialogView.findViewById<RadioGroup>(R.id.rgBssSort)
+
+        var currentSort = "mac"
+
+        // 排序
+        fun sortList(by: String) {
+            currentSort = by
+            bssList.sortWith(Comparator { a, b ->
+                when (by) {
+                    "building" -> {
+                        val cmp = a.building.compareTo(b.building, ignoreCase = true)
+                        if (cmp != 0) cmp else a.apName.compareTo(b.apName, ignoreCase = true)
+                    }
+                    "apname" -> {
+                        val cmp = a.apName.compareTo(b.apName, ignoreCase = true)
+                        if (cmp != 0) cmp else a.building.compareTo(b.building, ignoreCase = true)
+                    }
+                    else -> a.bssMac.compareTo(b.bssMac)
+                }
+            })
+        }
+
+        // 重新加载并排序
+        fun reloadList() {
+            val newList = getBssLocalList().toMutableList()
+            bssList.clear()
+            bssList.addAll(newList)
+            sortList(currentSort)
+        }
 
         // 设置适配器
         fun updateAdapter() {
@@ -652,11 +698,37 @@ v1.0 初始版本
                 tvEmpty.visibility = android.view.View.GONE
                 rvBssLocal.layoutManager = LinearLayoutManager(this)
                 rvBssLocal.adapter = BssLocalAdapter(bssList) { entry ->
-                    showEditBssDialog(entry, bssList, ::updateAdapter)
+                    showEditBssDialog(entry) {
+                        reloadList()
+                        updateAdapter()
+                    }
                 }
             }
         }
+        sortList("mac")
         updateAdapter()
+
+        // 排序切换
+        rgBssSort.setOnCheckedChangeListener { _, checkedId ->
+            val sortBy = when (checkedId) {
+                R.id.rbSortBuilding -> "building"
+                R.id.rbSortApName -> "apname"
+                else -> "mac"
+            }
+            sortList(sortBy)
+            rvBssLocal.adapter?.notifyDataSetChanged()
+        }
+
+        // 导出按钮
+        val btnExport = dialogView.findViewById<Button>(R.id.btnExport)
+        btnExport.setOnClickListener {
+            val list = getBssLocalList()
+            if (list.isEmpty()) {
+                Toast.makeText(this, R.string.bssmac_empty, Toast.LENGTH_SHORT).show()
+                return@setOnClickListener
+            }
+            exportFileLauncher.launch("bssmac_export.txt")
+        }
 
         // 批量添加
         btnBulkAdd.setOnClickListener {
@@ -665,18 +737,16 @@ v1.0 初始版本
                 var added = 0
                 text.lines().forEach { line ->
                     val parts = line.trim().split("\\s+".toRegex(), 3)
-                    if (parts.size >= 3) {
-                        if (addBssLocal(parts[0], parts[1], parts[2])) {
+                    if (parts.size >= 2) {
+                        val building = if (parts.size >= 3) parts[2] else ""
+                        if (addBssLocal(parts[0], parts[1], building)) {
                             added++
                         }
                     }
                 }
                 if (added > 0) {
                     Toast.makeText(this, "已添加 $added 条记录", Toast.LENGTH_SHORT).show()
-                    // 重新加载列表
-                    val newList = getBssLocalList().toMutableList()
-                    bssList.clear()
-                    bssList.addAll(newList)
+                    reloadList()
                     updateAdapter()
                     etBulkAdd.text.clear()
                 } else {
@@ -731,7 +801,7 @@ v1.0 初始版本
     /**
      * 显示编辑 BSSMAC 对话框
      */
-    private fun showEditBssDialog(entry: BssLocalEntry, bssList: MutableList<BssLocalEntry>, updateAdapter: () -> Unit) {
+    private fun showEditBssDialog(entry: BssLocalEntry, onSaved: () -> Unit) {
         val dialogView = layoutInflater.inflate(R.layout.dialog_edit_bss, null)
         val etBssMac = dialogView.findViewById<EditText>(R.id.etBssMac)
         val etApName = dialogView.findViewById<EditText>(R.id.etApName)
@@ -752,11 +822,7 @@ v1.0 初始版本
                 if (newMac.isNotBlank() && newApName.isNotBlank()) {
                     if (updateBssLocal(entry.bssMac, newMac, newApName, newBuilding)) {
                         Toast.makeText(this, R.string.bssmac_save, Toast.LENGTH_SHORT).show()
-                        // 刷新列表
-                        val newList = getBssLocalList().toMutableList()
-                        bssList.clear()
-                        bssList.addAll(newList)
-                        updateAdapter()
+                        onSaved()
                     } else {
                         Toast.makeText(this, "BSS MAC 格式错误", Toast.LENGTH_SHORT).show()
                     }
@@ -1001,6 +1067,26 @@ v1.0 初始版本
      */
     private fun clearBssLocal() {
         prefs.edit().remove(KEY_BSS_LOCAL).apply()
+    }
+
+    /**
+     * 导出 BSS MAC 列表到文件
+     */
+    private fun exportBssLocalToFile(uri: android.net.Uri) {
+        try {
+            val list = getBssLocalList()
+            val content = list.joinToString("\n") { entry ->
+                val parts = mutableListOf(entry.bssMac, entry.apName)
+                if (entry.building.isNotEmpty()) parts.add(entry.building)
+                parts.joinToString(" ")
+            }
+            contentResolver.openOutputStream(uri)?.use { outputStream ->
+                outputStream.write(content.toByteArray())
+            }
+            Toast.makeText(this, "已导出 ${list.size} 条记录", Toast.LENGTH_SHORT).show()
+        } catch (e: Exception) {
+            Toast.makeText(this, "导出失败: ${e.message}", Toast.LENGTH_LONG).show()
+        }
     }
 
     /**
@@ -1450,6 +1536,43 @@ v1.0 初始版本
         } else {
             locationGranted
         }
+    }
+
+    /**
+     * 显示权限说明，然后请求权限
+     */
+    private fun showPermissionRationale() {
+        val missingPerms = mutableListOf<String>()
+
+        val locationGranted = ContextCompat.checkSelfPermission(
+            this, Manifest.permission.ACCESS_FINE_LOCATION
+        ) == PackageManager.PERMISSION_GRANTED
+        if (!locationGranted) {
+            missingPerms.add("• 位置权限：Android 10+ 要求位置权限才能获取 WiFi BSSID 信息")
+        }
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            val nearbyGranted = ContextCompat.checkSelfPermission(
+                this, Manifest.permission.NEARBY_WIFI_DEVICES
+            ) == PackageManager.PERMISSION_GRANTED
+            if (!nearbyGranted) {
+                missingPerms.add("• 附近设备权限：Android 13+ 需要此权限以扫描附近 WiFi 设备")
+            }
+        }
+
+        if (missingPerms.isEmpty()) {
+            requestPermissions()
+            return
+        }
+
+        AlertDialog.Builder(this)
+            .setTitle("需要权限")
+            .setMessage("本应用需要以下权限以读取 WiFi 信息：\n\n${missingPerms.joinToString("\n")}\n\n点击「确定」后请在系统弹窗中允许。")
+            .setPositiveButton("确定") { _, _ ->
+                requestPermissions()
+            }
+            .setNegativeButton(android.R.string.cancel, null)
+            .show()
     }
 
     /**

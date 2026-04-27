@@ -416,7 +416,7 @@
         android:layout_marginTop="8dp"
         android:background="@android:drawable/edit_text"
         android:padding="8dp"
-        app:layout_constraintBottom_toTopOf="@+id/historyQuickView"
+        app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@id/tvResultLabel">
@@ -431,21 +431,5 @@
             android:textSize="12sp" />
 
     </ScrollView>
-
-    <!-- 历史记录快速查看 -->
-    <TextView
-        android:id="@+id/historyQuickView"
-        android:layout_width="0dp"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="8dp"
-        android:background="@android:drawable/edit_text"
-        android:padding="8dp"
-        android:text="最近记录：暂无"
-        android:textSize="12sp"
-        android:visibility="gone"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/resultScroll" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>

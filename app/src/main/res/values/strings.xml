@@ -68,7 +68,7 @@
     <string name="bssmac_clear_confirm">确定要清除所有记录吗？</string>
     <string name="bssmac_cleared">记录已清除</string>
     <string name="bssmac_bulk_add">批量添加</string>
-    <string name="bssmac_input_hint">每行格式：BSSMAC AP 名字 所在楼（BSSMAC 支持 xx:xx:xx:xx:xx:xx 或 xxxx-xxxx-xxxx 格式）</string>
+    <string name="bssmac_input_hint">每行格式：BSSMAC AP名字 [所在楼]（BSSMAC 支持 xx:xx:xx:xx:xx:xx 或 xxxx-xxxx-xxxx 格式，所在楼可选）</string>
     <string name="bssmac_add">添加</string>
     <string name="bssmac_edit">编辑</string>
     <string name="bssmac_delete">删除</string>
@@ -80,4 +80,9 @@
     <string name="bssmac_field_building">所在楼</string>
     <string name="history_swipe_left">左滑删除</string>
     <string name="history_swipe_right">右滑保存到本地</string>
+    <string name="bssmac_export">导出到文件</string>
+    <string name="bssmac_sort">排序方式：</string>
+    <string name="bssmac_sort_mac">MAC</string>
+    <string name="bssmac_sort_building">所在楼</string>
+    <string name="bssmac_sort_apname">AP 名字</string>
 </resources>

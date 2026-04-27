@@ -43,11 +43,21 @@ Release 构建使用 `wifi-bss-key.jks` 签名。密钥库凭据在 `keystore.pr
 ```kotlin
 // MainActivity.kt
 private fun getVersionInfo(): String {
-    return "版本：1.21"  // 与 versionName 一致
+    return "版本：1.23"  // 与 versionName 一致
 }
 
 private fun getChangesText(): String {
     return """
+v1.23 功能增强
+- BSSMAC 支持按 MAC/所在楼/AP 名字排序
+- BSSMAC 批量添加时所在楼可选
+- BSSMAC 信息支持导出到文件
+- WiFi 标准显示支持 Wi-Fi 7 (802.11be)
+- 权限不足时显示详细说明，解释为什么需要各项权限
+
+v1.22 代码清理
+- 移除未使用的 import 和布局元素
+
 v1.21 BSSMAC 编辑修复
 - 修复 BSSMAC 信息编辑后列表不刷新的问题
 
