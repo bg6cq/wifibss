@@ -55,7 +55,7 @@
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="信号强度（最近 5 分钟）"
+                android:text="信号强度（最近 10 分钟）"
                 android:textSize="12sp"
                 android:textStyle="bold" />
 

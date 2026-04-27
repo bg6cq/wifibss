@@ -387,7 +387,7 @@ class MainActivity : AppCompatActivity() {
      * 获取版本信息
      */
     private fun getVersionInfo(): String {
-        return "版本：1.16"
+        return "版本：1.17"
     }
 
     /**
@@ -402,6 +402,10 @@ class MainActivity : AppCompatActivity() {
      */
     private fun getChangesText(): String {
         return """
+v1.17 RSSI 图表优化
+- 图表时间范围从 5 分钟扩展到 10 分钟
+- 添加每分钟一条的竖向虚线网格，方便查看时间
+
 v1.16 历史记录增强
 - 历史记录支持滑动操作：左滑删除，右滑保存到本地 BSS MAC 数据库
 - 点击历史记录可快速保存到本地

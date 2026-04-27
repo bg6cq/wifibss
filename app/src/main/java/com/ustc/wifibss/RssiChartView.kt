@@ -14,7 +14,7 @@ import java.util.Locale
 
 /**
  * RSSI 信号强度图表视图
- * 显示最近 5 分钟的信号强度变化曲线
+ * 显示最近 10 分钟的信号强度变化曲线
  */
 class RssiChartView @JvmOverloads constructor(
     context: Context,
@@ -28,9 +28,9 @@ class RssiChartView @JvmOverloads constructor(
         val bssidChanged: Boolean = false
     )
 
-    // 数据队列：存储最近 5 分钟的数据点
+    // 数据队列：存储最近 10 分钟的数据点
     private val dataPoints = ConcurrentLinkedQueue<RssiDataPoint>()
-    private val maxDurationMs = 5 * 60 * 1000L // 5 分钟
+    private val maxDurationMs = 10 * 60 * 1000L // 10 分钟
 
     // 画笔
     private val linePaint = Paint().apply {
@@ -56,6 +56,13 @@ class RssiChartView @JvmOverloads constructor(
         color = Color.parseColor("#E0E0E0")
         strokeWidth = 1f
         style = Paint.Style.STROKE
+    }
+
+    private val timeLinePaint = Paint().apply {
+        color = Color.parseColor("#CCCCCC")
+        strokeWidth = 1f
+        style = Paint.Style.STROKE
+        pathEffect = android.graphics.DashPathEffect(floatArrayOf(10f, 10f), 0f)
     }
 
     private val textPaint = Paint().apply {
@@ -112,6 +119,9 @@ class RssiChartView @JvmOverloads constructor(
             canvas.drawText("$rssi", 2f, y - 2f, textPaint)
         }
 
+        // 绘制时间竖线（每分钟一条）
+        drawTimeLines(canvas, width, height, startTime, now)
+
         // 计算路径
         val path = Path()
         val points = mutableListOf<Pair<Float, Float>>()
@@ -155,5 +165,19 @@ class RssiChartView @JvmOverloads constructor(
         // RSSI 范围：-30 (最强) 到 -90 (最弱)
         val normalized = (rssi + 90) / 60f // 0 ~ 1
         return height - (normalized * height)
+    }
+
+    /**
+     * 绘制时间竖线（每分钟一条虚线）
+     */
+    private fun drawTimeLines(canvas: Canvas, width: Float, height: Float, startTime: Long, now: Long) {
+        // 找到第一个整分钟时间点
+        val startMinute = (startTime / 60000L) * 60000L + 60000L // 向上取整到下一个整分钟
+        var time = startMinute
+        while (time < now) {
+            val x = getXForTimestamp(time, startTime, now, width)
+            canvas.drawLine(x, 0f, x, height, timeLinePaint)
+            time += 60000L // 下一分钟
+        }
     }
 }
