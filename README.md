@@ -2,12 +2,19 @@
 
 USTC 校园网 WiFi 信息查询工具。获取当前连接的 WiFi 详细信息，并查询 AP 设备信息。
 
+可以添加BSSMAC、AP名字、楼信息，适合在小规模WiFi网络使用，观察信号和漫游情况。
+
 ## 功能
 
-- **WiFi 信息显示**：SSID、BSSID、IP 地址、信号强度（RSSI 及等级）、频率/信道/频段、链路速度
-- **BSS 信息查询**：通过 USTC API 查询 AP 的 AC_IP、AP_IP、AP_NAME、AP_SN、AP_Building 等信息
-- **自动查询**：开启后，WiFi 切换时自动查询新的 BSS 信息（失败自动重试 3 次）
-- **自动刷新**：可设置 1s/5s/10s 间隔自动刷新 WiFi 信息（信号强度等动态数据）
+- **WiFi 信息显示**：SSID、BSSID、IP 地址、信号强度（RSSI 及等级）、频率/信道/频段、链路速度及 WiFi 标准（Wi-Fi 4/5/6/7）
+- **RSSI 信号强度图表**：显示最近 10 分钟的信号强度变化曲线，BSSID 切换时有标记
+- **BSS 信息查询**：通过 API 查询 AP 的 AC_IP、AP_IP、AP_NAME、AP_SN、AP_Building 等信息
+- **本地 BSSMAC 数据库**：手动编辑和批量添加 BSSMAC 信息（设置 → BSSMAC 信息），查询时优先使用本地数据
+- **本地数据排序**：支持按 MAC、所在楼、AP 名字排序
+- **本地数据导出**：将 BSSMAC 数据库导出为文本文件
+- **查询历史记录**：自动记录 BSSID 变化历史，支持滑动删除和保存到本地数据库
+- **自动查询**：BSSID 变化时自动查询（优先本地数据，失败自动重试 3 次）
+- **自动刷新**：可设置 1s/5s/10s 间隔自动刷新 WiFi 信息
 - **版本更新检查**：启动时自动检查新版本，提示下载更新
 - **可配置查询 API**：支持自定义查询 URL 和 Authorization Bearer Key
 
@@ -24,14 +31,16 @@ USTC 校园网 WiFi 信息查询工具。获取当前连接的 WiFi 详细信息
 
 - `ACCESS_WIFI_STATE` — 获取 WiFi 状态
 - `ACCESS_FINE_LOCATION` / `ACCESS_COARSE_LOCATION` — Android 10+ 获取 BSSID 需要位置权限
-- `NEARBY_WIFI_DEVICES` — Android 13+ 需要
+- `NEARBY_WIFI_DEVICES` — Android 13+ 需要此权限以扫描附近 WiFi 设备
 - `INTERNET` — 访问 API
+
+权限不足时应用会弹出详细说明对话框，解释为什么需要各项权限。
 
 ## 使用方法
 
 1. 在 Android Studio 中打开项目
 2. 编译并运行到设备或模拟器
-3. 授予位置权限
+3. 授予位置权限（Android 10-12）或近场设备权限（Android 13+）
 4. 连接 WiFi 后点击「查询 BSS 信息」或开启自动查询
 
 ## 测试
@@ -66,11 +75,26 @@ API 端点：`https://linux.ustc.edu.cn/api/bssinfo.php?bssid={bssid}`
 ## 构建
 
 ```bash
+./gradlew assembleRelease    # 构建 Release APK（签名，默认）
 ./gradlew assembleDebug      # 构建 Debug APK
-./gradlew assembleRelease    # 构建 Release APK（需 keystore.properties）
 ```
 
+构建产物：`app/build/outputs/apk/release/app-release.apk`
+
 ## 更新历史
+
+### v1.24
+- 修复本地 BSSMAC 数据未更新历史记录的问题
+
+### v1.23
+- BSSMAC 支持按 MAC/所在楼/AP 名字排序
+- BSSMAC 批量添加时所在楼可选
+- BSSMAC 信息支持导出到文件
+- WiFi 标准显示支持 Wi-Fi 7 (802.11be)
+- 权限不足时显示详细说明，解释为什么需要各项权限
+
+### v1.22
+- 移除未使用的 import 和布局元素
 
 ### v1.21
 - 修复 BSSMAC 信息编辑后列表不刷新的问题
@@ -97,7 +121,7 @@ API 端点：`https://linux.ustc.edu.cn/api/bssinfo.php?bssid={bssid}`
 
 ### v1.15
 - 新增本地 BSSMAC 信息编辑功能（设置 → BSSMAC 信息）
-- 支持批量添加：每行格式"BSSMAC AP 名字 所在楼"
+- 支持批量添加：每行格式"BSSMAC AP名字 [所在楼]"
 - 支持多种 BSSMAC 格式自动识别（xx:xx:xx:xx:xx:xx、xxxx-xxxx-xxxx 等）
 - 查询时优先使用本地数据
 
