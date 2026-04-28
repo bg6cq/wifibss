@@ -2,7 +2,9 @@
 
 USTC 校园网 WiFi 信息查询工具。获取当前连接的 WiFi 详细信息，并查询 AP 设备信息。
 
-可以添加BSSMAC、AP名字、楼信息，适合在小规模WiFi网络使用，观察信号和漫游情况。
+可以添加 BSSMAC、AP 名字、楼信息，适合在小规模 WiFi 网络使用，观察信号和漫游情况。
+
+![屏幕截图](img/screen-shot.jpg)
 
 ## 功能
 
@@ -81,14 +83,20 @@ API 端点：`https://linux.ustc.edu.cn/api/bssinfo.php?bssid={bssid}`
 
 构建产物：`app/build/outputs/apk/release/app-release.apk`
 
-## 查询API
+## 查询 API
 
-api/h3c 目录下有采集H3C AC、整理数据并对外提供查询API的程序。
-api/huawei 目录下有采集华为 AC、整理数据的程序。对外提供查询API的程序请用h3c目录中的。
+api/h3c 目录下有采集 H3C AC、整理数据并对外提供查询 API 的程序。
+api/huawei 目录下有采集华为 AC、整理数据的程序。对外提供查询 API 的程序请用 h3c 目录中的。
 
 
 
 ## 更新历史
+
+### v1.28
+- 显示文字优化：关于页面描述文本优化，表达更清晰流畅
+- 设置项文字调整：BSSID 变化时自动查询
+- 作者信息格式简化
+- 更新日志精简
 
 ### v1.27
 - 构建系统升级：AGP 8.5.2 + Kotlin 2.0.0 + Gradle 8.7 + Java 17
@@ -139,7 +147,7 @@ api/huawei 目录下有采集华为 AC、整理数据的程序。对外提供查
 
 ### v1.15
 - 新增本地 BSSMAC 信息编辑功能（设置 → BSSMAC 信息）
-- 支持批量添加：每行格式"BSSMAC AP名字 [所在楼]"
+- 支持批量添加：每行格式"BSSMAC AP 名字 [所在楼]"
 - 支持多种 BSSMAC 格式自动识别（xx:xx:xx:xx:xx:xx、xxxx-xxxx-xxxx 等）
 - 查询时优先使用本地数据
 
