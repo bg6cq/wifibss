@@ -69,7 +69,17 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:textSize="13sp"
-            android:gravity="center" />
+            android:gravity="center"
+            android:layout_marginBottom="16dp" />
+
+        <!-- GitHub 仓库 -->
+        <TextView
+            android:id="@+id/tvGithub"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:textSize="13sp"
+            android:gravity="center"
+            android:autoLink="web" />
 
     </LinearLayout>
 

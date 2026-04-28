@@ -413,11 +413,13 @@ class MainActivity : AppCompatActivity() {
         val tvDescription = dialogView.findViewById<TextView>(R.id.tvDescription)
         val tvChanges = dialogView.findViewById<TextView>(R.id.tvChanges)
         val tvAuthor = dialogView.findViewById<TextView>(R.id.tvAuthor)
+        val tvGithub = dialogView.findViewById<TextView>(R.id.tvGithub)
 
         tvVersion.text = getVersionInfo()
         tvDescription.text = getDescriptionText()
         tvChanges.text = getChangesText()
         tvAuthor.text = getAuthorText()
+        tvGithub.text = "GitHub: https://github.com/bg6cq/wifibss"
 
         AlertDialog.Builder(this)
             .setView(dialogView)
@@ -429,7 +431,7 @@ class MainActivity : AppCompatActivity() {
      * 获取版本信息
      */
     private fun getVersionInfo(): String {
-        return "版本：1.24"
+        return "版本：1.25"
     }
 
     /**
@@ -444,6 +446,11 @@ class MainActivity : AppCompatActivity() {
      */
     private fun getChangesText(): String {
         return """
+v1.25 关于页面增强
+- 关于页面增加本地 BSSMAC 数据库功能说明
+- 添加 GitHub 仓库链接 (https://github.com/bg6cq/wifibss)
+- 菜单顺序调整，关于移至最上方
+
 v1.24 历史记录修复
 - 修复本地 BSSMAC 数据未更新历史记录的问题
 

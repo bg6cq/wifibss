@@ -83,6 +83,11 @@ API 端点：`https://linux.ustc.edu.cn/api/bssinfo.php?bssid={bssid}`
 
 ## 更新历史
 
+### v1.25
+- 关于页面增加本地 BSSMAC 数据库功能说明
+- 添加 GitHub 仓库链接
+- 菜单顺序调整，关于移至最上方
+
 ### v1.24
 - 修复本地 BSSMAC 数据未更新历史记录的问题
 
