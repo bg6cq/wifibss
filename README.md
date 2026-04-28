@@ -7,7 +7,7 @@ USTC 校园网 WiFi 信息查询工具。获取当前连接的 WiFi 详细信息
 ## 功能
 
 - **WiFi 信息显示**：SSID、BSSID、IP 地址、信号强度（RSSI 及等级）、频率/信道/频段、链路速度及 WiFi 标准（Wi-Fi 4/5/6/7）
-- **RSSI 信号强度图表**：显示最近 10 分钟的信号强度变化曲线，BSSID 切换时有标记
+- **RSSI 信号强度图表**：显示最近 10 分钟的信号强度变化曲线，BSSID 切换时有红色标记
 - **BSS 信息查询**：通过 API 查询 AP 的 AC_IP、AP_IP、AP_NAME、AP_SN、AP_Building 等信息
 - **本地 BSSMAC 数据库**：手动编辑和批量添加 BSSMAC 信息（设置 → BSSMAC 信息），查询时优先使用本地数据
 - **本地数据排序**：支持按 MAC、所在楼、AP 名字排序
@@ -82,6 +82,10 @@ API 端点：`https://linux.ustc.edu.cn/api/bssinfo.php?bssid={bssid}`
 构建产物：`app/build/outputs/apk/release/app-release.apk`
 
 ## 更新历史
+
+### v1.26
+- BSSMAC 编辑优化：修改 MAC 地址时保留原记录并添加新记录
+- 移除未使用的代码
 
 ### v1.25
 - 关于页面增加本地 BSSMAC 数据库功能说明

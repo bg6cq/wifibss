@@ -46,11 +46,11 @@
             android:lineSpacingExtra="4dp"
             android:layout_marginBottom="16dp" />
 
-        <!-- 重大更新 -->
+        <!-- 更新记录 -->
         <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="重大更新"
+            android:text="更新记录"
             android:textSize="15sp"
             android:textStyle="bold"
             android:layout_marginBottom="8dp" />

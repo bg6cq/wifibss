@@ -37,7 +37,7 @@
     <string name="settings_title">设置</string>
     <string name="query_url_label">查询 URL:</string>
     <string name="query_key_label">查询 KEY:</string>
-    <string name="query_key_hint">可选，如设置将添加到 Authorization 头</string>
+    <string name="query_key_hint">可选，如设置将添加到HTTP Authorization: Bearer 头</string>
     <string name="auto_refresh_label">自动刷新 WiFi 信息</string>
     <string name="auto_refresh_never">不刷新</string>
     <string name="auto_refresh_1s">1 秒</string>
@@ -46,9 +46,11 @@
     <string name="auto_query_label">自动查询（BSSID 变化时）</string>
     <string name="save">保存</string>
     <string name="cancel">取消</string>
-    <string name="about_description">为方便了解园区 WiFi 的使用状态，安卓手机可以运行本程序获取连接的 WiFi BSS 信息，并将 BSS 的 MAC 地址（去掉中间的 -: 字符）通过参数 bssid=XXXXXXXXXXX 发送给配置的查询 URL。如果设置了查询 KEY，放在 HTTP 请求头 Authorization: Bearer 后送给查询 URL。查询 URL 可以选择性返回 {\"status\":\"ok\",\"data\":[{\"BSS_MAC\":\"19c97ad55e00\",\"AP_NAME\":\"wlzx-13895-207\",\"AP_SN\":\"219801A6M28257E00XXX\",\"AP_MAC\":\"19c97ad55e00\",\"AC_IP\":\"x.x.x.x\",\"BAND\":\"2\",\"SSID\":\"ssid\",\"AP_Building\":\"东区 - 网络信息中心\",\"AP_IP\":\"x.x.x.x\"}]}。APP 会显示这些信息方便了解 WiFi 工作状态。
-
-本地 BSSMAC 数据库：支持在本地编辑和保存 BSSMAC 信息（设置 → BSSMAC 信息），查询时优先使用本地数据，无数据时调用远程 API。支持批量添加、编辑、删除和导出功能。</string>
+    <string name="about_description">为方便了解园区 WiFi 的使用状态，安卓手机可以获取连接的 WiFi BSS 信息，并将 BSS 的 MAC 地址（去掉中间的 -: 字符）通过参数 bssid=XXXXXXXXXXX 发送给配置的查询 URL。如果设置了查询 KEY，则放在 HTTP 请求头 Authorization: Bearer 后送给查询 URL。查询 URL 可以选择性返回 {\"status\":\"ok\",\"data\":[{\"BSS_MAC\":\"19c97ad55e00\",\"AP_NAME\":\"wlzx-13895-207\",\"AP_SN\":\"219801A6M28257E00XXX\",\"AP_MAC\":\"19c97ad55e00\",\"AC_IP\":\"x.x.x.x\",\"BAND\":\"2\",\"SSID\":\"ssid\",\"AP_Building\":\"东区 - 网络信息中心\",\"AP_IP\":\"x.x.x.x\"}]}。APP 会显示这些信息方便了解 WiFi 工作状态。\n\n
+本地 BSSMAC 数据库：支持在本地编辑和保存 BSSMAC 信息（设置 → BSSMAC 信息），查询时优先使用本地数据，无数据时调用远程 API。支持批量添加、编辑、删除和导出功能。\n\n
+在历史记录中可以单击一条记录，编辑后存到本地。\n\n
+信号图中，红点表明发生了漫游切换AP。
+</string>
     <string name="wifi_info_title">WiFi 连接信息</string>
     <string name="wifi_ssid_label">SSID:</string>
     <string name="wifi_bssid_label">BSSID:</string>
@@ -78,7 +80,7 @@
     <string name="bssmac_cancel">取消</string>
     <string name="bssmac_edit_title">编辑记录</string>
     <string name="bssmac_field_bssmac">BSS MAC</string>
-    <string name="bssmac_field_ap_name">AP 名字</string>
+    <string name="bssmac_field_ap_name">AP名字</string>
     <string name="bssmac_field_building">所在楼</string>
     <string name="history_swipe_left">左滑删除</string>
     <string name="history_swipe_right">右滑保存到本地</string>
@@ -86,5 +88,5 @@
     <string name="bssmac_sort">排序方式：</string>
     <string name="bssmac_sort_mac">MAC</string>
     <string name="bssmac_sort_building">所在楼</string>
-    <string name="bssmac_sort_apname">AP 名字</string>
+    <string name="bssmac_sort_apname">AP名字</string>
 </resources>
