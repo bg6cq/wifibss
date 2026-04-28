@@ -431,7 +431,7 @@ class MainActivity : AppCompatActivity() {
      * 获取版本信息
      */
     private fun getVersionInfo(): String {
-        return "版本：1.25"
+        return "版本：1.26"
     }
 
     /**
@@ -446,6 +446,10 @@ class MainActivity : AppCompatActivity() {
      */
     private fun getChangesText(): String {
         return """
+v1.26 BSSMAC 编辑优化
+- 修改 MAC 地址时保留原记录并添加新记录
+- 移除未使用的代码
+
 v1.25 关于页面增强
 - 关于页面增加本地 BSSMAC 数据库功能说明
 - 添加 GitHub 仓库链接 (https://github.com/bg6cq/wifibss)
@@ -830,8 +834,13 @@ v1.0 初始版本
                 val newBuilding = etBuilding.text.toString()
 
                 if (newMac.isNotBlank() && newApName.isNotBlank()) {
-                    if (updateBssLocal(entry.bssMac, newMac, newApName, newBuilding)) {
-                        Toast.makeText(this, R.string.bssmac_save, Toast.LENGTH_SHORT).show()
+                    if (addBssLocal(newMac, newApName, newBuilding)) {
+                        val msg = if (normalizeBssMac(newMac) != normalizeBssMac(entry.bssMac)) {
+                            "已添加新记录"
+                        } else {
+                            getString(R.string.bssmac_save)
+                        }
+                        Toast.makeText(this, msg, Toast.LENGTH_SHORT).show()
                         onSaved()
                     } else {
                         Toast.makeText(this, "BSS MAC 格式错误", Toast.LENGTH_SHORT).show()
@@ -1039,25 +1048,6 @@ v1.0 初始版本
             list.add(BssLocalEntry(normalizedMac, apName, building))
         }
 
-        saveBssLocalList(list)
-        return true
-    }
-
-    /**
-     * 更新本地 BSS MAC 记录
-     */
-    private fun updateBssLocal(oldMac: String, newMac: String, apName: String, building: String): Boolean {
-        val normalizedOld = normalizeBssMac(oldMac) ?: return false
-        val normalizedNew = normalizeBssMac(newMac) ?: return false
-
-        val list = getBssLocalList().toMutableList()
-
-        // 删除旧记录
-        val removed = list.removeIf { it.bssMac == normalizedOld }
-        if (!removed) return false
-
-        // 添加新记录
-        list.add(BssLocalEntry(normalizedNew, apName, building))
         saveBssLocalList(list)
         return true
     }
