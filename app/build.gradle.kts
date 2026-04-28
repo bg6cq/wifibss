@@ -30,8 +30,8 @@ android {
         applicationId = "com.ustc.wifibss"
         minSdk = 29
         targetSdk = 34
-        versionCode = 27
-        versionName = "1.27"
+        versionCode = 28
+        versionName = "1.28"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
