@@ -52,7 +52,6 @@ class MainActivity : AppCompatActivity() {
 
     companion object {
         private const val LOCATION_PERMISSION_CODE = 1001
-        private const val WIFI_PERMISSION_CODE = 1002
         private const val PREFS_NAME = "app_settings"
         private const val KEY_QUERY_URL = "query_url"
         private const val KEY_QUERY_KEY = "query_key"
@@ -431,7 +430,7 @@ class MainActivity : AppCompatActivity() {
      * 获取版本信息
      */
     private fun getVersionInfo(): String {
-        return "版本：1.26"
+        return "版本：1.27"
     }
 
     /**
@@ -446,6 +445,12 @@ class MainActivity : AppCompatActivity() {
      */
     private fun getChangesText(): String {
         return """
+v1.27 构建系统升级
+- AGP 7.4.2 → 8.5.2
+- Kotlin 1.8.22 → 2.0.0
+- Gradle 8.0 → 8.7
+- Java 11 → 17
+
 v1.26 BSSMAC 编辑优化
 - 修改 MAC 地址时保留原记录并添加新记录
 - 移除未使用的代码
@@ -490,8 +495,7 @@ v1.17 RSSI 图表优化
 - 添加每分钟一条的竖向虚线网格，方便查看时间
 
 v1.16 历史记录增强
-- 历史记录支持滑动操作：左滑删除，右滑保存到本地 BSS MAC 数据库
-- 点击历史记录可快速保存到本地
+- 点击历史记录可保存到本地 BSSMAC 数据库
 
 v1.15 本地 BSS MAC 数据库
 - 新增本地 BSSMAC 信息编辑功能（设置 → BSSMAC 信息）
@@ -1063,13 +1067,6 @@ v1.0 初始版本
     }
 
     /**
-     * 清除所有本地 BSS MAC 记录
-     */
-    private fun clearBssLocal() {
-        prefs.edit().remove(KEY_BSS_LOCAL).apply()
-    }
-
-    /**
      * 导出 BSS MAC 列表到文件
      */
     private fun exportBssLocalToFile(uri: android.net.Uri) {
@@ -1328,20 +1325,6 @@ v1.0 初始版本
 
         // 移除所有非十六进制字符，只保留 0-9, a-f, A-F
         return bssid.replace(Regex("[^0-9a-fA-F]"), "").lowercase()
-    }
-
-    /**
-     * 更新界面显示的 BSSID
-     */
-    private fun updateBssid() {
-        if (!checkPermissions()) {
-            requestPermissions()
-            binding.tvBssidValue.text = "等待权限..."
-            return
-        }
-
-        val formattedBssid = getFormattedBssid()
-        binding.tvBssidValue.text = formattedBssid ?: getString(R.string.no_wifi_connection)
     }
 
     /**
@@ -1614,7 +1597,7 @@ v1.0 初始版本
         when (requestCode) {
             LOCATION_PERMISSION_CODE -> {
                 if (grantResults.all { it == PackageManager.PERMISSION_GRANTED }) {
-                    updateBssid()
+                    updateWifiInfo()
                 } else {
                     Toast.makeText(this, getString(R.string.permission_required), Toast.LENGTH_LONG).show()
                 }

@@ -16,7 +16,6 @@ if (keystorePropertiesFile.exists()) {
 android {
     namespace = "com.ustc.wifibss"
     compileSdk = 34
-    buildToolsVersion = "33.0.2"
 
     signingConfigs {
         create("release") {
@@ -31,8 +30,8 @@ android {
         applicationId = "com.ustc.wifibss"
         minSdk = 29
         targetSdk = 34
-        versionCode = 26
-        versionName = "1.26"
+        versionCode = 27
+        versionName = "1.27"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }

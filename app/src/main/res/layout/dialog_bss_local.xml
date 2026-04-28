@@ -89,7 +89,7 @@
         android:inputType="textMultiLine"
         android:maxLines="5"
         android:scrollbars="vertical"
-        android:background="@android:drawable/edit_text"
+        android:background="@drawable/edit_text_background"
         android:padding="8dp"
         android:textSize="12sp"
         android:fontFamily="monospace" />
