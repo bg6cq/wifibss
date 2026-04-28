@@ -1,0 +1,14 @@
+<AC6805-Master>display ap all
+Total AP information:
+fault : fault           [340]
+idle  : idle            [17]
+nor   : normal          [1754]
+ExtraInfo : Extra information
+P     : insufficient power supply
+-----------------------------------------------------------------------------------------------------------------------------------------------
+ID    MAC            Name                        Group        IP            Type               State  STA  Uptime             ExtraInfo
+-----------------------------------------------------------------------------------------------------------------------------------------------
+0     7cd9-a071-8d50 TSG-1F04AP002               TSG          10.10.81.131  AirEngine5760-51   nor    0    27D:13H:46M:34S    P
+1     7cd9-a071-8e10 TSG-8F01AP013               TSG          10.10.80.95   AirEngine5760-51   nor    7    27D:13H:40M:40S    P
+2     2811-ec09-a0a0 TSG-12F01AP009              TSG          10.10.80.148  AirEngine5760-51   nor    0    27D:13H:40M:34S    P
+3     2811-ec09-a160 TSG-12F01AP008              TSG          10.10.80.1    AirEngine5760-51   nor    1    27D:13H:40M:29S    P

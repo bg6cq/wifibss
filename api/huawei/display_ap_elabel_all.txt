@@ -1,0 +1,10 @@
+<AC6805-Master>display ap elabel all
+Info: This operation may take a few seconds. Please wait for a moment.done.
+Total AP elabel information:
+---------------------------------------------------------------------------------------------------------------
+ID   MAC            Name                 Type               SN                   Item
+---------------------------------------------------------------------------------------------------------------
+0    7cd9-a071-8d50 TSG-1F04AP002        AirEngine5760-51   2102353GES10LB028048 02353GES
+1    7cd9-a071-8e10 TSG-8F01AP013        AirEngine5760-51   2102353GES10LB028051 02353GES
+2    2811-ec09-a0a0 TSG-12F01AP009       AirEngine5760-51   2102353GES10LA014451 02353GES
+3    2811-ec09-a160 TSG-12F01AP008       AirEngine5760-51   2102353GES10LA014454 02353GES
