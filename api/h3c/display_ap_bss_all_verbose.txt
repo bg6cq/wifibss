@@ -1,0 +1,45 @@
+<WX5540X>dis wlan bss all verbose
+Current BSS number: 5184
+Max BSS number: 61440
+Bound BSS number: 5272
+ AP name                      : AAA-1F-AP01
+ BSSID                        : 7cde-78d6-9fc0
+ Radio ID                     : 1
+ Service template name        : 1
+ SSID                         : USTC-WW
+ VLAN ID                      : 201
+ Service VLAN ID              : N/A
+ AKM mode                     : PSK
+ User authentication mode     : Bypass
+ FT status                    : Disabled
+ BTM status                   : Enabled
+ Tx BSSID                     : Not available
+ MLO status                   : Inactive
+
+ AP name                      : AAA-1F-AP01
+ BSSID                        : 7cde-78d6-9fc1
+ Radio ID                     : 1
+ Service template name        : 3
+ SSID                         : eduroam
+ VLAN ID                      : 601
+ Service VLAN ID              : N/A
+ AKM mode                     : 802.1X
+ User authentication mode     : 802.1X
+ FT status                    : Disabled
+ BTM status                   : Enabled
+ Tx BSSID                     : Not available
+ MLO status                   : Inactive
+
+ AP name                      : AAA-1F-AP01
+ BSSID                        : 7cde-78d6-9fc8
+ Radio ID                     : 2
+ Service template name        : 1
+ SSID                         : USTC-WW
+ VLAN ID                      : 201
+ Service VLAN ID              : N/A
+ AKM mode                     : PSK
+ User authentication mode     : Bypass
+ FT status                    : Disabled
+ BTM status                   : Enabled
+ Tx BSSID                     : Not available
+ MLO status                   : Inactive

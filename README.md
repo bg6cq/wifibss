@@ -81,6 +81,12 @@ API 端点：`https://linux.ustc.edu.cn/api/bssinfo.php?bssid={bssid}`
 
 构建产物：`app/build/outputs/apk/release/app-release.apk`
 
+## 查询API
+
+api/h3c 目录下有采集H3C AC、整理数据并对外提供查询API的程序。
+
+
+
 ## 更新历史
 
 ### v1.26

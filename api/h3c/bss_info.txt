@@ -1,0 +1,3 @@
+7cde-78d6-9fc0 AAA-1F-AP01 USTC-WW 1
+7cde-78d6-9fc1 AAA-1F-AP01 eduroam 1
+7cde-78d6-9fc8 AAA-1F-AP01 USTC-WW 2

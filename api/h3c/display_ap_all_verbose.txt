@@ -1,0 +1,404 @@
+<WX5540X>dis wlan ap all verbose
+Total number of APs: 849
+Total number of connected APs: 831
+Total number of connected manual APs: 831
+Total number of connected auto APs: 0
+Total number of connected common APs: 831
+Total number of connected WTUs: 0
+Total number of inside APs: 0
+Maximum supported APs: 3584
+Remaining APs: 2753
+Total AP licenses: 1024
+Local AP licenses: 1024
+Server AP licenses: 0
+Remaining local AP licenses: 193
+Sync AP licenses: 0
+
+AP name                       : AAA-1F-AP01
+AP ID                         : 199
+AP group name                 : hsl
+State                         : Run
+Backup type                   : Master
+Ready-for-Switchover          : Ready
+Online time                   : 12 days 12 hours 19 minutes 9 seconds
+System uptime                 : 12 days 12 hours 28 minutes 6 seconds
+Model                         : WA6520-HI
+Region code                   : CN
+Region code lock              : Disabled
+Serial ID                     : 219801A3PFP227000303
+MAC address                   : 7cde-78d6-9fc0
+IP address                    : 100.00.11.161
+UDP control port number       : 5134
+UDP data port number          : 5134
+H/W version                   : Ver.A
+S/W version                   : R2619P08
+Boot version                  : 7.30
+USB state                     : N/A
+Power level                   : N/A
+Power info                    : N/A
+Map file                      : flash:/6520-HI.txt
+Forwarding mode               : NSS
+BLE mode                      : IoT
+Description                   : Not configured
+Priority                      : 4
+Echo interval                 : 10 seconds
+Echo count                    : 3 counts
+Keepalive interval            : 10 seconds
+Discovery-response wait-time  : 2 seconds
+Statistics report interval    : 50 seconds
+Fragment size (data)          : 1500
+Fragment size (control)       : 1450
+MAC type                      : Local MAC & Split MAC
+Tunnel mode                   : Local Bridging & 802.3 Frame & Native Frame
+CAPWAP data-tunnel status     : Up
+Discovery type                : DHCP
+Retransmission count          : 3
+Retransmission interval       : 5 seconds
+Firmware upgrade              : Enabled
+Sent control packets          : 542257
+Received control packets      : 542257
+Echo requests                 : 108110
+Lost echo responses           : 0
+Average echo delay            : 1
+Last reboot reason            : Power on
+Latest IP address             : 100.00.11.161
+Current AC IP                 : 100.00.100.250
+Tunnel down reason            : N/A
+Connection count              : 1
+Backup IPv4                   : Not configured
+Backup IPv6                   : Not configured
+Ctrl-tunnel encryption        : Disabled
+Ctrl-tunnel encryption state  : Not encrypted
+Data-tunnel encryption        : Disabled
+Data-tunnel encryption state  : Not encrypted
+LED mode                      : Normal
+Remote configuration          : Disabled
+EnergySaving Level            : 0
+AP type                       : Normal AP
+Radio 1:
+    BSSID                     : 7cde-78d6-9fc0
+    State                     : Up
+    Type                      : 802.11ax(5GHz)
+    Antenna type              : internal
+    Client dot11ac-only       : Disabled
+    Client dot11n-only        : Disabled
+    Channel bandwidth         : 20/40MHz
+    Operating bandwidth       : 20/40MHz
+    Secondary channel mode    : SCA
+    Short GI for 20MHz        : Supported
+    Short GI for 40MHz        : Supported
+    Short GI for 80MHz        : Supported
+    Short GI for 160MHz       : Not supported
+    MIMO                      : 2*2
+    Green-Energy-Management   : Disabled
+    A-MSDU                    : Enabled
+    A-MPDU                    : Enabled
+    LDPC                      : Supported
+    STBC                      : Supported
+    Operational VHT-MCS Set   :
+        Mandatory             : Not configured
+        Supported             : NSS1 0,1,2,3,4,5,6,7,8,9
+                                NSS2 0,1,2,3,4,5,6,7,8,9
+        Multicast             : Not configured
+    Operational HT MCS Set    :
+        Mandatory             : Not configured
+        Supported             : 0, 1, 2, 3, 4, 5, 6, 7, 8, 9,
+                                10, 11, 12, 13, 14, 15
+        Multicast             : Not configured
+    Channel                   : 60(auto)
+    Channel usage(%)          : 0
+    Max power                 : 20 dBm
+    Operational rate          :
+        Mandatory             : 6, 12, 24 Mbps
+        Multicast             : Auto
+        Supported             : 9, 18, 36, 48, 54 Mbps
+        Disabled              : Not configured
+    Distance                  : 1 km
+    ANI                       : Enabled
+    Fragmentation threshold   : 2346 bytes
+    Beacon interval           : 100 TU
+    Protection threshold      : 2346 bytes
+    Long retry threshold      : 4
+    Short retry threshold     : 7
+    Frame aging time in cache : 2000 ms
+    Noise floor               : -93 dBm
+    Protection mode           : cts-to-self
+    MU-TxBF                   : Disabled
+    SU-TxBF                   : Disabled
+    Continuous mode           : N/A
+    Client dot11ax-only       : Disabled
+    Operational HE-MCS Set    :
+        Mandatory             : Not configured
+        Supported             : NSS1 0,1,2,3,4,5,6,7,8,9,10,11
+                                NSS2 0,1,2,3,4,5,6,7,8,9,10,11
+        Multicast             : Not configured
+    OFDMA random access RUs   : Not Supported
+    DL-OFDMA                  : Disabled
+    UL-OFDMA                  : Disabled
+    UL-MU-MIMO                : Disabled
+    BSS-COLOR                 : Disabled
+    TWT negotiation           : Disabled
+    ATF                       : Disabled
+    radar-detect switch       : Disabled
+    HT protection mode        : No protection
+Radio 2:
+    BSSID                     : 7cde-78d6-9fc8
+    State                     : Up
+    Type                      : 802.11ax(2.4GHz)
+    Antenna type              : internal
+    Client dot11ac-only       : Disabled
+    Client dot11n-only        : Disabled
+    Channel bandwidth         : 20MHz
+    Operating bandwidth       : 20MHz
+    Secondary channel mode    : SCN
+    Short GI for 20MHz        : Supported
+    Short GI for 40MHz        : Supported
+    Short GI for 80MHz        : Not supported
+    Short GI for 160MHz       : Not supported
+    MIMO                      : 2*2
+    Green-Energy-Management   : Disabled
+    A-MSDU                    : Enabled
+    A-MPDU                    : Enabled
+    LDPC                      : Supported
+    STBC                      : Supported
+    Operational VHT-MCS Set   :
+        Mandatory             : Not configured
+        Supported             : NSS1 0,1,2,3,4,5,6,7,8
+                                NSS2 0,1,2,3,4,5,6,7,8
+        Multicast             : Not configured
+    Operational HT MCS Set    :
+        Mandatory             : Not configured
+        Supported             : 0, 1, 2, 3, 4, 5, 6, 7, 8, 9,
+                                10, 11, 12, 13, 14, 15
+        Multicast             : Not configured
+    Channel                   : 6(auto)
+    Channel usage(%)          : 8
+    Max power                 : 20 dBm
+    Operational rate          :
+        Mandatory             : 11 Mbps
+        Multicast             : Auto
+        Supported             : 12, 18, 24, 36, 48, 54 Mbps
+        Disabled              : 1, 2, 5.5, 6, 9 Mbps
+    Distance                  : 1 km
+    ANI                       : Enabled
+    Fragmentation threshold   : 2346 bytes
+    Beacon interval           : 100 TU
+    Protection threshold      : 2346 bytes
+    Long retry threshold      : 4
+    Short retry threshold     : 7
+    Frame aging time in cache : 2000 ms
+    Noise floor               : -91 dBm
+    Protection mode           : cts-to-self
+    MU-TxBF                   : Disabled
+    SU-TxBF                   : Disabled
+    Continuous mode           : N/A
+    Client dot11ax-only       : Disabled
+    Operational HE-MCS Set    :
+        Mandatory             : Not configured
+        Supported             : NSS1 0,1,2,3,4,5,6,7,8,9,10,11
+                                NSS2 0,1,2,3,4,5,6,7,8,9,10,11
+        Multicast             : Not configured
+    OFDMA random access RUs   : Not Supported
+    DL-OFDMA                  : Disabled
+    UL-OFDMA                  : Disabled
+    UL-MU-MIMO                : Disabled
+    BSS-COLOR                 : Disabled
+    TWT negotiation           : Disabled
+    ATF                       : Disabled
+    radar-detect switch       : Enabled
+    HT protection mode        : No protection
+--------------------------------------------------------------------------------
+AP name                       : AAA-1F-AP02
+AP ID                         : 200
+AP group name                 : hsl
+State                         : Run
+Backup type                   : Master
+Ready-for-Switchover          : Ready
+Online time                   : 12 days 12 hours 19 minutes 4 seconds
+System uptime                 : 12 days 12 hours 28 minutes 15 seconds
+Model                         : WA6520-HI
+Region code                   : CN
+Region code lock              : Disabled
+Serial ID                     : 219801A3PFP2270002NL
+MAC address                   : 7cde-78d6-7700
+IP address                    : 100.00.11.135
+UDP control port number       : 38480
+UDP data port number          : 38480
+H/W version                   : Ver.A
+S/W version                   : R2619P08
+Boot version                  : 7.30
+USB state                     : N/A
+Power level                   : N/A
+Power info                    : N/A
+Map file                      : flash:/6520-HI.txt
+Forwarding mode               : NSS
+BLE mode                      : IoT
+Description                   : Not configured
+Priority                      : 4
+Echo interval                 : 10 seconds
+Echo count                    : 3 counts
+Keepalive interval            : 10 seconds
+Discovery-response wait-time  : 2 seconds
+Statistics report interval    : 50 seconds
+Fragment size (data)          : 1500
+Fragment size (control)       : 1450
+MAC type                      : Local MAC & Split MAC
+Tunnel mode                   : Local Bridging & 802.3 Frame & Native Frame
+CAPWAP data-tunnel status     : Up
+Discovery type                : DHCP
+Retransmission count          : 3
+Retransmission interval       : 5 seconds
+Firmware upgrade              : Enabled
+Sent control packets          : 611970
+Received control packets      : 611970
+Echo requests                 : 108112
+Lost echo responses           : 0
+Average echo delay            : 0
+Last reboot reason            : Power on
+Latest IP address             : 100.00.11.135
+Current AC IP                 : 100.00.100.250
+Tunnel down reason            : N/A
+Connection count              : 1
+Backup IPv4                   : Not configured
+Backup IPv6                   : Not configured
+Ctrl-tunnel encryption        : Disabled
+Ctrl-tunnel encryption state  : Not encrypted
+Data-tunnel encryption        : Disabled
+Data-tunnel encryption state  : Not encrypted
+LED mode                      : Normal
+Remote configuration          : Disabled
+EnergySaving Level            : 0
+AP type                       : Normal AP
+Radio 1:
+    BSSID                     : 7cde-78d6-7700
+    State                     : Up
+    Type                      : 802.11ax(5GHz)
+    Antenna type              : internal
+    Client dot11ac-only       : Disabled
+    Client dot11n-only        : Disabled
+    Channel bandwidth         : 20/40MHz
+    Operating bandwidth       : 20/40MHz
+    Secondary channel mode    : SCA
+    Short GI for 20MHz        : Supported
+    Short GI for 40MHz        : Supported
+    Short GI for 80MHz        : Supported
+    Short GI for 160MHz       : Not supported
+    MIMO                      : 2*2
+    Green-Energy-Management   : Disabled
+    A-MSDU                    : Enabled
+    A-MPDU                    : Enabled
+    LDPC                      : Supported
+    STBC                      : Supported
+    Operational VHT-MCS Set   :
+        Mandatory             : Not configured
+        Supported             : NSS1 0,1,2,3,4,5,6,7,8,9
+                                NSS2 0,1,2,3,4,5,6,7,8,9
+        Multicast             : Not configured
+    Operational HT MCS Set    :
+        Mandatory             : Not configured
+        Supported             : 0, 1, 2, 3, 4, 5, 6, 7, 8, 9,
+                                10, 11, 12, 13, 14, 15
+        Multicast             : Not configured
+    Channel                   : 44(auto)
+    Channel usage(%)          : 3
+    Max power                 : 20 dBm
+    Operational rate          :
+        Mandatory             : 6, 12, 24 Mbps
+        Multicast             : Auto
+        Supported             : 9, 18, 36, 48, 54 Mbps
+        Disabled              : Not configured
+    Distance                  : 1 km
+    ANI                       : Enabled
+    Fragmentation threshold   : 2346 bytes
+    Beacon interval           : 100 TU
+    Protection threshold      : 2346 bytes
+    Long retry threshold      : 4
+    Short retry threshold     : 7
+    Frame aging time in cache : 2000 ms
+    Noise floor               : -94 dBm
+    Protection mode           : cts-to-self
+    MU-TxBF                   : Disabled
+    SU-TxBF                   : Disabled
+    Continuous mode           : N/A
+    Client dot11ax-only       : Disabled
+    Operational HE-MCS Set    :
+        Mandatory             : Not configured
+        Supported             : NSS1 0,1,2,3,4,5,6,7,8,9,10,11
+                                NSS2 0,1,2,3,4,5,6,7,8,9,10,11
+        Multicast             : Not configured
+    OFDMA random access RUs   : Not Supported
+    DL-OFDMA                  : Disabled
+    UL-OFDMA                  : Disabled
+    UL-MU-MIMO                : Disabled
+    BSS-COLOR                 : Disabled
+    TWT negotiation           : Disabled
+    ATF                       : Disabled
+    radar-detect switch       : Disabled
+    HT protection mode        : No protection
+Radio 2:
+    BSSID                     : 7cde-78d6-7708
+    State                     : Up
+    Type                      : 802.11ax(2.4GHz)
+    Antenna type              : internal
+    Client dot11ac-only       : Disabled
+    Client dot11n-only        : Disabled
+    Channel bandwidth         : 20MHz
+    Operating bandwidth       : 20MHz
+    Secondary channel mode    : SCN
+    Short GI for 20MHz        : Supported
+    Short GI for 40MHz        : Supported
+    Short GI for 80MHz        : Not supported
+    Short GI for 160MHz       : Not supported
+    MIMO                      : 2*2
+    Green-Energy-Management   : Disabled
+    A-MSDU                    : Enabled
+    A-MPDU                    : Enabled
+    LDPC                      : Supported
+    STBC                      : Supported
+    Operational VHT-MCS Set   :
+        Mandatory             : Not configured
+        Supported             : NSS1 0,1,2,3,4,5,6,7,8
+                                NSS2 0,1,2,3,4,5,6,7,8
+        Multicast             : Not configured
+    Operational HT MCS Set    :
+        Mandatory             : Not configured
+        Supported             : 0, 1, 2, 3, 4, 5, 6, 7, 8, 9,
+                                10, 11, 12, 13, 14, 15
+        Multicast             : Not configured
+    Channel                   : 6(auto)
+    Channel usage(%)          : 11
+    Max power                 : 20 dBm
+    Operational rate          :
+        Mandatory             : 11 Mbps
+        Multicast             : Auto
+        Supported             : 12, 18, 24, 36, 48, 54 Mbps
+        Disabled              : 1, 2, 5.5, 6, 9 Mbps
+    Distance                  : 1 km
+    ANI                       : Enabled
+    Fragmentation threshold   : 2346 bytes
+    Beacon interval           : 100 TU
+    Protection threshold      : 2346 bytes
+    Long retry threshold      : 4
+    Short retry threshold     : 7
+    Frame aging time in cache : 2000 ms
+    Noise floor               : -90 dBm
+    Protection mode           : cts-to-self
+    MU-TxBF                   : Disabled
+    SU-TxBF                   : Disabled
+    Continuous mode           : N/A
+    Client dot11ax-only       : Disabled
+    Operational HE-MCS Set    :
+        Mandatory             : Not configured
+        Supported             : NSS1 0,1,2,3,4,5,6,7,8,9,10,11
+                                NSS2 0,1,2,3,4,5,6,7,8,9,10,11
+        Multicast             : Not configured
+    OFDMA random access RUs   : Not Supported
+    DL-OFDMA                  : Disabled
+    UL-OFDMA                  : Disabled
+    UL-MU-MIMO                : Disabled
+    BSS-COLOR                 : Disabled
+    TWT negotiation           : Disabled
+    ATF                       : Disabled
+    radar-detect switch       : Enabled
+    HT protection mode        : No protection
+--------------------------------------------------------------------------------
