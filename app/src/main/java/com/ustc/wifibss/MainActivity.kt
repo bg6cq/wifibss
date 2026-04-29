@@ -83,6 +83,8 @@ class MainActivity : AppCompatActivity() {
     private var autoRefreshJob: kotlinx.coroutines.Job? = null
     private var autoRefreshIntervalMs: Int = 0 // 0 = 不刷新
     private var bssidChangedForChart: Boolean = false // 标记当前刷新是否 BSSID 变化
+    private var lastScanTimeMs: Long = 0 // 上次 WiFi 扫描时间
+    private val scanIntervalMs = 30000L // WiFi 扫描间隔 30 秒
 
     private val exportFileLauncher = registerForActivityResult(ActivityResultContracts.CreateDocument("text/plain")) { uri ->
         if (uri != null) {
@@ -112,13 +114,32 @@ class MainActivity : AppCompatActivity() {
     override fun onResume() {
         super.onResume()
         updateWifiInfo()
+        scanAndUpdateNearbyAps() // 进入页面时立即扫描一次
         restartAutoRefresh()
+        startApScanTimer() // 启动 30 秒扫描定时器
     }
+
+    private var apScanJob: kotlinx.coroutines.Job? = null
 
     override fun onPause() {
         super.onPause()
         autoRefreshJob?.cancel()
         autoRefreshJob = null
+        apScanJob?.cancel()
+        apScanJob = null
+    }
+
+    /**
+     * 启动 AP 扫描定时器（每 30 秒扫描一次）
+     */
+    private fun startApScanTimer() {
+        apScanJob?.cancel()
+        apScanJob = lifecycleScope.launch {
+            while (true) {
+                delay(scanIntervalMs)
+                scanAndUpdateNearbyAps()
+            }
+        }
     }
 
     /**
@@ -269,8 +290,11 @@ class MainActivity : AppCompatActivity() {
         val rssi = wifiInfo.rssi
         binding.tvRssi.text = "$rssi dBm (${getSignalLevel(rssi)})"
 
-        // 添加 RSSI 数据点到图表
+        // 添加 RSSI 数据点到图表（当前连接的 AP）
         addRssiDataPoint(rssi)
+
+        // 扫描周围同 SSID 的其它 AP
+        scanAndUpdateNearbyAps()
 
         // 频率/信道
         val freq = wifiInfo.frequency
@@ -396,11 +420,68 @@ class MainActivity : AppCompatActivity() {
     }
 
     /**
-     * 添加 RSSI 数据点到图表
+     * 添加 RSSI 数据点到图表（旧 API 兼容）
      */
     private fun addRssiDataPoint(rssi: Int) {
-        binding.rssiChart.addDataPoint(rssi, bssidChangedForChart)
+        val bssid = getFormattedBssid() ?: return
+        binding.rssiChart.addOrUpdateApSeries(
+            apId = bssid,
+            apName = "当前 AP",
+            bssid = bssid,
+            isCurrentAp = true,
+            rssi = rssi
+        )
         binding.tvRssiEmpty.visibility = android.view.View.GONE
+    }
+
+    /**
+     * 扫描周围 WiFi AP，更新同 SSID 的其它 AP 到图表
+     */
+    private fun scanAndUpdateNearbyAps() {
+        val now = System.currentTimeMillis()
+        if (now - lastScanTimeMs < scanIntervalMs) {
+            return // 距离上次扫描不足 30 秒
+        }
+
+        if (!checkPermissions()) {
+            return
+        }
+
+        val wifiInfo = wifiManager.connectionInfo ?: return
+        val currentBssid = getFormattedBssid() ?: return
+        val currentSsid = wifiInfo.ssid.removeSurroundingQuotes()
+
+        lifecycleScope.launch {
+            try {
+                val scanResults = wifiManager.scanResults
+                lastScanTimeMs = now
+
+                // 过滤同 SSID 的 AP（排除当前连接的）
+                val sameSsidAps = scanResults
+                    .filter { it.SSID.removeSurroundingQuotes() == currentSsid }
+                    .filter { it.BSSID != currentBssid }
+                    .sortedByDescending { it.level } // 按信号强度降序
+                    .take(2) // 取最强的 2 个
+
+                // 更新图表
+                for ((index, ap) in sameSsidAps.withIndex()) {
+                    val apBssid = ap.BSSID.replace(Regex("[^0-9a-fA-F]"), "").lowercase()
+                    val apName = "${ap.SSID.removeSurroundingQuotes()} #${index + 1}"
+                    binding.rssiChart.addOrUpdateApSeries(
+                        apId = apBssid,
+                        apName = apName,
+                        bssid = apBssid,
+                        isCurrentAp = false,
+                        rssi = ap.level
+                    )
+                }
+
+                // 移除已经不存在的 AP（可选）
+                // 这里简化处理，不移除，因为可能只是暂时扫描不到
+            } catch (e: Exception) {
+                // 扫描失败，静默处理
+            }
+        }
     }
 
     /**
