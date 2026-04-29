@@ -3,7 +3,7 @@
 工作原理：登录 AC，分别执行 `display ap all`、`display ap elabel all` 和 `display vap all`，获取的文件分别用 `process_ap.py` 和 `process_bss.py` 处理，生成 AP 信息和 BSS 信息文件。
 如果有多台 AC，可以把多台 AC 的输出组合。
 
-这里只有数据处理的过程，具体API 服务请参考 h3c 目录中内容。
+这里只有数据处理的过程，具体API 服务请参考父目录中的 `server.py`（`../README.md`）。
 
 
 ## process_ap.py

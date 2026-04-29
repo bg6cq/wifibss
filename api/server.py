@@ -1,5 +1,5 @@
 #!/usr/bin/python3
-"""H3C BSS info web API server."""
+"""AC BSS info web API server."""
 
 import sys
 import json

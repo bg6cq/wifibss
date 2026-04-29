@@ -1,42 +1,12 @@
-# H3C AC BSSMAC 查询API服务端
+# 通用 BSSMAC 查询 API 服务端
 
-工作原理：登录AC，分别执行display wlan ap all verbose和display wlan bss all verbose，获取的文件分别用process_ap.py 和 process_bss.py处理，生成AP信息文件和BSS信息文件。
-如果有多台AC，可以把多台AC的输出组合。
-
-然后运行 server.py 对外提供查询API
-
-
-## 例子：
-
-目录中display_ap_all_verbose.txt 和 display_ap_bss_all_verbose.txt 分别是AC 采集的数据。
-
-执行以下命令处理数据:
-```
-python3 process_ap.py display_ap_all_verbose.txt > ap_info.txt 
-python3 process_bss.py display_ap_bss_all_verbose.txt > bss_info.txt
-```
-执行以下命令启动API服务端在8000端口提供服务，认证密码为 xyz:
-```
-python3 8000 ap_info.txt bss_info.txt group_map.txt name_map.txt xyz
-```
-
-执行以下命令可以测试API:
-```
-$ curl -H "Authorization: Bearer xyz" "http://127.0.0.1:8000/api/bssinfo?bssid=7cde78d69fc0"
-
-{"status": "ok", "data": [{"BSS_MAC": "7cde78d69fc0", "AP_NAME": "AAA-1F-AP01", "AP_SN": "219801A3PFP227000303", "AP_MAC": "7cde78d69fc0", "AC_IP": "100.00.100.250", "BAND": "1", "SSID": "USTC-WW", "AP_Building": "化学实验楼", "AP_IP": "100.00.11.161"}]}%
-```
-
-
-## server.py
-
-基于 BSS 和 AP 数据提供 REST API 查询服务的 HTTP 服务器，数据全部加载到内存中。
+基于 BSS 和 AP 数据提供 REST API 查询服务的 HTTP 服务器，数据全部加载到内存中，支持任意 AC 厂商的数据（H3C、华为等）。
 
 ```
 usage: python3 server.py <port> <ap_info_file> <bss_info_file> <group_mapping_file> <ap_name_mapping_file> [auth_key]
 ```
 
-### 参数说明
+## 参数说明
 
 | 参数 | 说明 |
 |------|------|
@@ -47,13 +17,13 @@ usage: python3 server.py <port> <ap_info_file> <bss_info_file> <group_mapping_fi
 | `ap_name_mapping_file` | AP 名字→楼名映射文件，每行：`AP名前缀 楼名`（最长前缀匹配） |
 | `auth_key` | （可选）Bearer Token 认证密钥 |
 
-### 楼名匹配顺序
+## 楼名匹配顺序
 
 1. 先按 AP 名字（`ap_name_mapping_file`）最长前缀匹配
 2. 匹配不到则按 AP 组名（`group_mapping_file`）最长前缀匹配
 3. 仍然匹配不到则使用 AP 组名本身
 
-### API 接口
+## API 接口
 
 `GET /api/bssinfo?bssid=XXXXXXXXXXXXXX`
 
@@ -78,55 +48,54 @@ BSSID 中的 `-` 号自动删除，大小写不敏感。
 }
 ```
 
-### 认证
+## 认证
 
-启动时指定第 6 个参数 `auth_key` 后启用 Bearer Token 认证。
+启动时指定 `auth_key` 后启用 Bearer Token 认证。
 请求需携带 HTTP 头 `Authorization: Bearer <key>`。
 认证失败时返回的数据中 `AP_SN`、`AC_IP`、`AP_IP` 为空字符串。
 
+## 数据准备
 
-# H3C AC 命令采集信息输出解析工具
+数据文件可通过各厂商对应的处理脚本生成：
 
-解析 H3C AC `display` 命令的详细输出，提取关键字段，提供 Web API 查询服务。
+- **H3C AC**: `h3c/` 目录下 `process_ap.py` + `process_bss.py`
+- **华为 AC**: `huawei/` 目录下 `process_ap.py` + `process_bss.py`
 
-## process_ap.py
+详细数据采集和处理步骤请参见各子目录中的 README。
 
-解析 `display wlan ap all verbose` 命令输出。
+## 完整示例
 
+```bash
+# 1. 使用 H3C 数据处理脚本生成数据文件
+cd h3c
+python3 process_ap.py display_ap_all_verbose.txt > ap_info.txt
+python3 process_bss.py display_ap_bss_all_verbose.txt > bss_info.txt
+cd ..
+
+# 2. 启动 API 服务（端口 8000，开启认证）
+python3 server.py 8000 h3c/ap_info.txt h3c/bss_info.txt h3c/group_map.txt h3c/name_map.txt xyz
+
+# 3. 测试查询
+curl -H "Authorization: Bearer xyz" "http://127.0.0.1:8000/api/bssinfo?bssid=7cde78d69fc0"
 ```
-usage: process_ap.py <filename>
-```
 
-提取字段（空格分隔）：`AP_NAME AP_GROUP AP_SN AP_MAC AP_IP AC_IP`
+## 开发提示
 
-## process_bss.py
+本目录下程序由以下 3 段提示经 AI 生成：
 
-解析 `display wlan bss all verbose` 命令输出。
-
-```
-usage: process_bss.py <filename>
-```
-
-提取字段（空格分隔）：`BSSID AP_NAME SSID BAND(Radio ID)`
-
-## 说明
-
-- 缺失字段输出 `-`
-- 每个 AP/BSS 输出一行
-
-
-## 备注
-
-开发本目录下程序的3段提示：
+**prompt 1**: `process_ap.py`
 ```
 display_ap_all_verbose.txt 是h3c ac 的命令输出，写一段python程序 process_ap.py ，参数是文件名，提取 AP_NAME AP_GROUP
   AP_SN AP_MAC AP_IP AC_IP, 这些域直接输出到标准输出，用空格分割
 ```
 
+**prompt 2**: `process_bss.py`
 ```
 display_ap_bss_all_verbose.txt 是h3c ac 的命令输出，写一段python程序 process_bss.py ，参数是文件名，提取 BSSID AP_NAME
   SSID BAND(Radio id) , 这些域直接输出到标准输出，用空格分割
 ```
+
+**prompt 3**: `server.py`
 ```
 写1个web api server，启动时有6个参数，其中第1个参数是TCP 端口号，第2个参数是AP信息文件名，第3个参数是BSS信息文件名，第4
   个参数是AP组名到楼名的映射文件名，第5个参数是AP名字都楼名的映射文件名，第6个参数是可选的 认证key。AP信息文件包含空格分开的  AP_NAME
@@ -148,6 +117,5 @@ display_ap_bss_all_verbose.txt 是h3c ac 的命令输出，写一段python程序
     "AP_IP": "x.x.x.x"
   }]
 }
-这样的信息。如果启动时带了第6个参数，检查HTTP请求头中的 Authorization: Bearer 后key，如果不匹配，返回的 AP_SN AC_IP AP_IP为空字符串。
+这样的信息。如果启动时带了第6个参数，检查HTTP请求头中的 Authorization: Bearer 后key，如果不匹配，返回的 AP_SN AC_IP AP_IP为空字符串。
 ```
-

@@ -85,8 +85,8 @@ API 端点：`https://linux.ustc.edu.cn/api/bssinfo.php?bssid={bssid}`
 
 ## 查询 API
 
-api/h3c 目录下有采集 H3C AC、整理数据并对外提供查询 API 的程序。
-api/huawei 目录下有采集华为 AC、整理数据的程序。对外提供查询 API 的程序请用 h3c 目录中的。
+api/ 目录下有通用的 API 查询服务端（server.py），支持任意 AC 厂商的数据。
+api/h3c 和 api/huawei 目录下分别有对应厂商的数据采集和处理脚本。
 
 
 

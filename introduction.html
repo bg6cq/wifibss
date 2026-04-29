@@ -258,8 +258,8 @@
   <a href="#overview">项目概述</a>
   <a href="#architecture">系统架构</a>
   <a href="#app">Android App</a>
-  <a href="#api-h3c">H3C AC API</a>
-  <a href="#api-huawei">华为 AC 采集</a>
+  <a href="#api-server">API 服务端</a>
+  <a href="#ac-collection">AC 数据采集</a>
   <a href="#data-flow">数据流程</a>
   <a href="#api-spec">API 规范</a>
   <a href="#build">构建部署</a>
@@ -282,13 +282,13 @@
     </div>
     <div class="feature-card" style="border-top-color: var(--success);">
       <div class="icon">&#128421;</div>
-      <h4>H3C AC API 服务端</h4>
-      <p>解析 H3C AC 命令输出，构建内存数据库，提供 REST API 查询服务</p>
+      <h4>API 服务端</h4>
+      <p>构建内存数据库，提供 REST API 查询服务</p>
     </div>
     <div class="feature-card" style="border-top-color: var(--warning);">
       <div class="icon">&#128202;</div>
-      <h4>华为 AC 数据采集</h4>
-      <p>解析华为 AC 命令输出，提取 AP 和 BSS 信息，与 H3C API 共用查询接口</p>
+      <h4>AC 数据采集</h4>
+      <p>解析不同厂商 AC 命令输出，提取 AP 和 BSS 信息，供 API 服务端查询使用</p>
     </div>
   </div>
 </section>
@@ -308,7 +308,7 @@
                              | Authorization: Bearer &lt;key&gt;
                              v
                     +------------------+
-                    |  H3C API Server  | &lt;---- 共用查询接口
+                    |  API Server      |
                     |  (Python http.server) |
                     +--------+---------+
                              |
@@ -378,7 +378,7 @@
 
   <h3>架构说明</h3>
   <div class="info-box">
-    <strong>单 Activity 架构：</strong>无 Fragment、无 ViewModel。网络请求通过协程在 Activity 中直接完成，ViewBinding 访问视图。代码集中在 <code>MainActivity.kt</code>（约 1625 行），包含所有 UI 逻辑、网络请求、数据持久化和适配器。
+    <strong>单 Activity 架构：</strong>无 Fragment、无 ViewModel。网络请求通过协程在 Activity 中直接完成，ViewBinding 访问视图。代码集中在 <code>MainActivity.kt</code>（约 1575 行），包含所有 UI 逻辑、网络请求、数据持久化和适配器。
   </div>
 
   <h3>BSSID 标准化</h3>
@@ -394,19 +394,53 @@
   <h3>关键类文件</h3>
   <table>
     <tr><th>文件</th><th>说明</th></tr>
-    <tr><td><code>MainActivity.kt</code></td><td>主 Activity：UI、网络、数据持久化、适配器、权限处理（约 1625 行）</td></tr>
+    <tr><td><code>MainActivity.kt</code></td><td>主 Activity：UI、网络、数据持久化、适配器、权限处理（约 1575 行）</td></tr>
     <tr><td><code>RssiChartView.kt</code></td><td>自定义 View：RSSI 信号强度曲线图（Canvas 绘制，10 分钟窗口）</td></tr>
     <tr><td><code>activity_main.xml</code></td><td>主布局：BSSID 标题、RSSI 图表卡片、WiFi 信息卡片、AP 信息卡片、查询结果区</td></tr>
     <tr><td><code>AndroidManifest.xml</code></td><td>权限声明：WiFi 状态、位置（Android 10+）、近场设备（Android 13+）、网络、唤醒锁</td></tr>
   </table>
 </section>
 
-<!-- ====== H3C AC API ====== -->
-<section id="api-h3c">
-  <h2>H3C AC API 服务端</h2>
-  <p><code>api/h3c/</code> 目录包含完整的 H3C AC 数据采集、处理和 API 查询服务。这是主要的对外查询接口。</p>
+<!-- ====== API Server ====== -->
+<section id="api-server">
+  <h2>API 服务端</h2>
+  <p>构建内存数据库，提供 REST API 查询服务</p>
+  <p>基于 Python 标准库 <code>http.server</code>，无需第三方依赖。启动时将所有数据加载到内存中，提供 REST API 查询。</p>
 
-  <h3>工作流程</h3>
+  <h3>启动参数</h3>
+  <pre class="code">python3 server.py &lt;port&gt; &lt;ap_info&gt; &lt;bss_info&gt; &lt;group_map&gt; &lt;name_map&gt; [auth_key]</pre>
+  <table>
+    <tr><th>参数</th><th>说明</th></tr>
+    <tr><td><code>port</code></td><td>TCP 监听端口号</td></tr>
+    <tr><td><code>ap_info</code></td><td>AP 信息文件（process_ap.py 输出）</td></tr>
+    <tr><td><code>bss_info</code></td><td>BSS 信息文件（process_bss.py 输出）</td></tr>
+    <tr><td><code>group_map</code></td><td>AP 组名&rarr;楼名映射文件（最长前缀匹配）</td></tr>
+    <tr><td><code>name_map</code></td><td>AP 名字&rarr;楼名映射文件（最长前缀匹配）</td></tr>
+    <tr><td><code>auth_key</code></td><td>（可选）Bearer Token 认证密钥</td></tr>
+  </table>
+
+  <h3>楼名匹配规则</h3>
+  <ol style="margin-left:20px;margin-bottom:14px;color:var(--text-secondary)">
+    <li>先按 AP 名字（<code>name_map</code>）最长前缀匹配</li>
+    <li>匹配不到则按 AP 组名（<code>group_map</code>）最长前缀匹配</li>
+    <li>仍然匹配不到则使用 AP 组名本身</li>
+  </ol>
+
+  <h3>认证机制</h3>
+  <p>启动时若指定第 6 个参数 <code>auth_key</code>，则启用 Bearer Token 认证。</p>
+  <p>认证失败时，返回数据中的 <code>AP_SN</code>、<code>AC_IP</code>、<code>AP_IP</code> 置为空字符串，隐藏敏感信息。</p>
+  <p>请求示例：</p>
+  <pre class="code">curl -H "Authorization: Bearer xyz" \
+  "http://127.0.0.1:8000/api/bssinfo?bssid=7cde78d69fc0"</pre>
+</section>
+
+<!-- ====== AC 数据采集 ====== -->
+<section id="ac-collection">
+  <h2>AC 数据采集</h2>
+  <p>从 AC 采集 AP 和 BSS 原始数据，处理为统一格式，供 <code>server.py</code> 加载查询。</p>
+
+  <h3>H3C AC</h3>
+
   <div class="flow-diagram">
     <span class="flow-step">登录 H3C AC</span>
     <span class="flow-arrow">&rarr;</span>
@@ -421,15 +455,9 @@
     <span class="flow-step" style="background:var(--success)">process_bss.py</span>
     <span class="flow-arrow">&rarr;</span>
     <span class="flow-step" style="background:var(--success)">bss_info.txt</span>
-    <br>
-    <span class="flow-step" style="background:var(--warning);margin-top:8px">server.py 启动</span>
-    <span class="flow-arrow">&rarr;</span>
-    <span class="flow-step">加载数据到内存</span>
-    <span class="flow-arrow">&rarr;</span>
-    <span class="flow-step">监听 REST API</span>
   </div>
 
-  <h3>数据采集</h3>
+  <h4>数据采集</h4>
   <p>在 H3C AC 上执行以下两条命令，将输出保存为文本文件：</p>
   <pre class="code"><span class="comment"># 采集 AP 详细信息</span>
 display wlan ap all verbose  &gt; display_ap_all_verbose.txt
@@ -437,8 +465,6 @@ display wlan ap all verbose  &gt; display_ap_all_verbose.txt
 <span class="comment"># 采集 BSS 详细信息</span>
 display wlan bss all verbose &gt; display_ap_bss_all_verbose.txt</pre>
   <p>如果有多台 AC，可将多台 AC 的输出内容直接合并到同一文件。</p>
-
-  <h3>数据处理脚本</h3>
 
   <h4>process_ap.py</h4>
   <p>解析 <code>display wlan ap all verbose</code> 输出，按 <code>AP name</code> 块划分，提取关键字段：</p>
@@ -466,53 +492,10 @@ display wlan bss all verbose &gt; display_ap_bss_all_verbose.txt</pre>
   <p>输出格式：</p>
   <pre class="code">BSSID AP_NAME SSID BAND</pre>
 
-  <h3>API 服务端 (server.py)</h3>
-  <p>基于 Python 标准库 <code>http.server</code>，无需第三方依赖。启动时将所有数据加载到内存中，提供 REST API 查询。</p>
+  <h3>华为 AC</h3>
+  <p><code>api/huawei/</code> 目录包含华为 AC 的数据采集和解析程序。</p>
 
-  <h4>启动参数</h4>
-  <pre class="code">python3 server.py &lt;port&gt; &lt;ap_info&gt; &lt;bss_info&gt; &lt;group_map&gt; &lt;name_map&gt; [auth_key]</pre>
-  <table>
-    <tr><th>参数</th><th>说明</th></tr>
-    <tr><td><code>port</code></td><td>TCP 监听端口号</td></tr>
-    <tr><td><code>ap_info</code></td><td>AP 信息文件（process_ap.py 输出）</td></tr>
-    <tr><td><code>bss_info</code></td><td>BSS 信息文件（process_bss.py 输出）</td></tr>
-    <tr><td><code>group_map</code></td><td>AP 组名&rarr;楼名映射文件（最长前缀匹配）</td></tr>
-    <tr><td><code>name_map</code></td><td>AP 名字&rarr;楼名映射文件（最长前缀匹配）</td></tr>
-    <tr><td><code>auth_key</code></td><td>（可选）Bearer Token 认证密钥</td></tr>
-  </table>
-
-  <h4>楼名匹配规则</h4>
-  <ol style="margin-left:20px;margin-bottom:14px;color:var(--text-secondary)">
-    <li>先按 AP 名字（<code>name_map</code>）最长前缀匹配</li>
-    <li>匹配不到则按 AP 组名（<code>group_map</code>）最长前缀匹配</li>
-    <li>仍然匹配不到则使用 AP 组名本身</li>
-  </ol>
-
-  <h4>认证机制</h4>
-  <p>启动时若指定第 6 个参数 <code>auth_key</code>，则启用 Bearer Token 认证。</p>
-  <p>认证失败时，返回数据中的 <code>AP_SN</code>、<code>AC_IP</code>、<code>AP_IP</code> 置为空字符串，隐藏敏感信息。</p>
-  <p>请求示例：</p>
-  <pre class="code">curl -H "Authorization: Bearer xyz" \
-  "http://127.0.0.1:8000/api/bssinfo?bssid=7cde78d69fc0"</pre>
-
-  <h4>示例文件</h4>
-  <table>
-    <tr><th>文件</th><th>说明</th></tr>
-    <tr><td><code>display_ap_all_verbose.txt</code></td><td>H3C AC display wlan ap all verbose 输出示例</td></tr>
-    <tr><td><code>display_ap_bss_all_verbose.txt</code></td><td>H3C AC display wlan bss all verbose 输出示例</td></tr>
-    <tr><td><code>ap_info.txt</code></td><td>处理后的 AP 信息</td></tr>
-    <tr><td><code>bss_info.txt</code></td><td>处理后的 BSS 信息</td></tr>
-    <tr><td><code>group_map.txt</code></td><td>组名&rarr;楼名映射示例</td></tr>
-    <tr><td><code>name_map.txt</code></td><td>AP 名字&rarr;楼名映射示例</td></tr>
-  </table>
-</section>
-
-<!-- ====== 华为 AC 采集 ====== -->
-<section id="api-huawei">
-  <h2>华为 AC 数据采集</h2>
-  <p><code>api/huawei/</code> 目录包含华为 AC 的数据采集和解析程序。与 H3C 不同的是，华为 AC 只需要数据采集部分，查询 API 复用了 H3C 目录中的 <code>server.py</code>。</p>
-
-  <h3>数据采集</h3>
+  <h4>数据采集</h4>
   <p>在华为 AC 上执行以下命令，保存输出：</p>
   <pre class="code"><span class="comment"># 采集 AP 列表</span>
 display ap all          &gt; display_ap_all.txt
@@ -523,15 +506,15 @@ display ap elabel all   &gt; display_ap_elabel_all.txt
 <span class="comment"># 采集 VAP 信息（含 BSSID）</span>
 display vap all         &gt; display_vap_all.txt</pre>
 
-  <h3>数据处理脚本</h3>
+  <h4>数据处理脚本</h4>
 
-  <h4>process_ap.py</h4>
+  <h5>process_ap.py</h5>
   <p>解析 <code>display ap all</code> 和 <code>display ap elabel all</code> 两个文件，通过 MAC 地址关联：</p>
   <ul style="margin-left:20px;margin-bottom:12px;color:var(--text-secondary)">
     <li><code>display ap all</code>：提取 MAC、名称、组名、IP（固定列宽解析）</li>
     <li><code>display ap elabel all</code>：提取 MAC 和序列号（固定列宽解析）</li>
     <li>通过 MAC 地址关联两个文件的数据</li>
-    <li>输出格式与 H3C 版本完全一致，可被 H3C 的 server.py 直接使用</li>
+    <li>输出格式与 H3C 版本完全一致，可被 <code>server.py</code> 直接使用</li>
   </ul>
   <p>使用方法：</p>
   <pre class="code"><span class="comment"># 不指定 AC_IP</span>
@@ -540,7 +523,7 @@ python3 process_ap.py display_ap_all.txt display_ap_elabel_all.txt &gt; ap_info.
 <span class="comment"># 指定 AC_IP</span>
 python3 process_ap.py display_ap_all.txt display_ap_elabel_all.txt 10.10.0.1 &gt; ap_info.txt</pre>
 
-  <h4>process_bss.py</h4>
+  <h5>process_bss.py</h5>
   <p>解析 <code>display vap all</code> 输出，通过固定列宽提取字段：</p>
   <pre class="code">python3 process_bss.py display_vap_all.txt &gt; bss_info.txt</pre>
   <p>提取字段：BSSID（标准化为 12 位小写十六进制）、AP_NAME、SSID、BAND（Radio ID）</p>
@@ -648,12 +631,14 @@ python3 process_ap.py display_ap_all.txt display_ap_elabel_all.txt 10.10.0.1 &gt
 <span class="comment"># display wlan ap all verbose &gt; display_ap_all_verbose.txt</span>
 <span class="comment"># display wlan bss all verbose &gt; display_ap_bss_all_verbose.txt</span>
 
-<span class="comment"># 2. 处理数据</span>
+<span class="comment"># 2. 处理数据（在 api/h3c/ 目录下）</span>
+cd h3c
 python3 process_ap.py display_ap_all_verbose.txt &gt; ap_info.txt
 python3 process_bss.py display_ap_bss_all_verbose.txt &gt; bss_info.txt
+cd ..
 
-<span class="comment"># 3. 启动 API 服务</span>
-python3 server.py 8000 ap_info.txt bss_info.txt group_map.txt name_map.txt my_secret_key
+<span class="comment"># 3. 启动 API 服务（在 api/ 目录下）</span>
+python3 server.py 8000 h3c/ap_info.txt h3c/bss_info.txt h3c/group_map.txt h3c/name_map.txt my_secret_key
 
 <span class="comment"># 4. 测试查询</span>
 curl -H "Authorization: Bearer my_secret_key" \
@@ -685,16 +670,16 @@ curl -H "Authorization: Bearer my_secret_key" \
 &#9474;&#9474;         &#9500;&#9472;&#9472; values/           <span class="comment"># 字符串、颜色、主题</span>
 &#9474;&#9474;         &#9492;&#9472;&#9472; drawable/         <span class="comment"># WiFi 图标</span>
 &#9500;&#9472;&#9472; api/
-&#9474;&#9474;   &#9500;&#9472;&#9472; h3c/                      <span class="comment"># H3C AC 采集 + API 服务端</span>
+&#9474;&#9474;   &#9500;&#9472;&#9472; server.py             <span class="comment"># REST API 服务端（通用，支持任意 AC）</span>
+&#9474;&#9474;   &#9500;&#9472;&#9472; README.md             <span class="comment"># API 服务端文档</span>
+&#9474;&#9474;   &#9500;&#9472;&#9472; h3c/                      <span class="comment"># H3C AC 数据采集</span>
 &#9474;&#9474;   &#9474;   &#9500;&#9472;&#9472; process_ap.py         <span class="comment"># 解析 AP 命令输出</span>
 &#9474;&#9474;   &#9474;   &#9500;&#9472;&#9472; process_bss.py        <span class="comment"># 解析 BSS 命令输出</span>
-&#9474;&#9474;   &#9474;   &#9500;&#9472;&#9472; server.py             <span class="comment"># REST API 服务端</span>
 &#9474;&#9474;   &#9474;   &#9500;&#9472;&#9472; group_map.txt         <span class="comment"># 组名&rarr;楼名映射</span>
 &#9474;&#9474;   &#9474;   &#9500;&#9472;&#9472; name_map.txt          <span class="comment"># AP 名&rarr;楼名映射</span>
 &#9474;&#9474;   &#9474;   &#9500;&#9472;&#9472; ap_info.txt           <span class="comment"># 处理后的 AP 数据</span>
 &#9474;&#9474;   &#9474;   &#9500;&#9472;&#9472; bss_info.txt          <span class="comment"># 处理后的 BSS 数据</span>
 &#9474;&#9474;   &#9474;   &#9500;&#9472;&#9472; display_*_verbose.txt <span class="comment"># AC 命令输出示例</span>
-&#9474;&#9474;   &#9474;   &#9492;&#9472;&#9472; README.md
 &#9474;&#9474;   &#9492;&#9472;&#9472; huawei/                   <span class="comment"># 华为 AC 数据采集</span>
 &#9474;&#9474;       &#9500;&#9472;&#9472; process_ap.py         <span class="comment"># 解析 display ap（双文件关联）</span>
 &#9474;&#9474;       &#9500;&#9472;&#9472; process_bss.py        <span class="comment"># 解析 display vap</span>

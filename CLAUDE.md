@@ -43,48 +43,48 @@ Release 构建使用 `wifi-bss-key.jks` 签名。密钥库凭据在 `keystore.pr
 ```kotlin
 // MainActivity.kt
 private fun getVersionInfo(): String {
-    return "版本：1.24"  // 与 versionName 一致
+    return "版本：1.28"  // 与 versionName 一致
 }
 
 private fun getChangesText(): String {
     return """
+v1.28 显示文字优化
+- 优化关于页面描述文本，表达更清晰流畅
+- 设置项文字调整："BSSID 变化时自动查询"
+- 作者信息格式简化
+
+v1.27 构建系统升级
+- AGP 7.4.2 → 8.5.2
+- Kotlin 1.8.22 → 2.0.0
+- Gradle 8.0 → 8.7
+- Java 11 → 17
+
+v1.26 BSSMAC 编辑优化
+- 修改 MAC 地址时保留原记录并添加新记录
+
 v1.24 历史记录修复
 - 修复本地 BSSMAC 数据未更新历史记录的问题
 
 v1.23 功能增强
 - BSSMAC 支持按 MAC/所在楼/AP 名字排序
-- BSSMAC 批量添加时所在楼可选
 - BSSMAC 信息支持导出到文件
-- WiFi 标准显示支持 Wi-Fi 7 (802.11be)
 - 权限不足时显示详细说明，解释为什么需要各项权限
-
-v1.22 代码清理
-- 移除未使用的 import 和布局元素
 
 v1.21 BSSMAC 编辑修复
 - 修复 BSSMAC 信息编辑后列表不刷新的问题
 
-v1.20 修复 BSSID 显示
-- 恢复位置权限以获取真实 BSSID（Android 10+ 需要）
-
 v1.19 权限和体验优化
-- 移除 GPS 定位权限要求，仅保留 Android 13+ 近场设备权限
 - 添加屏幕唤醒保持，APP 运行时屏幕不会休眠
 - 自动查询关闭时也会检查本地数据库
-- WiFi 标准显示使用 Android 11+ 官方 API
 
 v1.18 WiFi 技术标准显示
 - 链路速度后显示 WiFi 技术标准（WiFi 4/WiFi 5/WiFi 6/WiFi 6E/WiFi 7）
-- Android 11+ 使用系统 API 获取准确标准
-- 旧版本根据频段和速率估算
 
 v1.17 RSSI 图表优化
-- 图表时间范围从 5 分钟扩展到 10 分钟
 - 添加每分钟一条的竖向虚线网格，方便查看时间
 
 v1.16 历史记录增强
-- 历史记录支持滑动操作：左滑删除，右滑保存到本地 BSS MAC 数据库
-- 点击历史记录可快速保存到本地
+- 点击历史记录可保存到本地 BSSMAC 数据库
 
 v1.15 本地 BSS MAC 数据库
 - 新增本地 BSSMAC 信息编辑功能（设置 → BSSMAC 信息）
@@ -92,9 +92,6 @@ v1.15 本地 BSS MAC 数据库
 - 支持多种 BSSMAC 格式自动识别（xx:xx:xx:xx:xx:xx、xxxx-xxxx-xxxx 等）
 - 左滑删除记录，点击记录可编辑
 - 查询时优先使用本地数据，无数据时调用远程 API
-
-v1.14 布局优化
-- 加宽左侧标签栏（70dp → 90dp），避免文字换行
 
 v1.13 历史记录优化
 - BSSID 变化时立即记录历史（无需等待查询结果）
@@ -104,12 +101,10 @@ v1.13 历史记录优化
 v1.12 信号强度图表
 - 新增 RSSI 信号强度曲线图，显示最近 5 分钟变化
 - BSSID 切换时用红色大圆点标记
-- 优化布局：图表置顶，查询结果可滚动
 
 v1.11 历史记录功能
 - 新增查询历史记录，保存 BSSID、AP 名字、楼名和查询时间
 - BSSID 变化时自动记录，相同 BSSID 智能合并
-- 菜单中可查看和清除历史记录
     """.trimIndent()
 }
 ```
