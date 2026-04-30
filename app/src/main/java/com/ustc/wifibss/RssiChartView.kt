@@ -338,7 +338,7 @@ class RssiChartView @JvmOverloads constructor(
 
         for ((index, series) in nearbySeries.withIndex()) {
             val startX = if (index == 0) marginLeft else halfWidth
-            val maxChars = if (index == 0) 20 else 20
+            val maxChars = 30
 
             // 绘制颜色点
             val dotPaint = Paint().apply {

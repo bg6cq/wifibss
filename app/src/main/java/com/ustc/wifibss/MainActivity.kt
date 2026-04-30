@@ -475,7 +475,7 @@ class MainActivity : AppCompatActivity() {
                 for ((index, ap) in sameSsidAps.withIndex()) {
                     val apBssid = ap.BSSID.replace(Regex("[^0-9a-fA-F]"), "").lowercase()
                     val apName = queryNearbyApName(apBssid)
-                        ?: "${currentSsid} #${index + 1}"
+                        ?: apBssid
                     binding.rssiChart.addOrUpdateApSeries(
                         apId = nearbyIds[index],
                         apName = apName,
@@ -553,7 +553,7 @@ class MainActivity : AppCompatActivity() {
      * 获取版本信息
      */
     private fun getVersionInfo(): String {
-        return "版本：1.29"
+        return "版本：1.30"
     }
 
     /**
@@ -568,8 +568,7 @@ class MainActivity : AppCompatActivity() {
      */
     private fun getChangesText(): String {
         return """
-v1.29 同SSID附近AP信号显示
-- 支持显示同SSID其他AP的RSSI曲线（2个信号最强的AP）
+v1.30 显示可能漫游切换的AP信号
 - 自动查询附近AP名称并在图表下方显示
 - 设置中增加缓存AP信息选项，减少查询次数
 - 图表布局和显示优化
