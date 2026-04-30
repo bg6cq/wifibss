@@ -25,6 +25,71 @@ class RssiChartView @JvmOverloads constructor(
     defStyleAttr: Int = 0
 ) : View(context, attrs, defStyleAttr) {
 
+    companion object {
+        // 时间范围
+        const val MAX_DURATION_MS = 10 * 60 * 1000L
+        const val ONE_MINUTE_MS = 60000L
+
+        // 图表边距
+        const val MARGIN_TOP = 2f
+        const val MARGIN_BOTTOM = 2f
+        const val MARGIN_LEFT = 50f
+        const val MARGIN_RIGHT = 20f
+        const val BOTTOM_ZONE_HEIGHT = 65f
+
+        // 颜色
+        const val COLOR_GRID = "#E0E0E0"
+        const val COLOR_TIME_LINE = "#CCCCCC"
+        const val COLOR_TEXT = "#999999"
+        const val COLOR_BSSID_CHANGED = "#F44336"
+
+        // 画笔
+        const val STROKE_WIDTH_THIN = 1f
+        const val STROKE_WIDTH_LINE = 4f
+        const val DASH_WIDTH = 10f
+        const val DASH_GAP = 10f
+
+        // 文字
+        const val TEXT_SIZE_LABEL = 24f
+        const val TEXT_SIZE_LEGEND = 26f
+        const val MAX_AP_NAME_CHARS = 30
+
+        // 数据点半径
+        const val RADIUS_DATA_POINT = 3f
+        const val RADIUS_NEARBY_POINT = 5f
+        const val RADIUS_BSSID_MARKER = 8f
+        const val RADIUS_LEGEND_DOT = 5f
+
+        // 坐标偏移
+        const val GRID_TEXT_OFFSET = 2f
+        const val TIME_LABEL_Y_OFFSET = 2f
+        const val AP_NAME_Y_OFFSET = 7f
+        const val LEGEND_DOT_X_OFFSET = 10f
+        const val LEGEND_DOT_Y_OFFSET = 8f
+        const val LEGEND_TEXT_X_OFFSET = 22f
+
+        // RSSI
+        const val RSSI_MAX = -30
+        const val RSSI_MIN = -90
+        const val RSSI_RANGE = 60f
+        const val DEFAULT_RSSI = -100
+
+        // 网格线
+        val GRID_RSSI_LINES = listOf(-30, -40, -50, -60, -70, -80, -90)
+
+        // AP 颜色
+        val AP_COLORS = listOf(
+            Color.parseColor("#2196F3"),
+            Color.parseColor("#FF9800"),
+            Color.parseColor("#4CAF50"),
+            Color.parseColor("#9C27B0"),
+            Color.parseColor("#F44336")
+        )
+
+        // 附近 AP 最大显示数
+        const val MAX_NEARBY_APS = 2
+    }
+
     data class RssiDataPoint(
         val timestamp: Long,
         val rssi: Int
@@ -53,7 +118,7 @@ class RssiChartView @JvmOverloads constructor(
             cleanupOldData()
         }
 
-        fun cleanupOldData(maxDurationMs: Long = 10 * 60 * 1000L) {
+        fun cleanupOldData(maxDurationMs: Long = MAX_DURATION_MS) {
             val now = System.currentTimeMillis()
             while (dataPoints.isNotEmpty()) {
                 val ts = dataPoints.peek()?.timestamp ?: break
@@ -64,48 +129,48 @@ class RssiChartView @JvmOverloads constructor(
         }
 
         fun getRecentRssi(): Int {
-            return dataPoints.lastOrNull()?.rssi ?: -100
+            return dataPoints.lastOrNull()?.rssi ?: DEFAULT_RSSI
         }
     }
 
     // 多 AP 数据系列列表
     private val apSeries = CopyOnWriteArrayList<ApDataSeries>()
-    private val maxDurationMs = 10 * 60 * 1000L // 10 分钟
+    private val maxDurationMs = MAX_DURATION_MS
 
     // 图表边距
-    private val marginTop = 2f
-    private val marginBottom = 2f
-    private val marginLeft = 50f
-    private val marginRight = 20f
-    private val bottomZoneHeight = 65f // 底部区域（时间标签 + AP 名称）
+    private val marginTop = MARGIN_TOP
+    private val marginBottom = MARGIN_BOTTOM
+    private val marginLeft = MARGIN_LEFT
+    private val marginRight = MARGIN_RIGHT
+    private val bottomZoneHeight = BOTTOM_ZONE_HEIGHT
 
     // 画笔
     private val gridPaint = Paint().apply {
-        color = Color.parseColor("#E0E0E0")
-        strokeWidth = 1f
+        color = Color.parseColor(COLOR_GRID)
+        strokeWidth = STROKE_WIDTH_THIN
         style = Paint.Style.STROKE
     }
 
     private val timeLinePaint = Paint().apply {
-        color = Color.parseColor("#CCCCCC")
-        strokeWidth = 1f
+        color = Color.parseColor(COLOR_TIME_LINE)
+        strokeWidth = STROKE_WIDTH_THIN
         style = Paint.Style.STROKE
-        pathEffect = DashPathEffect(floatArrayOf(10f, 10f), 0f)
+        pathEffect = DashPathEffect(floatArrayOf(DASH_WIDTH, DASH_GAP), 0f)
     }
 
     private val textPaint = Paint().apply {
-        color = Color.parseColor("#999999")
-        textSize = 24f
+        color = Color.parseColor(COLOR_TEXT)
+        textSize = TEXT_SIZE_LABEL
         isAntiAlias = true
     }
 
     private val legendPaint = Paint().apply {
-        textSize = 26f
+        textSize = TEXT_SIZE_LEGEND
         isAntiAlias = true
     }
 
     private val bssidChangedPaint = Paint().apply {
-        color = Color.parseColor("#F44336")
+        color = Color.parseColor(COLOR_BSSID_CHANGED)
         style = Paint.Style.FILL
         isAntiAlias = true
     }
@@ -150,16 +215,8 @@ class RssiChartView @JvmOverloads constructor(
     }
 
     // 根据索引获取颜色
-    private fun getApColor(index: Int): Int {
-        val colors = listOf(
-            Color.parseColor("#2196F3"), // 蓝色 - 当前 AP
-            Color.parseColor("#FF9800"), // 橙色 - 其他 AP 1
-            Color.parseColor("#4CAF50"), // 绿色 - 其他 AP 2
-            Color.parseColor("#9C27B0"), // 紫色 - 其他 AP 3
-            Color.parseColor("#F44336"), // 红色 - 其他 AP 4
-        )
-        return colors.getOrElse(index % colors.size) { Color.GRAY }
-    }
+    private fun getApColor(index: Int): Int =
+        AP_COLORS.getOrElse(index % AP_COLORS.size) { Color.GRAY }
 
     // 清空所有数据
     fun clearData() {
@@ -194,8 +251,8 @@ class RssiChartView @JvmOverloads constructor(
         val chartRect = RectF(marginLeft, marginTop, marginLeft + chartWidth, marginTop + chartHeight)
 
         // 计算底部文字位置
-        val timeLabelY = chartRect.bottom + marginBottom + textPaint.textSize + 2f
-        val apNameY = timeLabelY + textPaint.textSize + 7f
+        val timeLabelY = chartRect.bottom + marginBottom + textPaint.textSize + TIME_LABEL_Y_OFFSET
+        val apNameY = timeLabelY + textPaint.textSize + AP_NAME_Y_OFFSET
 
         // 绘制网格线和时间竖线
         drawGridLines(canvas, chartRect)
@@ -218,24 +275,24 @@ class RssiChartView @JvmOverloads constructor(
     }
 
     private fun drawGridLines(canvas: Canvas, rect: RectF) {
-        val gridLines = listOf(-30, -40, -50, -60, -70, -80, -90)
+        val gridLines = GRID_RSSI_LINES
         for (rssi in gridLines) {
             val y = getYForRssi(rssi.toFloat(), rect)
             canvas.drawLine(rect.left, y, rect.right, y, gridPaint)
-            canvas.drawText("$rssi", rect.left + 2f, y - 2f, textPaint)
+            canvas.drawText("$rssi", rect.left + GRID_TEXT_OFFSET, y - GRID_TEXT_OFFSET, textPaint)
         }
     }
 
     private fun drawTimeLines(canvas: Canvas, rect: RectF, labelY: Float) {
         val now = System.currentTimeMillis()
         val startTime = now - maxDurationMs
-        val startMinute = (startTime / 60000L) * 60000L + 60000L
+        val startMinute = (startTime / ONE_MINUTE_MS) * ONE_MINUTE_MS + ONE_MINUTE_MS
 
         var time = startMinute
         while (time < now) {
             val x = getXForTimestamp(time, startTime, now, rect.right - rect.left) + rect.left
             canvas.drawLine(x, rect.top, x, rect.bottom, timeLinePaint)
-            time += 60000L
+            time += ONE_MINUTE_MS
         }
 
         // 在图表下方绘制时间标签
@@ -244,7 +301,7 @@ class RssiChartView @JvmOverloads constructor(
         while (labelTime < now) {
             val x = getXForTimestamp(labelTime, startTime, now, rect.right - rect.left) + rect.left
             canvas.drawText(dateFormat.format(Date(labelTime)), x, labelY, textPaint)
-            labelTime += 60000L
+            labelTime += ONE_MINUTE_MS
         }
         textPaint.textAlign = Paint.Align.LEFT
     }
@@ -275,7 +332,7 @@ class RssiChartView @JvmOverloads constructor(
         // 绘制实线
         val seriesPaint = Paint().apply {
             color = series.lineColor
-            strokeWidth = 4f
+            strokeWidth = STROKE_WIDTH_LINE
             style = Paint.Style.STROKE
             isAntiAlias = true
         }
@@ -293,7 +350,7 @@ class RssiChartView @JvmOverloads constructor(
             isAntiAlias = true
         }
         for ((x, y) in points) {
-            canvas.drawCircle(x, y, 3f, pointPaint)
+            canvas.drawCircle(x, y, RADIUS_DATA_POINT, pointPaint)
         }
 
         // 绘制 BSSID 切换标记（红色大圆点）
@@ -301,7 +358,7 @@ class RssiChartView @JvmOverloads constructor(
             if (marker.timestamp < startTime) continue
             val x = getXForTimestamp(marker.timestamp, startTime, now, chartWidth) + rect.left
             val y = getYForRssi(marker.rssi.toFloat(), rect)
-            canvas.drawCircle(x, y, 8f, bssidChangedPaint)
+            canvas.drawCircle(x, y, RADIUS_BSSID_MARKER, bssidChangedPaint)
         }
     }
 
@@ -325,32 +382,30 @@ class RssiChartView @JvmOverloads constructor(
         for (point in dataList) {
             val x = getXForTimestamp(point.timestamp, startTime, now, chartWidth) + rect.left
             val y = getYForRssi(point.rssi.toFloat(), rect)
-            canvas.drawCircle(x, y, 5f, pointPaint) // 比当前 AP 的点稍大
+            canvas.drawCircle(x, y, RADIUS_NEARBY_POINT, pointPaint)
         }
     }
 
     private fun drawApNames(canvas: Canvas, width: Float, yPosition: Float) {
         // 只显示非当前 AP 的名称（最多 2 个）, 不显示 dBm
-        val nearbySeries = apSeries.filter { !it.isCurrentAp }.take(2)
+        val nearbySeries = apSeries.filter { !it.isCurrentAp }.take(MAX_NEARBY_APS)
         if (nearbySeries.isEmpty()) return
 
         val halfWidth = width / 2
 
         for ((index, series) in nearbySeries.withIndex()) {
             val startX = if (index == 0) marginLeft else halfWidth
-            val maxChars = 30
-
             // 绘制颜色点
             val dotPaint = Paint().apply {
                 color = series.lineColor
                 style = Paint.Style.FILL
                 isAntiAlias = true
             }
-            canvas.drawCircle(startX + 10f, yPosition - 8f, 5f, dotPaint)
+            canvas.drawCircle(startX + LEGEND_DOT_X_OFFSET, yPosition - LEGEND_DOT_Y_OFFSET, RADIUS_LEGEND_DOT, dotPaint)
 
             // AP 名称（一行显示，允许更长文字）
-            val displayName = series.apName.take(maxChars)
-            canvas.drawText(displayName, startX + 22f, yPosition, legendPaint)
+            val displayName = series.apName.take(MAX_AP_NAME_CHARS)
+            canvas.drawText(displayName, startX + LEGEND_TEXT_X_OFFSET, yPosition, legendPaint)
         }
     }
 
@@ -360,8 +415,7 @@ class RssiChartView @JvmOverloads constructor(
     }
 
     private fun getYForRssi(rssi: Float, rect: RectF): Float {
-        // RSSI 范围：-30 (最强) 到 -90 (最弱)
-        val normalized = (rssi + 90) / 60f // 0 ~ 1
+        val normalized = (rssi - RSSI_MIN) / RSSI_RANGE
         return rect.bottom - (normalized * (rect.bottom - rect.top))
     }
 }
