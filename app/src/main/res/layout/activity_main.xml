@@ -69,7 +69,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="match_parent"
                     android:gravity="center"
-                    android:text="正在收集信号数据..."
+                    android:text="@string/rssi_empty_hint"
                     android:textSize="12sp"
                     android:textColor="#999999" />
             </FrameLayout>

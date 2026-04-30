@@ -1,6 +1,7 @@
 package com.ustc.wifibss
 
 import android.Manifest
+import android.annotation.SuppressLint
 import android.content.Context
 import androidx.activity.result.contract.ActivityResultContracts
 import android.content.SharedPreferences
@@ -244,6 +245,7 @@ class MainActivity : AppCompatActivity() {
     /**
      * 更新所有 WiFi 信息显示
      */
+    @Suppress("DEPRECATION")
     private fun updateWifiInfo() {
         if (!checkPermissions()) {
             showPermissionRationale()
@@ -267,10 +269,10 @@ class MainActivity : AppCompatActivity() {
         binding.tvBssidValue.text = bssid ?: getString(R.string.no_wifi_connection)
 
         // 检测 BSSID 变化
-        bssidChangedForChart = (bssid != null && bssid != lastBssid)
+        val bssidChanged = (bssid != null && bssid != lastBssid)
+        bssidChangedForChart = bssidChanged
 
-        // 检测 BSSID 变化
-        if (bssid != null && bssid != lastBssid) {
+        if (bssidChanged) {
             lastBssid = bssid
             // 记录历史（即使没有查询到数据）
             addHistoryRecord(bssid, "", "")
@@ -441,6 +443,8 @@ class MainActivity : AppCompatActivity() {
     /**
      * 扫描周围 WiFi AP，更新同 SSID 的其它 AP 到图表
      */
+    @SuppressLint("MissingPermission")
+    @Suppress("DEPRECATION")
     private fun scanAndUpdateNearbyAps() {
         val now = System.currentTimeMillis()
         if (now - lastScanTimeMs < scanIntervalMs) {
@@ -461,6 +465,8 @@ class MainActivity : AppCompatActivity() {
 
         lifecycleScope.launch {
             try {
+                // 再次检查权限（协程执行时权限可能已被撤销）
+                if (!checkPermissions()) return@launch
                 val scanResults = wifiManager.scanResults
 
                 // 过滤同 SSID 的 AP（排除当前连接的）
@@ -739,7 +745,7 @@ v1.0 初始版本
         etBuilding.setText(history.building)
 
         AlertDialog.Builder(this)
-            .setTitle("编辑记录")
+            .setTitle(R.string.edit_record_title)
             .setView(dialogView)
             .setPositiveButton(R.string.bssmac_save) { _, _ ->
                 val newBssid = etBssid.text.toString()
@@ -750,9 +756,9 @@ v1.0 初始版本
                     // 保存到本地 BSS MAC 数据库
                     val success = addBssLocal(newBssid, newApName, newBuilding)
                     if (success) {
-                        Toast.makeText(this, "已保存到本地 BSS MAC 数据库", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(this, R.string.saved_to_local_db, Toast.LENGTH_SHORT).show()
                     } else {
-                        Toast.makeText(this, "保存失败：BSS MAC 格式错误", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(this, R.string.save_failed_invalid_mac, Toast.LENGTH_SHORT).show()
                     }
                 }
             }
@@ -859,12 +865,12 @@ v1.0 初始版本
                     }
                 }
                 if (added > 0) {
-                    Toast.makeText(this, "已添加 $added 条记录", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(this, getString(R.string.bssmac_added_count, added), Toast.LENGTH_SHORT).show()
                     reloadList()
                     updateAdapter()
                     etBulkAdd.text.clear()
                 } else {
-                    Toast.makeText(this, "格式错误，请检查输入", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(this, R.string.bssmac_format_error, Toast.LENGTH_SHORT).show()
                 }
             }
         }
@@ -882,12 +888,12 @@ v1.0 初始版本
                     // 显示确认对话框
                     AlertDialog.Builder(this@MainActivity)
                         .setTitle(R.string.bssmac_delete)
-                        .setMessage("确定要删除 ${entry.bssMac} 吗？")
+                        .setMessage(getString(R.string.bssmac_delete_confirm, entry.bssMac))
                         .setPositiveButton(R.string.bssmac_delete) { _, _ ->
                             deleteBssLocal(entry.bssMac)
                             bssList.removeAt(position)
                             rvBssLocal.adapter?.notifyItemRemoved(position)
-                            Toast.makeText(this@MainActivity, "已删除 ${entry.bssMac}", Toast.LENGTH_SHORT).show()
+                            Toast.makeText(this@MainActivity, getString(R.string.bssmac_deleted, entry.bssMac), Toast.LENGTH_SHORT).show()
                             if (bssList.isEmpty()) {
                                 updateAdapter()
                             }
@@ -936,14 +942,14 @@ v1.0 初始版本
                 if (newMac.isNotBlank() && newApName.isNotBlank()) {
                     if (addBssLocal(newMac, newApName, newBuilding)) {
                         val msg = if (normalizeBssMac(newMac) != normalizeBssMac(entry.bssMac)) {
-                            "已添加新记录"
+                            getString(R.string.bssmac_added_new)
                         } else {
                             getString(R.string.bssmac_save)
                         }
                         Toast.makeText(this, msg, Toast.LENGTH_SHORT).show()
                         onSaved()
                     } else {
-                        Toast.makeText(this, "BSS MAC 格式错误", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(this, R.string.bssmac_format_invalid, Toast.LENGTH_SHORT).show()
                     }
                 }
             }
@@ -1176,9 +1182,9 @@ v1.0 初始版本
             contentResolver.openOutputStream(uri)?.use { outputStream ->
                 outputStream.write(content.toByteArray())
             }
-            Toast.makeText(this, "已导出 ${list.size} 条记录", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, getString(R.string.bssmac_export_success, list.size), Toast.LENGTH_SHORT).show()
         } catch (e: Exception) {
-            Toast.makeText(this, "导出失败: ${e.message}", Toast.LENGTH_LONG).show()
+            Toast.makeText(this, getString(R.string.bssmac_export_failed, e.message), Toast.LENGTH_LONG).show()
         }
     }
 
@@ -1432,6 +1438,7 @@ v1.0 初始版本
      * 获取并格式化 BSSID
      * 移除所有非十六进制字符（如 : - 等），只保留 12 位十六进制字符
      */
+    @Suppress("DEPRECATION")
     private fun getFormattedBssid(): String? {
         val bssid = wifiManager.connectionInfo.bssid ?: return null
 
@@ -1686,9 +1693,9 @@ v1.0 初始版本
         }
 
         AlertDialog.Builder(this)
-            .setTitle("需要权限")
-            .setMessage("本应用需要以下权限以读取 WiFi 信息：\n\n${missingPerms.joinToString("\n")}\n\n点击「确定」后请在系统弹窗中允许。")
-            .setPositiveButton("确定") { _, _ ->
+            .setTitle(R.string.need_permission)
+            .setMessage(getString(R.string.permission_message, missingPerms.joinToString("\n")))
+            .setPositiveButton(android.R.string.ok) { _, _ ->
                 requestPermissions()
             }
             .setNegativeButton(android.R.string.cancel, null)

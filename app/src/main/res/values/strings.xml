@@ -87,4 +87,18 @@
     <string name="bssmac_sort_mac">MAC</string>
     <string name="bssmac_sort_building">所在楼</string>
     <string name="bssmac_sort_apname">AP名字</string>
+    <string name="edit_record_title">编辑记录</string>
+    <string name="saved_to_local_db">已保存到本地 BSS MAC 数据库</string>
+    <string name="save_failed_invalid_mac">保存失败：BSS MAC 格式错误</string>
+    <string name="need_permission">需要权限</string>
+    <string name="permission_message">本应用需要以下权限以读取 WiFi 信息：\n\n%1$s\n\n点击「确定」后请在系统弹窗中允许。</string>
+    <string name="bssmac_delete_confirm">确定要删除 %1$s 吗？</string>
+    <string name="bssmac_deleted">已删除 %1$s</string>
+    <string name="bssmac_export_success">已导出 %1$d 条记录</string>
+    <string name="bssmac_export_failed">导出失败：%1$s</string>
+    <string name="bssmac_format_error">格式错误，请检查输入</string>
+    <string name="bssmac_added_count">已添加 %1$d 条记录</string>
+    <string name="bssmac_added_new">已添加新记录</string>
+    <string name="bssmac_format_invalid">BSS MAC 格式错误</string>
+    <string name="rssi_empty_hint">正在收集信号数据...</string>
 </resources>
