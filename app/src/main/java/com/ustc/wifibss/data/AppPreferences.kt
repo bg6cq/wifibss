@@ -1,95 +1,99 @@
 package com.ustc.wifibss.data
 
 import android.content.SharedPreferences
+import android.content.Context
 import com.ustc.wifibss.R
-import com.ustc.wifibss.model.BssLocalEntry
-import com.ustc.wifibss.model.QueryHistory
+import com.ustc.wifibss.R.string
+import kotlinx.coroutines.flow.first
 
-class AppPreferences(private val prefs: SharedPreferences) {
-
-    private val autoRefreshResIds = mapOf(
-        0 to R.string.auto_refresh_never,
-        1000 to R.string.auto_refresh_1s,
-        5000 to R.string.auto_refresh_5s,
-        10000 to R.string.auto_refresh_10s
-    )
-
-    // 查询设置
-    fun getQueryUrl(): String = prefs.getString(KEY_QUERY_URL, DEFAULT_QUERY_URL) ?: DEFAULT_QUERY_URL
-    fun getQueryKey(): String = prefs.getString(KEY_QUERY_KEY, "") ?: ""
-    fun saveSettings(url: String, key: String) {
-        prefs.edit()
-            .putString(KEY_QUERY_URL, url.takeIf { it.isNotBlank() } ?: DEFAULT_QUERY_URL)
-            .putString(KEY_QUERY_KEY, key)
-            .apply()
-    }
-
-    // 自动查询
-    fun isAutoQueryEnabled(): Boolean = prefs.getBoolean(KEY_AUTO_QUERY, false)
-    fun saveAutoQuery(enabled: Boolean) = prefs.edit().putBoolean(KEY_AUTO_QUERY, enabled).apply()
-
-    // 缓存设置
-    fun isCacheApInfoEnabled(): Boolean = prefs.getBoolean(KEY_CACHE_AP_INFO, false)
-    fun saveCacheApInfo(enabled: Boolean) = prefs.edit().putBoolean(KEY_CACHE_AP_INFO, enabled).apply()
-
-    // 自动刷新
-    fun getAutoRefreshInterval(): Int = prefs.getInt(KEY_AUTO_REFRESH, DEFAULT_AUTO_REFRESH)
-    fun saveAutoRefreshInterval(intervalMs: Int) = prefs.edit().putInt(KEY_AUTO_REFRESH, intervalMs).apply()
-
-    // 历史记录
-    fun getHistoryList(): String = prefs.getString(KEY_HISTORY, "") ?: ""
-    fun saveHistoryList(json: String) = prefs.edit().putString(KEY_HISTORY, json).apply()
-    fun clearHistory() = prefs.edit().remove(KEY_HISTORY).apply()
-
-    // 本地 BSSMAC
-    fun getBssLocalList(): String = prefs.getString(KEY_BSS_LOCAL, "") ?: ""
-    fun saveBssLocalList(json: String) = prefs.edit().putString(KEY_BSS_LOCAL, json).apply()
-
-    fun parseHistoryList(json: String): List<QueryHistory> {
-        if (json.isEmpty()) return emptyList()
-        return try {
-            val array = org.json.JSONArray(json)
-            (0 until array.length()).mapNotNull { i ->
-                val obj = array.getJSONObject(i)
-                QueryHistory(
-                    timestamp = obj.getLong("timestamp"),
-                    bssid = obj.getString("bssid"),
-                    apName = obj.getString("apName"),
-                    building = obj.getString("building")
-                )
-            }
-        } catch (_: Exception) {
-            emptyList()
-        }
-    }
-
-    fun parseBssLocalList(json: String): List<BssLocalEntry> {
-        if (json.isEmpty()) return emptyList()
-        return try {
-            val array = org.json.JSONArray(json)
-            (0 until array.length()).map { i ->
-                val obj = array.getJSONObject(i)
-                BssLocalEntry(
-                    bssMac = obj.getString("bssMac"),
-                    apName = obj.getString("apName"),
-                    building = obj.getString("building")
-                )
-            }
-        } catch (_: Exception) {
-            emptyList()
-        }
-    }
+class AppPreferences(private val context: Context,
+                     private val prefs: SharedPreferences? = null) {
 
     companion object {
         const val PREFS_NAME = "app_settings"
         const val DEFAULT_QUERY_URL = "https://linux.ustc.edu.cn/api/bssinfo.php"
         const val DEFAULT_AUTO_REFRESH = 0
-        private const val KEY_QUERY_URL = "query_url"
-        private const val KEY_QUERY_KEY = "query_key"
-        private const val KEY_AUTO_QUERY = "auto_query"
-        private const val KEY_AUTO_REFRESH = "auto_refresh"
-        private const val KEY_HISTORY = "query_history"
-        private const val KEY_BSS_LOCAL = "bss_local_data"
-        private const val KEY_CACHE_AP_INFO = "cache_ap_info"
     }
+
+    // 设置存储（DataStore）
+    private val store = com.ustc.wifibss.datastore.SettingsDataStore(context)
+
+    // ==================== 查询设置 ====================
+    suspend fun getQueryUrl(): String {
+        val fromStore = store.getQueryUrl()
+        return if (fromStore == DEFAULT_QUERY_URL) {
+            // 兼容旧数据
+            prefs?.getString("query_url", null)?.takeIf { it != DEFAULT_QUERY_URL } ?: fromStore
+        } else {
+            fromStore
+        }
+    }
+
+    suspend fun getQueryKey(): String {
+        val fromStore = store.getQueryKey()
+        return fromStore.ifBlank { prefs?.getString("query_key", "") ?: "" }
+    }
+
+    suspend fun saveSettings(url: String, key: String) {
+        store.saveSettings(url, key)
+    }
+
+    // ==================== 自动查询 ====================
+    suspend fun isAutoQueryEnabled(): Boolean {
+        val fromStore = store.autoQueryEnabledFlow.first()
+        return if (!fromStore) {
+            prefs?.getBoolean("auto_query", false) ?: false
+        } else {
+            fromStore
+        }
+    }
+
+    suspend fun saveAutoQuery(enabled: Boolean) {
+        store.saveAutoQuery(enabled)
+    }
+
+    // ==================== 缓存设置 ====================
+    suspend fun isCacheApInfoEnabled(): Boolean {
+        val fromStore = store.cacheApInfoEnabledFlow.first()
+        return if (!fromStore) {
+            prefs?.getBoolean("cache_ap_info", false) ?: false
+        } else {
+            fromStore
+        }
+    }
+
+    suspend fun saveCacheApInfo(enabled: Boolean) {
+        store.saveCacheApInfo(enabled)
+    }
+
+    // ==================== 自动刷新 ====================
+    suspend fun getAutoRefreshInterval(): Int {
+        val fromStore = store.autoRefreshIntervalFlow.first()
+        return if (fromStore == 0) {
+            prefs?.getInt("auto_refresh", 0) ?: 0
+        } else {
+            fromStore
+        }
+    }
+
+    suspend fun saveAutoRefreshInterval(intervalMs: Int) {
+        store.saveAutoRefreshInterval(intervalMs)
+    }
+
+    fun getAutoRefreshLabelResId(interval: Int): Int = when (interval) {
+        0 -> string.auto_refresh_never
+        1000 -> string.auto_refresh_1s
+        5000 -> string.auto_refresh_5s
+        10000 -> string.auto_refresh_10s
+        else -> string.auto_refresh_never
+    }
+
+    // ==================== 历史记录（迁移中，旧方法保留） ====================
+    fun getHistoryList(): String = prefs?.getString("query_history", "") ?: ""
+    fun saveHistoryList(json: String) = prefs?.edit()?.putString("query_history", json)?.apply()
+    fun clearHistory() = prefs?.edit()?.remove("query_history")?.apply()
+
+    // ==================== 本地 BSSMAC（迁移中，旧方法保留） ====================
+    fun getBssLocalList(): String = prefs?.getString("bss_local_data", "") ?: ""
+    fun saveBssLocalList(json: String) = prefs?.edit()?.putString("bss_local_data", json)?.apply()
 }

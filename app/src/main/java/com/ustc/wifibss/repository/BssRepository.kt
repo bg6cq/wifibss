@@ -2,24 +2,33 @@ package com.ustc.wifibss.repository
 
 import com.ustc.wifibss.api.BssInfoApiService
 import com.ustc.wifibss.data.AppPreferences
+import com.ustc.wifibss.database.BssLocalEntity
+import com.ustc.wifibss.database.QueryHistoryEntity
+import com.ustc.wifibss.database.WifiBssDatabase
 import com.ustc.wifibss.model.ApInfo
 import com.ustc.wifibss.model.BssLocalEntry
 import com.ustc.wifibss.model.QueryHistory
 import com.ustc.wifibss.util.WifiUtils
-import org.json.JSONArray
-import org.json.JSONObject
 
 class BssRepository(
-    private val prefs: AppPreferences
+    private val prefs: AppPreferences,
+    private val database: WifiBssDatabase
 ) {
     private val apiService = BssInfoApiService(prefs)
+    private val historyDao = database.queryHistoryDao()
+    private val bssLocalDao = database.bssLocalDao()
 
     // ==================== 历史记录 ====================
 
-    fun getHistoryList(): List<QueryHistory> = prefs.parseHistoryList(prefs.getHistoryList())
+    suspend fun getHistoryList(): List<QueryHistory> {
+        return historyDao.getLatest(MAX_HISTORY_COUNT)
+            .map(QueryHistoryEntity::toQueryHistory)
+    }
 
-    fun addHistoryRecord(bssid: String, apName: String, building: String) {
-        val list = getHistoryList().toMutableList()
+    suspend fun addHistoryRecord(bssid: String, apName: String, building: String) {
+        val list = historyDao.getLatest(MAX_HISTORY_COUNT + 1)
+            .map(QueryHistoryEntity::toQueryHistory)
+            .toMutableList()
 
         val lastRecord = list.lastOrNull()
         if (lastRecord != null && lastRecord.bssid == bssid) {
@@ -38,76 +47,77 @@ class BssRepository(
         saveHistoryList(list)
     }
 
-    fun updateHistoryRecord(bssid: String, apName: String, building: String) {
-        val list = getHistoryList().toMutableList()
+    suspend fun updateHistoryRecord(bssid: String, apName: String, building: String) {
+        val list = historyDao.getLatest(MAX_HISTORY_COUNT + 1)
+            .map(QueryHistoryEntity::toQueryHistory)
+            .toMutableList()
+
         for (i in list.size - 1 downTo 0) {
             if (list[i].bssid == bssid && list[i].apName.isEmpty()) {
-                list[i] = QueryHistory(list[i].timestamp, bssid, apName, building)
-                saveHistoryList(list)
-                return
+                // 找到对应的 entity 并更新
+                val entities = historyDao.getLatest(MAX_HISTORY_COUNT)
+                for (entity in entities) {
+                    if (entity.bssid == bssid && entity.apName.isEmpty()) {
+                        val updated = entity.copy(
+                            apName = apName,
+                            building = building
+                        )
+                        historyDao.update(updated)
+                        return
+                    }
+                }
+                break
             }
         }
         addHistoryRecord(bssid, apName, building)
     }
 
-    fun clearHistory() = prefs.clearHistory()
+    suspend fun clearHistory() {
+        historyDao.clearAll()
+    }
 
-    private fun saveHistoryList(list: List<QueryHistory>) {
-        val array = JSONArray()
-        for (item in list) {
-            val obj = JSONObject()
-            obj.put("timestamp", item.timestamp)
-            obj.put("bssid", item.bssid)
-            obj.put("apName", item.apName)
-            obj.put("building", item.building)
-            array.put(obj)
+    private suspend fun saveHistoryList(list: List<QueryHistory>) {
+        val entities = list.mapIndexed { index, h ->
+            QueryHistoryEntity(
+                id = index.toLong(),
+                timestamp = h.timestamp,
+                bssid = h.bssid,
+                apName = h.apName,
+                building = h.building
+            )
         }
-        prefs.saveHistoryList(array.toString())
+        historyDao.clearAll()
+        historyDao.insertAll(entities)
     }
 
     // ==================== 本地 BSSMAC ====================
 
-    fun getBssLocalList(): List<BssLocalEntry> = prefs.parseBssLocalList(prefs.getBssLocalList())
+    suspend fun getBssLocalList(): List<BssLocalEntry> =
+        bssLocalDao.getAll().map(BssLocalEntity::toBssLocalEntry)
 
-    fun addBssLocal(bssMac: String, apName: String, building: String): Boolean {
+    suspend fun addBssLocal(bssMac: String, apName: String, building: String): Boolean {
         val normalizedMac = WifiUtils.normalizeBssMac(bssMac) ?: return false
-        val list = getBssLocalList().toMutableList()
-
-        val existingIndex = list.indexOfFirst { it.bssMac == normalizedMac }
-        if (existingIndex >= 0) {
-            list[existingIndex] = BssLocalEntry(normalizedMac, apName, building)
+        val existing = bssLocalDao.getByBssMac(normalizedMac)
+        if (existing != null) {
+            bssLocalDao.update(existing.copy(apName = apName, building = building))
         } else {
-            list.add(BssLocalEntry(normalizedMac, apName, building))
+            bssLocalDao.insert(BssLocalEntity(bssMac = normalizedMac, apName = apName, building = building))
         }
-        saveBssLocalList(list)
         return true
     }
 
-    fun deleteBssLocal(bssMac: String) {
+    suspend fun deleteBssLocal(bssMac: String) {
         val normalizedMac = WifiUtils.normalizeBssMac(bssMac) ?: return
-        val list = getBssLocalList().toMutableList()
-        list.removeAll { it.bssMac == normalizedMac }
-        saveBssLocalList(list)
+        bssLocalDao.deleteByBssMac(normalizedMac)
     }
 
-    private fun saveBssLocalList(list: List<BssLocalEntry>) {
-        val array = JSONArray()
-        for (item in list) {
-            val obj = JSONObject()
-            obj.put("bssMac", item.bssMac)
-            obj.put("apName", item.apName)
-            obj.put("building", item.building)
-            array.put(obj)
-        }
-        prefs.saveBssLocalList(array.toString())
-    }
-
-    fun exportBssLocalToString(): String {
-        return getBssLocalList().joinToString("\n") { entry ->
-            val parts = mutableListOf(entry.bssMac, entry.apName)
-            if (entry.building.isNotEmpty()) parts.add(entry.building)
-            parts.joinToString(" ")
-        }
+    suspend fun exportBssLocalToString(): String {
+        return bssLocalDao.getAll().map(BssLocalEntity::toBssLocalEntry)
+            .joinToString("\n") { entry ->
+                val parts = mutableListOf(entry.bssMac, entry.apName)
+                if (entry.building.isNotEmpty()) parts.add(entry.building)
+                parts.joinToString(" ")
+            }
     }
 
     // ==================== BSS 信息查询 ====================

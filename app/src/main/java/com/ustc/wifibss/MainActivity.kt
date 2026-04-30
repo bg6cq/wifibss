@@ -27,7 +27,10 @@ import androidx.recyclerview.widget.ItemTouchHelper
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.ustc.wifibss.api.BssInfoApiService
+import com.ustc.wifibss.database.DataMigration
+import com.ustc.wifibss.database.WifiBssDatabase
 import com.ustc.wifibss.data.AppPreferences
+import com.ustc.wifibss.datastore.SettingsDataStore
 import com.ustc.wifibss.databinding.ActivityMainBinding
 import com.ustc.wifibss.model.ApInfo
 import com.ustc.wifibss.model.BssLocalEntry
@@ -50,6 +53,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var wifiManager: WifiManager
     private lateinit var repository: BssRepository
     private lateinit var prefs: AppPreferences
+    private lateinit var database: WifiBssDatabase
 
     companion object {
         private const val LOCATION_PERMISSION_CODE = 1001
@@ -73,14 +77,20 @@ class MainActivity : AppCompatActivity() {
         setContentView(binding.root)
 
         wifiManager = applicationContext.getSystemService(WIFI_SERVICE) as WifiManager
-        prefs = AppPreferences(getSharedPreferences(AppPreferences.PREFS_NAME, Context.MODE_PRIVATE))
-        repository = BssRepository(prefs)
+        database = WifiBssDatabase.getInstance(this)
+        prefs = AppPreferences(this)
+        repository = BssRepository(prefs, database)
 
         // 保持屏幕唤醒
         window.addFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
 
         // 加载自动刷新设置
-        autoRefreshIntervalMs = prefs.getAutoRefreshInterval()
+        lifecycleScope.launch {
+            autoRefreshIntervalMs = prefs.getAutoRefreshInterval()
+
+            // 执行数据迁移
+            DataMigration.migrateIfNeeded(database, getSharedPreferences(AppPreferences.PREFS_NAME, Context.MODE_PRIVATE))
+        }
 
         setupUI()
         setupRssiChart()
@@ -203,12 +213,14 @@ class MainActivity : AppCompatActivity() {
             lastBssid = bssid
             addHistoryRecord(bssid, "", "")
 
-            val localData = repository.getBssLocalList().find { it.bssMac == bssid }
-            if (localData != null) {
-                displayLocalBssInfo(localData)
-            } else if (prefs.isAutoQueryEnabled() && bssid.length == 12) {
-                autoQueryRetryCount = 0
-                queryBssInfoWithRetry(bssid)
+            lifecycleScope.launch {
+                val localData = repository.getBssLocalList().find { it.bssMac == bssid }
+                if (localData != null) {
+                    displayLocalBssInfo(localData)
+                } else if (prefs.isAutoQueryEnabled() && bssid.length == 12) {
+                    autoQueryRetryCount = 0
+                    queryBssInfoWithRetry(bssid)
+                }
             }
         }
 
@@ -475,48 +487,52 @@ v1.0 初始版本
      * 显示历史记录对话框
      */
     private fun showHistoryDialog() {
-        val history = repository.getHistoryList().toMutableList()
+        lifecycleScope.launch {
+            val history = repository.getHistoryList().toMutableList()
 
-        val dialogView = layoutInflater.inflate(R.layout.dialog_history, null)
-        val rvHistory = dialogView.findViewById<RecyclerView>(R.id.rvHistory)
-        val tvEmpty = dialogView.findViewById<TextView>(R.id.tvHistoryEmpty)
-        val btnClear = dialogView.findViewById<Button>(R.id.btnClearHistory)
+            val dialogView = layoutInflater.inflate(R.layout.dialog_history, null)
+            val rvHistory = dialogView.findViewById<RecyclerView>(R.id.rvHistory)
+            val tvEmpty = dialogView.findViewById<TextView>(R.id.tvHistoryEmpty)
+            val btnClear = dialogView.findViewById<Button>(R.id.btnClearHistory)
 
-        fun updateAdapter() {
-            if (history.isEmpty()) {
-                rvHistory.visibility = android.view.View.GONE
-                tvEmpty.visibility = android.view.View.VISIBLE
-                btnClear.isEnabled = false
-            } else {
-                rvHistory.visibility = android.view.View.VISIBLE
-                tvEmpty.visibility = android.view.View.GONE
-                rvHistory.layoutManager = LinearLayoutManager(this)
-                rvHistory.adapter = HistoryAdapter(history) { entry ->
-                    showEditHistoryDialog(entry)
+            fun updateAdapter() {
+                if (history.isEmpty()) {
+                    rvHistory.visibility = android.view.View.GONE
+                    tvEmpty.visibility = android.view.View.VISIBLE
+                    btnClear.isEnabled = false
+                } else {
+                    rvHistory.visibility = android.view.View.VISIBLE
+                    tvEmpty.visibility = android.view.View.GONE
+                    rvHistory.layoutManager = LinearLayoutManager(this@MainActivity)
+                    rvHistory.adapter = HistoryAdapter(history) { entry ->
+                        showEditHistoryDialog(entry)
+                    }
                 }
             }
-        }
-        updateAdapter()
+            updateAdapter()
 
-        btnClear.setOnClickListener {
-            AlertDialog.Builder(this)
-                .setTitle(R.string.history_clear)
-                .setMessage(R.string.history_clear_confirm)
-                .setPositiveButton(android.R.string.ok) { _, _ ->
-                    repository.clearHistory()
-                    Toast.makeText(this, R.string.history_cleared, Toast.LENGTH_SHORT).show()
-                    history.clear()
-                    history.addAll(repository.getHistoryList())
-                    updateAdapter()
-                }
-                .setNegativeButton(android.R.string.cancel, null)
+            btnClear.setOnClickListener {
+                AlertDialog.Builder(this@MainActivity)
+                    .setTitle(R.string.history_clear)
+                    .setMessage(R.string.history_clear_confirm)
+                    .setPositiveButton(android.R.string.ok) { _, _ ->
+                        lifecycleScope.launch {
+                            repository.clearHistory()
+                            Toast.makeText(this@MainActivity, R.string.history_cleared, Toast.LENGTH_SHORT).show()
+                            history.clear()
+                            history.addAll(repository.getHistoryList())
+                            updateAdapter()
+                        }
+                    }
+                    .setNegativeButton(android.R.string.cancel, null)
+                    .show()
+            }
+
+            AlertDialog.Builder(this@MainActivity)
+                .setView(dialogView)
+                .setPositiveButton(android.R.string.ok, null)
                 .show()
         }
-
-        AlertDialog.Builder(this)
-            .setView(dialogView)
-            .setPositiveButton(android.R.string.ok, null)
-            .show()
     }
 
     private fun showEditHistoryDialog(history: QueryHistory) {
@@ -538,11 +554,13 @@ v1.0 初始版本
                 val newBuilding = etBuilding.text.toString()
 
                 if (newBssid.isNotBlank() && newApName.isNotBlank()) {
-                    val success = repository.addBssLocal(newBssid, newApName, newBuilding)
-                    if (success) {
-                        Toast.makeText(this, R.string.saved_to_local_db, Toast.LENGTH_SHORT).show()
-                    } else {
-                        Toast.makeText(this, R.string.save_failed_invalid_mac, Toast.LENGTH_SHORT).show()
+                    lifecycleScope.launch {
+                        val success = repository.addBssLocal(newBssid, newApName, newBuilding)
+                        if (success) {
+                            Toast.makeText(this@MainActivity, R.string.saved_to_local_db, Toast.LENGTH_SHORT).show()
+                        } else {
+                            Toast.makeText(this@MainActivity, R.string.save_failed_invalid_mac, Toast.LENGTH_SHORT).show()
+                        }
                     }
                 }
             }
@@ -554,137 +572,145 @@ v1.0 初始版本
      * 显示本地 BSSMAC 对话框
      */
     private fun showBssLocalDialog() {
-        val bssList = repository.getBssLocalList().toMutableList()
+        lifecycleScope.launch {
+            val bssList = repository.getBssLocalList().toMutableList()
 
-        val dialogView = layoutInflater.inflate(R.layout.dialog_bss_local, null)
-        val rvBssLocal = dialogView.findViewById<RecyclerView>(R.id.rvBssLocal)
-        val tvEmpty = dialogView.findViewById<TextView>(R.id.tvBssLocalEmpty)
-        val etBulkAdd = dialogView.findViewById<EditText>(R.id.etBulkAdd)
-        val btnBulkAdd = dialogView.findViewById<Button>(R.id.btnBulkAdd)
-        val rgBssSort = dialogView.findViewById<RadioGroup>(R.id.rgBssSort)
+            val dialogView = layoutInflater.inflate(R.layout.dialog_bss_local, null)
+            val rvBssLocal = dialogView.findViewById<RecyclerView>(R.id.rvBssLocal)
+            val tvEmpty = dialogView.findViewById<TextView>(R.id.tvBssLocalEmpty)
+            val etBulkAdd = dialogView.findViewById<EditText>(R.id.etBulkAdd)
+            val btnBulkAdd = dialogView.findViewById<Button>(R.id.btnBulkAdd)
+            val rgBssSort = dialogView.findViewById<RadioGroup>(R.id.rgBssSort)
 
-        var currentSort = "mac"
+            var currentSort = "mac"
 
-        fun sortList(by: String) {
-            currentSort = by
-            bssList.sortWith(Comparator { a, b ->
-                when (by) {
-                    "building" -> {
-                        val cmp = a.building.compareTo(b.building, ignoreCase = true)
-                        if (cmp != 0) cmp else a.apName.compareTo(b.apName, ignoreCase = true)
-                    }
-                    "apname" -> {
-                        val cmp = a.apName.compareTo(b.apName, ignoreCase = true)
-                        if (cmp != 0) cmp else a.building.compareTo(b.building, ignoreCase = true)
-                    }
-                    else -> a.bssMac.compareTo(b.bssMac)
-                }
-            })
-        }
-
-        fun reloadList() {
-            val newList = repository.getBssLocalList().toMutableList()
-            bssList.clear()
-            bssList.addAll(newList)
-            sortList(currentSort)
-        }
-
-        fun updateAdapter() {
-            if (bssList.isEmpty()) {
-                rvBssLocal.visibility = android.view.View.GONE
-                tvEmpty.visibility = android.view.View.VISIBLE
-            } else {
-                rvBssLocal.visibility = android.view.View.VISIBLE
-                tvEmpty.visibility = android.view.View.GONE
-                rvBssLocal.layoutManager = LinearLayoutManager(this)
-                rvBssLocal.adapter = BssLocalAdapter(bssList) { entry ->
-                    showEditBssDialog(entry) {
-                        reloadList()
-                        updateAdapter()
-                    }
-                }
-            }
-        }
-        sortList("mac")
-        updateAdapter()
-
-        rgBssSort.setOnCheckedChangeListener { _, checkedId ->
-            val sortBy = when (checkedId) {
-                R.id.rbSortBuilding -> "building"
-                R.id.rbSortApName -> "apname"
-                else -> "mac"
-            }
-            sortList(sortBy)
-            rvBssLocal.adapter?.notifyDataSetChanged()
-        }
-
-        val btnExport = dialogView.findViewById<Button>(R.id.btnExport)
-        btnExport.setOnClickListener {
-            val list = repository.getBssLocalList()
-            if (list.isEmpty()) {
-                Toast.makeText(this, R.string.bssmac_empty, Toast.LENGTH_SHORT).show()
-                return@setOnClickListener
-            }
-            exportFileLauncher.launch("bssmac_export.txt")
-        }
-
-        btnBulkAdd.setOnClickListener {
-            val text = etBulkAdd.text.toString()
-            if (text.isNotBlank()) {
-                var added = 0
-                text.lines().forEach { line ->
-                    val parts = line.trim().split("\\s+".toRegex(), 3)
-                    if (parts.size >= 2) {
-                        val building = if (parts.size >= 3) parts[2] else ""
-                        if (repository.addBssLocal(parts[0], parts[1], building)) {
-                            added++
+            fun sortList(by: String) {
+                currentSort = by
+                bssList.sortWith(Comparator { a, b ->
+                    when (by) {
+                        "building" -> {
+                            val cmp = a.building.compareTo(b.building, ignoreCase = true)
+                            if (cmp != 0) cmp else a.apName.compareTo(b.apName, ignoreCase = true)
                         }
+                        "apname" -> {
+                            val cmp = a.apName.compareTo(b.apName, ignoreCase = true)
+                            if (cmp != 0) cmp else a.building.compareTo(b.building, ignoreCase = true)
+                        }
+                        else -> a.bssMac.compareTo(b.bssMac)
                     }
-                }
-                if (added > 0) {
-                    Toast.makeText(this, getString(R.string.bssmac_added_count, added), Toast.LENGTH_SHORT).show()
-                    reloadList()
-                    updateAdapter()
-                    etBulkAdd.text.clear()
+                })
+            }
+
+            suspend fun reloadList() {
+                val newList = repository.getBssLocalList().toMutableList()
+                bssList.clear()
+                bssList.addAll(newList)
+                sortList(currentSort)
+            }
+
+            fun updateAdapter() {
+                if (bssList.isEmpty()) {
+                    rvBssLocal.visibility = android.view.View.GONE
+                    tvEmpty.visibility = android.view.View.VISIBLE
                 } else {
-                    Toast.makeText(this, R.string.bssmac_format_error, Toast.LENGTH_SHORT).show()
+                    rvBssLocal.visibility = android.view.View.VISIBLE
+                    tvEmpty.visibility = android.view.View.GONE
+                    rvBssLocal.layoutManager = LinearLayoutManager(this@MainActivity)
+                    rvBssLocal.adapter = BssLocalAdapter(bssList) { entry ->
+                        showEditBssDialog(entry) {
+                            lifecycleScope.launch { reloadList() }
+                            updateAdapter()
+                        }
+                    }
                 }
             }
-        }
+            sortList("mac")
+            updateAdapter()
 
-        val touchCallback = object : ItemTouchHelper.SimpleCallback(0, ItemTouchHelper.LEFT) {
-            override fun onMove(rv: RecyclerView, vh: RecyclerView.ViewHolder, target: RecyclerView.ViewHolder): Boolean = false
+            rgBssSort.setOnCheckedChangeListener { _, checkedId ->
+                val sortBy = when (checkedId) {
+                    R.id.rbSortBuilding -> "building"
+                    R.id.rbSortApName -> "apname"
+                    else -> "mac"
+                }
+                sortList(sortBy)
+                rvBssLocal.adapter?.notifyDataSetChanged()
+            }
 
-            override fun onSwiped(vh: RecyclerView.ViewHolder, direction: Int) {
-                val position = vh.adapterPosition
-                if (position >= 0 && position < bssList.size) {
-                    val entry = bssList[position]
-                    AlertDialog.Builder(this@MainActivity)
-                        .setTitle(R.string.bssmac_delete)
-                        .setMessage(getString(R.string.bssmac_delete_confirm, entry.bssMac))
-                        .setPositiveButton(R.string.bssmac_delete) { _, _ ->
-                            repository.deleteBssLocal(entry.bssMac)
-                            bssList.removeAt(position)
-                            rvBssLocal.adapter?.notifyItemRemoved(position)
-                            Toast.makeText(this@MainActivity, getString(R.string.bssmac_deleted, entry.bssMac), Toast.LENGTH_SHORT).show()
-                            if (bssList.isEmpty()) updateAdapter()
-                        }
-                        .setNegativeButton(R.string.bssmac_cancel) { _, _ ->
-                            rvBssLocal.adapter?.notifyItemChanged(position)
-                        }
-                        .setOnCancelListener {
-                            rvBssLocal.adapter?.notifyItemChanged(position)
-                        }
-                        .show()
+            val btnExport = dialogView.findViewById<Button>(R.id.btnExport)
+            btnExport.setOnClickListener {
+                lifecycleScope.launch {
+                    val list = repository.getBssLocalList()
+                    if (list.isEmpty()) {
+                        Toast.makeText(this@MainActivity, R.string.bssmac_empty, Toast.LENGTH_SHORT).show()
+                        return@launch
+                    }
+                    exportFileLauncher.launch("bssmac_export.txt")
                 }
             }
-        }
-        ItemTouchHelper(touchCallback).attachToRecyclerView(rvBssLocal)
 
-        AlertDialog.Builder(this)
-            .setView(dialogView)
-            .setPositiveButton(android.R.string.ok, null)
-            .show()
+            btnBulkAdd.setOnClickListener {
+                val text = etBulkAdd.text.toString()
+                if (text.isNotBlank()) {
+                    lifecycleScope.launch {
+                        var added = 0
+                        text.lines().forEach { line ->
+                            val parts = line.trim().split("\\s+".toRegex(), 3)
+                            if (parts.size >= 2) {
+                                val building = if (parts.size >= 3) parts[2] else ""
+                                if (repository.addBssLocal(parts[0], parts[1], building)) {
+                                    added++
+                                }
+                            }
+                        }
+                        if (added > 0) {
+                            Toast.makeText(this@MainActivity, getString(R.string.bssmac_added_count, added), Toast.LENGTH_SHORT).show()
+                            reloadList()
+                            updateAdapter()
+                            etBulkAdd.text.clear()
+                        } else {
+                            Toast.makeText(this@MainActivity, R.string.bssmac_format_error, Toast.LENGTH_SHORT).show()
+                        }
+                    }
+                }
+            }
+
+            val touchCallback = object : ItemTouchHelper.SimpleCallback(0, ItemTouchHelper.LEFT) {
+                override fun onMove(rv: RecyclerView, vh: RecyclerView.ViewHolder, target: RecyclerView.ViewHolder): Boolean = false
+
+                override fun onSwiped(vh: RecyclerView.ViewHolder, direction: Int) {
+                    val position = vh.adapterPosition
+                    if (position >= 0 && position < bssList.size) {
+                        val entry = bssList[position]
+                        AlertDialog.Builder(this@MainActivity)
+                            .setTitle(R.string.bssmac_delete)
+                            .setMessage(getString(R.string.bssmac_delete_confirm, entry.bssMac))
+                            .setPositiveButton(R.string.bssmac_delete) { _, _ ->
+                                lifecycleScope.launch {
+                                    repository.deleteBssLocal(entry.bssMac)
+                                    bssList.removeAt(position)
+                                    rvBssLocal.adapter?.notifyItemRemoved(position)
+                                    Toast.makeText(this@MainActivity, getString(R.string.bssmac_deleted, entry.bssMac), Toast.LENGTH_SHORT).show()
+                                    if (bssList.isEmpty()) updateAdapter()
+                                }
+                            }
+                            .setNegativeButton(R.string.bssmac_cancel) { _, _ ->
+                                rvBssLocal.adapter?.notifyItemChanged(position)
+                            }
+                            .setOnCancelListener {
+                                rvBssLocal.adapter?.notifyItemChanged(position)
+                            }
+                            .show()
+                    }
+                }
+            }
+            ItemTouchHelper(touchCallback).attachToRecyclerView(rvBssLocal)
+
+            AlertDialog.Builder(this@MainActivity)
+                .setView(dialogView)
+                .setPositiveButton(android.R.string.ok, null)
+                .show()
+        }
     }
 
     private fun showEditBssDialog(entry: BssLocalEntry, onSaved: () -> Unit) {
@@ -706,16 +732,18 @@ v1.0 初始版本
                 val newBuilding = etBuilding.text.toString()
 
                 if (newMac.isNotBlank() && newApName.isNotBlank()) {
-                    if (repository.addBssLocal(newMac, newApName, newBuilding)) {
-                        val msg = if (WifiUtils.normalizeBssMac(newMac) != WifiUtils.normalizeBssMac(entry.bssMac)) {
-                            getString(R.string.bssmac_added_new)
+                    lifecycleScope.launch {
+                        if (repository.addBssLocal(newMac, newApName, newBuilding)) {
+                            val msg = if (WifiUtils.normalizeBssMac(newMac) != WifiUtils.normalizeBssMac(entry.bssMac)) {
+                                getString(R.string.bssmac_added_new)
+                            } else {
+                                getString(R.string.bssmac_save)
+                            }
+                            Toast.makeText(this@MainActivity, msg, Toast.LENGTH_SHORT).show()
+                            onSaved()
                         } else {
-                            getString(R.string.bssmac_save)
+                            Toast.makeText(this@MainActivity, R.string.bssmac_format_invalid, Toast.LENGTH_SHORT).show()
                         }
-                        Toast.makeText(this, msg, Toast.LENGTH_SHORT).show()
-                        onSaved()
-                    } else {
-                        Toast.makeText(this, R.string.bssmac_format_invalid, Toast.LENGTH_SHORT).show()
                     }
                 }
             }
@@ -724,14 +752,17 @@ v1.0 初始版本
     }
 
     private fun exportBssLocalToFile(uri: android.net.Uri) {
-        try {
-            val content = repository.exportBssLocalToString()
-            contentResolver.openOutputStream(uri)?.use { outputStream ->
-                outputStream.write(content.toByteArray())
+        lifecycleScope.launch {
+            try {
+                val content = repository.exportBssLocalToString()
+                contentResolver.openOutputStream(uri)?.use { outputStream ->
+                    outputStream.write(content.toByteArray())
+                }
+                val count = repository.getBssLocalList().size
+                Toast.makeText(this@MainActivity, getString(R.string.bssmac_export_success, count), Toast.LENGTH_SHORT).show()
+            } catch (e: Exception) {
+                Toast.makeText(this@MainActivity, getString(R.string.bssmac_export_failed, e.message), Toast.LENGTH_LONG).show()
             }
-            Toast.makeText(this, getString(R.string.bssmac_export_success, repository.getBssLocalList().size), Toast.LENGTH_SHORT).show()
-        } catch (e: Exception) {
-            Toast.makeText(this, getString(R.string.bssmac_export_failed, e.message), Toast.LENGTH_LONG).show()
         }
     }
 
@@ -806,53 +837,55 @@ v1.0 初始版本
      * 显示设置对话框
      */
     private fun showSettingsDialog() {
-        val dialogView = layoutInflater.inflate(R.layout.dialog_settings, null)
-        val etQueryUrl = dialogView.findViewById<EditText>(R.id.etQueryUrl)
-        val etQueryKey = dialogView.findViewById<EditText>(R.id.etQueryKey)
-        val rgAutoRefresh = dialogView.findViewById<RadioGroup>(R.id.rgAutoRefresh)
-        val cbAutoQuery = dialogView.findViewById<CheckBox>(R.id.cbAutoQuery)
-        val cbCacheApInfo = dialogView.findViewById<CheckBox>(R.id.cbCacheApInfo)
+        lifecycleScope.launch {
+            val dialogView = layoutInflater.inflate(R.layout.dialog_settings, null)
+            val etQueryUrl = dialogView.findViewById<EditText>(R.id.etQueryUrl)
+            val etQueryKey = dialogView.findViewById<EditText>(R.id.etQueryKey)
+            val rgAutoRefresh = dialogView.findViewById<RadioGroup>(R.id.rgAutoRefresh)
+            val cbAutoQuery = dialogView.findViewById<CheckBox>(R.id.cbAutoQuery)
+            val cbCacheApInfo = dialogView.findViewById<CheckBox>(R.id.cbCacheApInfo)
 
-        etQueryUrl.setText(prefs.getQueryUrl())
-        etQueryKey.setText(prefs.getQueryKey())
-        cbAutoQuery.isChecked = prefs.isAutoQueryEnabled()
-        cbCacheApInfo.isChecked = prefs.isCacheApInfoEnabled()
+            etQueryUrl.setText(prefs.getQueryUrl())
+            etQueryKey.setText(prefs.getQueryKey())
+            cbAutoQuery.isChecked = prefs.isAutoQueryEnabled()
+            cbCacheApInfo.isChecked = prefs.isCacheApInfoEnabled()
 
-        val autoRefresh = prefs.getAutoRefreshInterval()
-        when (autoRefresh) {
-            0 -> rgAutoRefresh.check(R.id.rbNever)
-            1000 -> rgAutoRefresh.check(R.id.rb1s)
-            5000 -> rgAutoRefresh.check(R.id.rb5s)
-            10000 -> rgAutoRefresh.check(R.id.rb10s)
-        }
-
-        AlertDialog.Builder(this)
-            .setTitle(R.string.settings_title)
-            .setView(dialogView)
-            .setPositiveButton(R.string.save) { _, _ ->
-                prefs.saveSettings(etQueryUrl.text.toString(), etQueryKey.text.toString())
-                prefs.saveAutoQuery(cbAutoQuery.isChecked)
-                prefs.saveCacheApInfo(cbCacheApInfo.isChecked)
-                if (!cbCacheApInfo.isChecked) {
-                    repository.clearApInfoCache()
-                }
-
-                val selectedId = rgAutoRefresh.checkedRadioButtonId
-                val newInterval = when (selectedId) {
-                    R.id.rb1s -> 1000
-                    R.id.rb5s -> 5000
-                    R.id.rb10s -> 10000
-                    else -> 0
-                }
-                prefs.saveAutoRefreshInterval(newInterval)
-                if (newInterval != autoRefresh) {
-                    autoRefreshIntervalMs = newInterval
-                    restartAutoRefresh()
-                }
-                Toast.makeText(this, R.string.save, Toast.LENGTH_SHORT).show()
+            val autoRefresh = prefs.getAutoRefreshInterval()
+            when (autoRefresh) {
+                0 -> rgAutoRefresh.check(R.id.rbNever)
+                1000 -> rgAutoRefresh.check(R.id.rb1s)
+                5000 -> rgAutoRefresh.check(R.id.rb5s)
+                10000 -> rgAutoRefresh.check(R.id.rb10s)
             }
-            .setNegativeButton(R.string.cancel, null)
-            .show()
+
+            AlertDialog.Builder(this@MainActivity)
+                .setTitle(R.string.settings_title)
+                .setView(dialogView)
+                .setPositiveButton(R.string.save) { _, _ ->
+                    val newInterval = when (rgAutoRefresh.checkedRadioButtonId) {
+                        R.id.rb1s -> 1000
+                        R.id.rb5s -> 5000
+                        R.id.rb10s -> 10000
+                        else -> 0
+                    }
+                    lifecycleScope.launch {
+                        prefs.saveSettings(etQueryUrl.text.toString(), etQueryKey.text.toString())
+                        prefs.saveAutoQuery(cbAutoQuery.isChecked)
+                        prefs.saveCacheApInfo(cbCacheApInfo.isChecked)
+                        if (!cbCacheApInfo.isChecked) {
+                            repository.clearApInfoCache()
+                        }
+                        prefs.saveAutoRefreshInterval(newInterval)
+                        if (newInterval != autoRefresh) {
+                            autoRefreshIntervalMs = newInterval
+                            restartAutoRefresh()
+                        }
+                        Toast.makeText(this@MainActivity, R.string.save, Toast.LENGTH_SHORT).show()
+                    }
+                }
+                .setNegativeButton(R.string.cancel, null)
+                .show()
+        }
     }
 
     /**
@@ -896,16 +929,16 @@ v1.0 初始版本
      * 查询 BSS 信息（带重试，用于自动查询）
      */
     private fun queryBssInfoWithRetry(bssid: String) {
-        val localData = repository.getBssLocalList().find { it.bssMac == bssid }
-        if (localData != null) {
-            displayLocalBssInfo(localData)
-            return
-        }
-
-        binding.tvResult.text = getString(R.string.querying)
-        clearApInfoDisplay()
-
         lifecycleScope.launch {
+            val localData = repository.getBssLocalList().find { it.bssMac == bssid }
+            if (localData != null) {
+                displayLocalBssInfo(localData)
+                return@launch
+            }
+
+            binding.tvResult.text = getString(R.string.querying)
+            clearApInfoDisplay()
+
             var success = false
             while (!success && autoQueryRetryCount < 3) {
                 try {
@@ -947,17 +980,17 @@ v1.0 初始版本
      * 查询 BSS 信息（手动查询，无重试）
      */
     private fun queryBssInfo(bssid: String) {
-        val localData = repository.getBssLocalList().find { it.bssMac == bssid }
-        if (localData != null) {
-            displayLocalBssInfo(localData)
-            return
-        }
-
-        binding.tvResult.text = getString(R.string.querying)
-        clearApInfoDisplay()
-        binding.btnQuery.isEnabled = false
-
         lifecycleScope.launch {
+            val localData = repository.getBssLocalList().find { it.bssMac == bssid }
+            if (localData != null) {
+                displayLocalBssInfo(localData)
+                return@launch
+            }
+
+            binding.tvResult.text = getString(R.string.querying)
+            clearApInfoDisplay()
+            binding.btnQuery.isEnabled = false
+
             try {
                 val apInfo = repository.queryBssInfo(bssid)
                 withContext(Dispatchers.Main) {
@@ -1005,14 +1038,18 @@ v1.0 初始版本
         binding.tvApBuilding.text = localData.building
         binding.tvResult.text = "本地数据"
 
-        val currentBssid = WifiUtils.formatBssid(wifiManager.connectionInfo.bssid)
-        if (currentBssid != null && currentBssid.length == 12) {
-            repository.updateHistoryRecord(currentBssid, localData.apName, localData.building)
+        lifecycleScope.launch {
+            val currentBssid = WifiUtils.formatBssid(wifiManager.connectionInfo.bssid)
+            if (currentBssid != null && currentBssid.length == 12) {
+                repository.updateHistoryRecord(currentBssid, localData.apName, localData.building)
+            }
         }
     }
 
     private fun addHistoryRecord(bssid: String, apName: String, building: String) {
-        repository.addHistoryRecord(bssid, apName, building)
+        lifecycleScope.launch {
+            repository.addHistoryRecord(bssid, apName, building)
+        }
     }
 
     /**
