@@ -3,8 +3,6 @@ package com.ustc.wifibss
 import android.Manifest
 import android.annotation.SuppressLint
 import android.content.Context
-import androidx.activity.result.contract.ActivityResultContracts
-import android.content.SharedPreferences
 import android.content.pm.PackageManager
 import android.net.wifi.ScanResult
 import android.net.wifi.WifiManager
@@ -19,82 +17,54 @@ import android.widget.EditText
 import android.widget.RadioGroup
 import android.widget.TextView
 import android.widget.Toast
-import androidx.recyclerview.widget.LinearLayoutManager
-import androidx.recyclerview.widget.RecyclerView
-import androidx.recyclerview.widget.ItemTouchHelper
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.lifecycleScope
+import androidx.recyclerview.widget.ItemTouchHelper
+import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.RecyclerView
+import com.ustc.wifibss.api.BssInfoApiService
+import com.ustc.wifibss.data.AppPreferences
 import com.ustc.wifibss.databinding.ActivityMainBinding
+import com.ustc.wifibss.model.ApInfo
+import com.ustc.wifibss.model.BssLocalEntry
+import com.ustc.wifibss.model.QueryHistory
+import com.ustc.wifibss.repository.BssRepository
+import com.ustc.wifibss.util.WifiUtils
+import com.ustc.wifibss.util.WifiUtils.SignalLevel
+import com.ustc.wifibss.util.WifiUtils.removeSurroundingQuotes
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import okhttp3.OkHttpClient
-import okhttp3.Request
-import org.json.JSONArray
-import org.json.JSONObject
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
-import java.util.concurrent.TimeUnit
 
 class MainActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityMainBinding
     private lateinit var wifiManager: WifiManager
-    private lateinit var prefs: SharedPreferences
-    private val httpClient = OkHttpClient.Builder()
-        .connectTimeout(10, TimeUnit.SECONDS)
-        .readTimeout(10, TimeUnit.SECONDS)
-        .build()
+    private lateinit var repository: BssRepository
+    private lateinit var prefs: AppPreferences
 
     companion object {
         private const val LOCATION_PERMISSION_CODE = 1001
-        private const val PREFS_NAME = "app_settings"
-        private const val KEY_QUERY_URL = "query_url"
-        private const val KEY_QUERY_KEY = "query_key"
-        private const val KEY_AUTO_QUERY = "auto_query"
-        private const val KEY_AUTO_REFRESH = "auto_refresh"
-        private const val KEY_HISTORY = "query_history"
-        private const val KEY_BSS_LOCAL = "bss_local_data"
-        private const val KEY_CACHE_AP_INFO = "cache_ap_info"
-        private const val DEFAULT_QUERY_URL = "https://linux.ustc.edu.cn/api/bssinfo.php"
-        private const val MAX_HISTORY_COUNT = 50
-        private const val AP_INFO_CACHE_DURATION_MS = 10 * 60 * 1000L // 10 分钟
+        private const val SCAN_INTERVAL_MS = 30000L // WiFi 扫描间隔 30 秒
     }
-
-    // 历史记录数据类
-    data class QueryHistory(
-        val timestamp: Long,
-        val bssid: String,
-        val apName: String,
-        val building: String
-    )
-
-    // 本地 BSS MAC 数据类
-    data class BssLocalEntry(
-        val bssMac: String,
-        val apName: String,
-        val building: String
-    )
 
     private var lastBssid: String? = null
     private var autoQueryRetryCount = 0
     private var autoRefreshJob: kotlinx.coroutines.Job? = null
-    private var autoRefreshIntervalMs: Int = 0 // 0 = 不刷新
-    private var bssidChangedForChart: Boolean = false // 标记当前刷新是否 BSSID 变化
-    private var lastScanTimeMs: Long = 0 // 上次 WiFi 扫描时间
-    private val scanIntervalMs = 30000L // WiFi 扫描间隔 30 秒
-    private val apInfoCache = mutableMapOf<String, ApInfoCacheEntry>() // AP 信息查询缓存
-    private data class ApInfoCacheEntry(val result: String, val cachedAt: Long)
+    private var autoRefreshIntervalMs: Int = 0
+    private var bssidChangedForChart: Boolean = false
+    private var lastScanTimeMs: Long = 0
 
     private val exportFileLauncher = registerForActivityResult(ActivityResultContracts.CreateDocument("text/plain")) { uri ->
-        if (uri != null) {
-            exportBssLocalToFile(uri)
-        }
+        if (uri != null) exportBssLocalToFile(uri)
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -103,13 +73,14 @@ class MainActivity : AppCompatActivity() {
         setContentView(binding.root)
 
         wifiManager = applicationContext.getSystemService(WIFI_SERVICE) as WifiManager
-        prefs = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs = AppPreferences(getSharedPreferences(AppPreferences.PREFS_NAME, Context.MODE_PRIVATE))
+        repository = BssRepository(prefs)
 
         // 保持屏幕唤醒
         window.addFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
 
         // 加载自动刷新设置
-        autoRefreshIntervalMs = getAutoRefreshInterval()
+        autoRefreshIntervalMs = prefs.getAutoRefreshInterval()
 
         setupUI()
         setupRssiChart()
@@ -119,12 +90,10 @@ class MainActivity : AppCompatActivity() {
     override fun onResume() {
         super.onResume()
         updateWifiInfo()
-        scanAndUpdateNearbyAps() // 进入页面时立即扫描一次
+        scanAndUpdateNearbyAps()
         restartAutoRefresh()
-        startApScanTimer() // 启动 30 秒扫描定时器
+        startApScanTimer()
     }
-
-    private var apScanJob: kotlinx.coroutines.Job? = null
 
     override fun onPause() {
         super.onPause()
@@ -134,6 +103,8 @@ class MainActivity : AppCompatActivity() {
         apScanJob = null
     }
 
+    private var apScanJob: kotlinx.coroutines.Job? = null
+
     /**
      * 启动 AP 扫描定时器（每 30 秒扫描一次）
      */
@@ -141,7 +112,7 @@ class MainActivity : AppCompatActivity() {
         apScanJob?.cancel()
         apScanJob = lifecycleScope.launch {
             while (true) {
-                delay(scanIntervalMs)
+                delay(SCAN_INTERVAL_MS)
                 scanAndUpdateNearbyAps()
             }
         }
@@ -153,7 +124,7 @@ class MainActivity : AppCompatActivity() {
     private fun checkUpdate() {
         lifecycleScope.launch {
             try {
-                val versionInfo = fetchVersionInfo()
+                val versionInfo = repository.checkVersion()
                 withContext(Dispatchers.Main) {
                     val packageInfo = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                         packageManager.getPackageInfo(packageName, android.content.pm.PackageManager.PackageInfoFlags.of(0))
@@ -171,38 +142,7 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    /**
-     * 获取服务器版本信息
-     */
-    private suspend fun fetchVersionInfo(): VersionInfo? = withContext(Dispatchers.IO) {
-        val url = "https://noc.ustc.edu.cn/version.json"
-        val request = Request.Builder()
-            .url(url)
-            .build()
-
-        try {
-            httpClient.newCall(request).execute().use { response ->
-                if (response.isSuccessful) {
-                    val json = JSONObject(response.body?.string() ?: return@withContext null)
-                    VersionInfo(
-                        versionCode = json.optInt("versionCode", 0),
-                        versionName = json.optString("versionName", ""),
-                        updateUrl = json.optString("updateUrl", ""),
-                        updateLog = json.optString("updateLog", "")
-                    )
-                } else {
-                    null
-                }
-            }
-        } catch (e: Exception) {
-            null
-        }
-    }
-
-    /**
-     * 显示更新对话框
-     */
-    private fun showUpdateDialog(versionInfo: VersionInfo, packageInfo: android.content.pm.PackageInfo) {
+    private fun showUpdateDialog(versionInfo: BssInfoApiService.VersionInfo, packageInfo: android.content.pm.PackageInfo) {
         val currentVersionStr = "v${packageInfo.versionName} (${packageInfo.longVersionCode})"
         val newVersionStr = "v${versionInfo.versionName} (${versionInfo.versionCode})"
 
@@ -223,24 +163,11 @@ class MainActivity : AppCompatActivity() {
             .show()
     }
 
-    /**
-     * 下载 APK
-     */
     private fun downloadApk(url: String) {
         val intent = android.content.Intent(android.content.Intent.ACTION_VIEW)
         intent.data = android.net.Uri.parse(url)
         startActivity(intent)
     }
-
-    /**
-     * 版本信息数据类
-     */
-    private data class VersionInfo(
-        val versionCode: Int,
-        val versionName: String,
-        val updateUrl: String,
-        val updateLog: String
-    )
 
     /**
      * 更新所有 WiFi 信息显示
@@ -265,7 +192,7 @@ class MainActivity : AppCompatActivity() {
         binding.tvSsid.text = ssid.ifEmpty { getString(R.string.no_wifi_connection) }
 
         // BSSID
-        val bssid = getFormattedBssid()
+        val bssid = WifiUtils.formatBssid(wifiInfo.bssid)
         binding.tvBssidValue.text = bssid ?: getString(R.string.no_wifi_connection)
 
         // 检测 BSSID 变化
@@ -274,29 +201,26 @@ class MainActivity : AppCompatActivity() {
 
         if (bssidChanged) {
             lastBssid = bssid
-            // 记录历史（即使没有查询到数据）
             addHistoryRecord(bssid, "", "")
 
-            // 无论自动查询是否开启，都先检查本地数据库
-            val localData = getBssLocalList().find { it.bssMac == bssid }
+            val localData = repository.getBssLocalList().find { it.bssMac == bssid }
             if (localData != null) {
                 displayLocalBssInfo(localData)
-            } else if (getAutoQuery() && bssid.length == 12) {
-                // 本地无数据且开启了自动查询，才调用远程 API
+            } else if (prefs.isAutoQueryEnabled() && bssid.length == 12) {
                 autoQueryRetryCount = 0
                 queryBssInfoWithRetry(bssid)
             }
         }
 
         // IP 地址
-        val ip = formatIpAddress(wifiInfo.ipAddress)
-        binding.tvIp.text = ip
+        binding.tvIp.text = WifiUtils.formatIpAddress(wifiInfo.ipAddress)
 
         // 信号强度 RSSI
         val rssi = wifiInfo.rssi
-        binding.tvRssi.text = "$rssi dBm (${getSignalLevel(rssi)})"
+        val signalLevel = WifiUtils.getSignalLevel(rssi)
+        binding.tvRssi.text = "$rssi dBm (${signalLevel.label})"
 
-        // 添加 RSSI 数据点到图表（当前连接的 AP）
+        // 添加 RSSI 数据点到图表
         addRssiDataPoint(rssi)
 
         // 扫描周围同 SSID 的其它 AP
@@ -304,13 +228,8 @@ class MainActivity : AppCompatActivity() {
 
         // 频率/信道
         val freq = wifiInfo.frequency
-        val channel = frequencyToChannel(freq)
-        val band = when {
-            freq <= 0 -> ""
-            freq < 2500 -> "2.4GHz"
-            freq < 5925 -> "5GHz"
-            else -> "6GHz"
-        }
+        val channel = WifiUtils.frequencyToChannel(freq)
+        val band = WifiUtils.getBand(freq)
         val bandText = if (band.isNotEmpty()) " ($band)" else ""
         binding.tvFrequency.text = "$freq MHz (信道 $channel)$bandText"
 
@@ -322,10 +241,8 @@ class MainActivity : AppCompatActivity() {
 
     /**
      * 获取 WiFi 技术标准 (802.11 a/b/g/n/ac/ax/be)
-     * Android 11+ 使用官方 API，旧版本不显示
      */
     private fun getWifiStandard(wifiInfo: android.net.wifi.WifiInfo): String {
-        // Android 11+ (API 30) 使用官方 API
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
             return try {
                 val standard = wifiInfo.wifiStandard
@@ -344,9 +261,6 @@ class MainActivity : AppCompatActivity() {
         return ""
     }
 
-    /**
-     * 清空 WiFi 信息显示
-     */
     private fun clearWifiInfo() {
         binding.tvSsid.text = getString(R.string.no_wifi_connection)
         binding.tvBssidValue.text = getString(R.string.no_wifi_connection)
@@ -356,59 +270,10 @@ class MainActivity : AppCompatActivity() {
         binding.tvLinkSpeed.text = "-"
     }
 
-    /**
-     * 格式化 IP 地址 (int 转 IPv4)
-     */
-    private fun formatIpAddress(ip: Int): String {
-        if (ip == 0) return "-"
-        return "${ip and 0xFF}.${(ip shr 8) and 0xFF}.${(ip shr 16) and 0xFF}.${(ip shr 24) and 0xFF}"
-    }
-
-    /**
-     * 频率转信道
-     */
-    private fun frequencyToChannel(freq: Int): Int {
-        return when {
-            freq <= 0 -> -1
-            freq <= 2484 -> when (freq) {
-                2484 -> 14
-                else -> (freq - 2407) / 5
-            }
-            freq in 5000..5900 -> (freq - 5000) / 5
-            freq in 5925..7125 -> (freq - 5950) / 5 + 1
-            else -> -1
-        }
-    }
-
-    /**
-     * 获取信号强度等级
-     */
-    private fun getSignalLevel(rssi: Int): String {
-        return when {
-            rssi >= -50 -> getString(R.string.signal_excellent)
-            rssi >= -60 -> getString(R.string.signal_good)
-            rssi >= -70 -> getString(R.string.signal_fair)
-            rssi >= -80 -> getString(R.string.signal_weak)
-            else -> getString(R.string.signal_poor)
-        }
-    }
-
-    /**
-     * 移除 SSID 周围的引号
-     */
-    private fun String.removeSurroundingQuotes(): String {
-        return if (startsWith("\"") && endsWith("\"")) {
-            substring(1, length - 1)
-        } else {
-            this
-        }
-    }
-
     private fun setupUI() {
         binding.btnQuery.setOnClickListener {
-            val bssid = getFormattedBssid()
+            val bssid = WifiUtils.formatBssid(wifiManager.connectionInfo.bssid)
             if (bssid != null && bssid.length == 12) {
-                // 更新界面显示的 BSSID
                 binding.tvBssidValue.text = bssid
                 queryBssInfo(bssid)
             } else {
@@ -417,17 +282,10 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    /**
-     * 设置 RSSI 图表
-     */
     private fun setupRssiChart() {
-        // 初始隐藏空数据提示
         binding.tvRssiEmpty.visibility = android.view.View.GONE
     }
 
-    /**
-     * 添加 RSSI 数据点到图表（当前连接的 AP）
-     */
     private fun addRssiDataPoint(rssi: Int) {
         binding.rssiChart.addOrUpdateApSeries(
             apId = "current",
@@ -447,41 +305,32 @@ class MainActivity : AppCompatActivity() {
     @Suppress("DEPRECATION")
     private fun scanAndUpdateNearbyAps() {
         val now = System.currentTimeMillis()
-        if (now - lastScanTimeMs < scanIntervalMs) {
-            return // 距离上次扫描不足 30 秒
-        }
+        if (now - lastScanTimeMs < SCAN_INTERVAL_MS) return
 
-        if (!checkPermissions()) {
-            return
-        }
+        if (!checkPermissions()) return
 
         val wifiInfo = wifiManager.connectionInfo ?: return
-        val currentBssid = getFormattedBssid() ?: return
+        val currentBssid = WifiUtils.formatBssid(wifiInfo.bssid) ?: return
         val currentSsid = wifiInfo.ssid.removeSurroundingQuotes()
-        if (currentSsid.isEmpty()) return // 隐藏网络不扫描
+        if (currentSsid.isEmpty()) return
 
-        // 提前设置时间戳，避免竞态条件
         lastScanTimeMs = now
 
         lifecycleScope.launch {
             try {
-                // 再次检查权限（协程执行时权限可能已被撤销）
                 if (!checkPermissions()) return@launch
                 val scanResults = wifiManager.scanResults
 
-                // 过滤同 SSID 的 AP（排除当前连接的）
                 val sameSsidAps = scanResults
                     .filter { it.SSID.removeSurroundingQuotes() == currentSsid }
                     .filter { it.BSSID != currentBssid }
-                    .sortedByDescending { it.level } // 按信号强度降序
-                    .take(2) // 取最强的 2 个
+                    .sortedByDescending { it.level }
+                    .take(2)
 
-                // 更新 2 个固定附近 AP 数据流（查询名称用于显示）
                 val nearbyIds = listOf("nearby_1", "nearby_2")
                 for ((index, ap) in sameSsidAps.withIndex()) {
                     val apBssid = ap.BSSID.replace(Regex("[^0-9a-fA-F]"), "").lowercase()
-                    val apName = queryNearbyApName(apBssid)
-                        ?: apBssid
+                    val apName = repository.queryNearbyApName(apBssid) ?: apBssid
                     binding.rssiChart.addOrUpdateApSeries(
                         apId = nearbyIds[index],
                         apName = apName,
@@ -497,44 +346,6 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    /**
-     * 查询附近 AP 名称：本地数据库 → API
-     */
-    private suspend fun queryNearbyApName(bssid: String): String? {
-        // 1. 本地数据库
-        val localData = getBssLocalList().find { it.bssMac == bssid }
-        if (localData != null) {
-            if (localData.apName.isNotEmpty()) return localData.apName
-        }
-
-        // 2. API 查询
-        return try {
-            withContext(Dispatchers.IO) {
-                val baseUrl = getQueryUrl()
-                val queryKey = getQueryKey()
-                val url = "$baseUrl?bssid=$bssid"
-                val requestBuilder = Request.Builder().url(url)
-                if (queryKey.isNotEmpty()) {
-                    requestBuilder.addHeader("Authorization", "Bearer $queryKey")
-                }
-                val response = httpClient.newCall(requestBuilder.build()).execute()
-                if (response.isSuccessful) {
-                    val json = JSONObject(response.body?.string() ?: return@withContext null)
-                    if (json.optString("status") == "ok") {
-                        val data = json.optJSONArray("data")
-                        if (data != null && data.length() > 0) {
-                            val item = data.getJSONObject(0)
-                            val apName = item.optString("AP_NAME", "")
-                            if (apName.isNotEmpty()) return@withContext apName
-                        }
-                    }
-                }
-                null
-            }
-        } catch (e: Exception) {
-            null
-        }
-    }
     private fun showAboutDialog() {
         val dialogView = layoutInflater.inflate(R.layout.dialog_about, null)
         val tvVersion = dialogView.findViewById<TextView>(R.id.tvVersion)
@@ -555,28 +366,15 @@ class MainActivity : AppCompatActivity() {
             .show()
     }
 
-    /**
-     * 获取版本信息
-     */
-    private fun getVersionInfo(): String {
-        return "版本：1.30"
-    }
+    private fun getVersionInfo(): String = "版本：1.30"
 
-    /**
-     * 获取功能说明
-     */
-    private fun getDescriptionText(): String {
-        return getString(R.string.about_description)
-    }
+    private fun getDescriptionText(): String = getString(R.string.about_description)
 
-    /**
-     * 获取重大更新内容
-     */
     private fun getChangesText(): String {
         return """
-v1.30 显示可能漫游切换的AP信号
-- 自动查询附近AP名称并在图表下方显示
-- 设置中增加缓存AP信息选项，减少查询次数
+v1.30 显示可能漫游切换的 AP 信号
+- 自动查询附近 AP 名称并在图表下方显示
+- 设置中增加缓存 AP 信息选项，减少查询次数
 - 图表布局和显示优化
 
 v1.28 显示文字优化
@@ -671,25 +469,19 @@ v1.0 初始版本
         """.trimIndent()
     }
 
-    /**
-     * 获取作者信息
-     */
-    private fun getAuthorText(): String {
-        return "作者：james@ustc.edu.cn 2026"
-    }
+    private fun getAuthorText(): String = "作者：james@ustc.edu.cn 2026"
 
     /**
      * 显示历史记录对话框
      */
     private fun showHistoryDialog() {
-        val history = getHistoryList().toMutableList()
+        val history = repository.getHistoryList().toMutableList()
 
         val dialogView = layoutInflater.inflate(R.layout.dialog_history, null)
         val rvHistory = dialogView.findViewById<RecyclerView>(R.id.rvHistory)
         val tvEmpty = dialogView.findViewById<TextView>(R.id.tvHistoryEmpty)
         val btnClear = dialogView.findViewById<Button>(R.id.btnClearHistory)
 
-        // 设置适配器
         fun updateAdapter() {
             if (history.isEmpty()) {
                 rvHistory.visibility = android.view.View.GONE
@@ -700,25 +492,21 @@ v1.0 初始版本
                 tvEmpty.visibility = android.view.View.GONE
                 rvHistory.layoutManager = LinearLayoutManager(this)
                 rvHistory.adapter = HistoryAdapter(history) { entry ->
-                    // 单击编辑：显示编辑对话框
                     showEditHistoryDialog(entry)
                 }
             }
         }
         updateAdapter()
 
-        // 清除按钮点击事件
         btnClear.setOnClickListener {
             AlertDialog.Builder(this)
                 .setTitle(R.string.history_clear)
                 .setMessage(R.string.history_clear_confirm)
                 .setPositiveButton(android.R.string.ok) { _, _ ->
-                    clearHistory()
+                    repository.clearHistory()
                     Toast.makeText(this, R.string.history_cleared, Toast.LENGTH_SHORT).show()
-                    // 刷新列表
-                    val newHistory = getHistoryList()
                     history.clear()
-                    history.addAll(newHistory)
+                    history.addAll(repository.getHistoryList())
                     updateAdapter()
                 }
                 .setNegativeButton(android.R.string.cancel, null)
@@ -731,9 +519,6 @@ v1.0 初始版本
             .show()
     }
 
-    /**
-     * 显示编辑历史记录对话框
-     */
     private fun showEditHistoryDialog(history: QueryHistory) {
         val dialogView = layoutInflater.inflate(R.layout.dialog_edit_history, null)
         val etBssid = dialogView.findViewById<EditText>(R.id.etBssid)
@@ -753,8 +538,7 @@ v1.0 初始版本
                 val newBuilding = etBuilding.text.toString()
 
                 if (newBssid.isNotBlank() && newApName.isNotBlank()) {
-                    // 保存到本地 BSS MAC 数据库
-                    val success = addBssLocal(newBssid, newApName, newBuilding)
+                    val success = repository.addBssLocal(newBssid, newApName, newBuilding)
                     if (success) {
                         Toast.makeText(this, R.string.saved_to_local_db, Toast.LENGTH_SHORT).show()
                     } else {
@@ -766,12 +550,11 @@ v1.0 初始版本
             .show()
     }
 
-
     /**
      * 显示本地 BSSMAC 对话框
      */
     private fun showBssLocalDialog() {
-        val bssList = getBssLocalList().toMutableList()
+        val bssList = repository.getBssLocalList().toMutableList()
 
         val dialogView = layoutInflater.inflate(R.layout.dialog_bss_local, null)
         val rvBssLocal = dialogView.findViewById<RecyclerView>(R.id.rvBssLocal)
@@ -782,7 +565,6 @@ v1.0 初始版本
 
         var currentSort = "mac"
 
-        // 排序
         fun sortList(by: String) {
             currentSort = by
             bssList.sortWith(Comparator { a, b ->
@@ -800,15 +582,13 @@ v1.0 初始版本
             })
         }
 
-        // 重新加载并排序
         fun reloadList() {
-            val newList = getBssLocalList().toMutableList()
+            val newList = repository.getBssLocalList().toMutableList()
             bssList.clear()
             bssList.addAll(newList)
             sortList(currentSort)
         }
 
-        // 设置适配器
         fun updateAdapter() {
             if (bssList.isEmpty()) {
                 rvBssLocal.visibility = android.view.View.GONE
@@ -828,7 +608,6 @@ v1.0 初始版本
         sortList("mac")
         updateAdapter()
 
-        // 排序切换
         rgBssSort.setOnCheckedChangeListener { _, checkedId ->
             val sortBy = when (checkedId) {
                 R.id.rbSortBuilding -> "building"
@@ -839,10 +618,9 @@ v1.0 初始版本
             rvBssLocal.adapter?.notifyDataSetChanged()
         }
 
-        // 导出按钮
         val btnExport = dialogView.findViewById<Button>(R.id.btnExport)
         btnExport.setOnClickListener {
-            val list = getBssLocalList()
+            val list = repository.getBssLocalList()
             if (list.isEmpty()) {
                 Toast.makeText(this, R.string.bssmac_empty, Toast.LENGTH_SHORT).show()
                 return@setOnClickListener
@@ -850,7 +628,6 @@ v1.0 初始版本
             exportFileLauncher.launch("bssmac_export.txt")
         }
 
-        // 批量添加
         btnBulkAdd.setOnClickListener {
             val text = etBulkAdd.text.toString()
             if (text.isNotBlank()) {
@@ -859,7 +636,7 @@ v1.0 初始版本
                     val parts = line.trim().split("\\s+".toRegex(), 3)
                     if (parts.size >= 2) {
                         val building = if (parts.size >= 3) parts[2] else ""
-                        if (addBssLocal(parts[0], parts[1], building)) {
+                        if (repository.addBssLocal(parts[0], parts[1], building)) {
                             added++
                         }
                     }
@@ -875,35 +652,27 @@ v1.0 初始版本
             }
         }
 
-        // 添加滑动删除支持（带确认）
-        val touchCallback = object : androidx.recyclerview.widget.ItemTouchHelper.SimpleCallback(0, androidx.recyclerview.widget.ItemTouchHelper.LEFT) {
-            override fun onMove(rv: RecyclerView, vh: RecyclerView.ViewHolder, target: RecyclerView.ViewHolder): Boolean {
-                return false
-            }
+        val touchCallback = object : ItemTouchHelper.SimpleCallback(0, ItemTouchHelper.LEFT) {
+            override fun onMove(rv: RecyclerView, vh: RecyclerView.ViewHolder, target: RecyclerView.ViewHolder): Boolean = false
 
             override fun onSwiped(vh: RecyclerView.ViewHolder, direction: Int) {
                 val position = vh.adapterPosition
                 if (position >= 0 && position < bssList.size) {
                     val entry = bssList[position]
-                    // 显示确认对话框
                     AlertDialog.Builder(this@MainActivity)
                         .setTitle(R.string.bssmac_delete)
                         .setMessage(getString(R.string.bssmac_delete_confirm, entry.bssMac))
                         .setPositiveButton(R.string.bssmac_delete) { _, _ ->
-                            deleteBssLocal(entry.bssMac)
+                            repository.deleteBssLocal(entry.bssMac)
                             bssList.removeAt(position)
                             rvBssLocal.adapter?.notifyItemRemoved(position)
                             Toast.makeText(this@MainActivity, getString(R.string.bssmac_deleted, entry.bssMac), Toast.LENGTH_SHORT).show()
-                            if (bssList.isEmpty()) {
-                                updateAdapter()
-                            }
+                            if (bssList.isEmpty()) updateAdapter()
                         }
                         .setNegativeButton(R.string.bssmac_cancel) { _, _ ->
-                            // 取消删除，恢复 item
                             rvBssLocal.adapter?.notifyItemChanged(position)
                         }
                         .setOnCancelListener {
-                            // 对话框取消，恢复 item
                             rvBssLocal.adapter?.notifyItemChanged(position)
                         }
                         .show()
@@ -918,9 +687,6 @@ v1.0 初始版本
             .show()
     }
 
-    /**
-     * 显示编辑 BSSMAC 对话框
-     */
     private fun showEditBssDialog(entry: BssLocalEntry, onSaved: () -> Unit) {
         val dialogView = layoutInflater.inflate(R.layout.dialog_edit_bss, null)
         val etBssMac = dialogView.findViewById<EditText>(R.id.etBssMac)
@@ -940,8 +706,8 @@ v1.0 初始版本
                 val newBuilding = etBuilding.text.toString()
 
                 if (newMac.isNotBlank() && newApName.isNotBlank()) {
-                    if (addBssLocal(newMac, newApName, newBuilding)) {
-                        val msg = if (normalizeBssMac(newMac) != normalizeBssMac(entry.bssMac)) {
+                    if (repository.addBssLocal(newMac, newApName, newBuilding)) {
+                        val msg = if (WifiUtils.normalizeBssMac(newMac) != WifiUtils.normalizeBssMac(entry.bssMac)) {
                             getString(R.string.bssmac_added_new)
                         } else {
                             getString(R.string.bssmac_save)
@@ -957,232 +723,13 @@ v1.0 初始版本
             .show()
     }
 
-    /**
-     * 获取历史记录列表
-     */
-    private fun getHistoryList(): List<QueryHistory> {
-        val json = prefs.getString(KEY_HISTORY, "") ?: return emptyList()
-        if (json.isEmpty()) return emptyList()
-
-        return try {
-            val array = JSONArray(json)
-            val list = mutableListOf<QueryHistory>()
-            for (i in 0 until array.length()) {
-                val obj = array.getJSONObject(i)
-                list.add(
-                    QueryHistory(
-                        timestamp = obj.getLong("timestamp"),
-                        bssid = obj.getString("bssid"),
-                        apName = obj.getString("apName"),
-                        building = obj.getString("building")
-                    )
-                )
-            }
-            list
-        } catch (e: Exception) {
-            emptyList()
-        }
-    }
-
-    /**
-     * 保存历史记录列表
-     */
-    private fun saveHistoryList(list: List<QueryHistory>) {
-        val array = JSONArray()
-        for (item in list) {
-            val obj = JSONObject()
-            obj.put("timestamp", item.timestamp)
-            obj.put("bssid", item.bssid)
-            obj.put("apName", item.apName)
-            obj.put("building", item.building)
-            array.put(obj)
-        }
-        prefs.edit().putString(KEY_HISTORY, array.toString()).apply()
-    }
-
-    /**
-     * 清除历史记录
-     */
-    private fun clearHistory() {
-        prefs.edit().remove(KEY_HISTORY).apply()
-    }
-
-    /**
-     * 添加历史记录
-     */
-    private fun addHistoryRecord(bssid: String, apName: String, building: String) {
-        val list = getHistoryList().toMutableList()
-
-        // 检查是否与上一条记录 BSSID 相同
-        val lastRecord = list.lastOrNull()
-        if (lastRecord != null && lastRecord.bssid == bssid) {
-            // 如果上一条没有 AP 名字，而这次有，则替换
-            if (lastRecord.apName.isEmpty() && apName.isNotEmpty()) {
-                list.removeAt(list.size - 1)
-                list.add(
-                    QueryHistory(
-                        timestamp = System.currentTimeMillis(),
-                        bssid = bssid,
-                        apName = apName,
-                        building = building
-                    )
-                )
-                saveHistoryList(list)
-                return
-            }
-            // 如果上一条已经有 AP 名字，这次也有，则不添加（避免重复）
-            if (lastRecord.apName.isNotEmpty() && apName.isNotEmpty()) {
-                return
-            }
-            // 如果两条都没有 AP 名字，不添加
-            if (lastRecord.apName.isEmpty() && apName.isEmpty()) {
-                return
-            }
-        }
-
-        // 添加新记录
-        list.add(
-            QueryHistory(
-                timestamp = System.currentTimeMillis(),
-                bssid = bssid,
-                apName = apName,
-                building = building
-            )
-        )
-
-        // 限制最多 50 条
-        if (list.size > MAX_HISTORY_COUNT) {
-            list.removeAt(0)
-        }
-
-        saveHistoryList(list)
-    }
-
-    /**
-     * 更新历史记录（用 AP 信息更新最近一条同 BSSID 的记录）
-     */
-    private fun updateHistoryRecord(bssid: String, apName: String, building: String) {
-        val list = getHistoryList().toMutableList()
-
-        // 从后往前找第一条同 BSSID 且没有 AP 信息的记录
-        for (i in list.size - 1 downTo 0) {
-            if (list[i].bssid == bssid && list[i].apName.isEmpty()) {
-                list[i] = QueryHistory(
-                    timestamp = list[i].timestamp,
-                    bssid = bssid,
-                    apName = apName,
-                    building = building
-                )
-                saveHistoryList(list)
-                return
-            }
-        }
-
-        // 如果没有找到，添加新记录
-        addHistoryRecord(bssid, apName, building)
-    }
-
-    /**
-     * 标准化 BSS MAC 格式（支持多种输入格式）
-     */
-    private fun normalizeBssMac(input: String): String? {
-        // 移除所有非十六进制字符
-        val hexOnly = input.replace(Regex("[^0-9a-fA-F]"), "")
-        // 验证是否为 12 位十六进制
-        return if (hexOnly.length == 12) {
-            hexOnly.lowercase()
-        } else {
-            null
-        }
-    }
-
-    /**
-     * 获取本地 BSS MAC 列表
-     */
-    private fun getBssLocalList(): List<BssLocalEntry> {
-        val json = prefs.getString(KEY_BSS_LOCAL, "") ?: return emptyList()
-        if (json.isEmpty()) return emptyList()
-
-        return try {
-            val array = JSONArray(json)
-            val list = mutableListOf<BssLocalEntry>()
-            for (i in 0 until array.length()) {
-                val obj = array.getJSONObject(i)
-                list.add(
-                    BssLocalEntry(
-                        bssMac = obj.getString("bssMac"),
-                        apName = obj.getString("apName"),
-                        building = obj.getString("building")
-                    )
-                )
-            }
-            list
-        } catch (e: Exception) {
-            emptyList()
-        }
-    }
-
-    /**
-     * 保存本地 BSS MAC 列表
-     */
-    private fun saveBssLocalList(list: List<BssLocalEntry>) {
-        val array = JSONArray()
-        for (item in list) {
-            val obj = JSONObject()
-            obj.put("bssMac", item.bssMac)
-            obj.put("apName", item.apName)
-            obj.put("building", item.building)
-            array.put(obj)
-        }
-        prefs.edit().putString(KEY_BSS_LOCAL, array.toString()).apply()
-    }
-
-    /**
-     * 添加本地 BSS MAC 记录
-     */
-    private fun addBssLocal(bssMac: String, apName: String, building: String): Boolean {
-        val normalizedMac = normalizeBssMac(bssMac) ?: return false
-        val list = getBssLocalList().toMutableList()
-
-        // 检查是否已存在
-        val existingIndex = list.indexOfFirst { it.bssMac == normalizedMac }
-        if (existingIndex >= 0) {
-            // 更新已有记录
-            list[existingIndex] = BssLocalEntry(normalizedMac, apName, building)
-        } else {
-            // 添加新记录
-            list.add(BssLocalEntry(normalizedMac, apName, building))
-        }
-
-        saveBssLocalList(list)
-        return true
-    }
-
-    /**
-     * 删除本地 BSS MAC 记录
-     */
-    private fun deleteBssLocal(bssMac: String) {
-        val normalizedMac = normalizeBssMac(bssMac) ?: return
-        val list = getBssLocalList().toMutableList()
-        list.removeAll { it.bssMac == normalizedMac }
-        saveBssLocalList(list)
-    }
-
-    /**
-     * 导出 BSS MAC 列表到文件
-     */
     private fun exportBssLocalToFile(uri: android.net.Uri) {
         try {
-            val list = getBssLocalList()
-            val content = list.joinToString("\n") { entry ->
-                val parts = mutableListOf(entry.bssMac, entry.apName)
-                if (entry.building.isNotEmpty()) parts.add(entry.building)
-                parts.joinToString(" ")
-            }
+            val content = repository.exportBssLocalToString()
             contentResolver.openOutputStream(uri)?.use { outputStream ->
                 outputStream.write(content.toByteArray())
             }
-            Toast.makeText(this, getString(R.string.bssmac_export_success, list.size), Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, getString(R.string.bssmac_export_success, repository.getBssLocalList().size), Toast.LENGTH_SHORT).show()
         } catch (e: Exception) {
             Toast.makeText(this, getString(R.string.bssmac_export_failed, e.message), Toast.LENGTH_LONG).show()
         }
@@ -1218,17 +765,14 @@ v1.0 初始版本
             holder.tvApName.text = item.apName.ifEmpty { "-" }
             holder.tvBuilding.text = item.building.ifEmpty { "" }
 
-            // 点击保存本地
-            holder.itemView.setOnClickListener {
-                onItemClick(item)
-            }
+            holder.itemView.setOnClickListener { onItemClick(item) }
         }
 
         override fun getItemCount() = historyList.size
     }
 
     /**
-     * 本地 BSSMAC 适配器（支持滑动删除/编辑）
+     * 本地 BSSMAC 适配器
      */
     private class BssLocalAdapter(
         private val bssList: MutableList<BssLocalEntry>,
@@ -1252,11 +796,7 @@ v1.0 初始版本
             holder.tvBssMac.text = item.bssMac
             holder.tvApName.text = item.apName.ifEmpty { "-" }
             holder.tvBuilding.text = item.building.ifEmpty { "-" }
-
-            // 点击编辑
-            holder.itemView.setOnClickListener {
-                onEditClick(item)
-            }
+            holder.itemView.setOnClickListener { onEditClick(item) }
         }
 
         override fun getItemCount() = bssList.size
@@ -1273,14 +813,12 @@ v1.0 初始版本
         val cbAutoQuery = dialogView.findViewById<CheckBox>(R.id.cbAutoQuery)
         val cbCacheApInfo = dialogView.findViewById<CheckBox>(R.id.cbCacheApInfo)
 
-        // 加载当前设置
-        etQueryUrl.setText(getQueryUrl())
-        etQueryKey.setText(getQueryKey())
-        cbAutoQuery.isChecked = getAutoQuery()
-        cbCacheApInfo.isChecked = getCacheApInfo()
+        etQueryUrl.setText(prefs.getQueryUrl())
+        etQueryKey.setText(prefs.getQueryKey())
+        cbAutoQuery.isChecked = prefs.isAutoQueryEnabled()
+        cbCacheApInfo.isChecked = prefs.isCacheApInfoEnabled()
 
-        // 设置自动刷新选中状态
-        val autoRefresh = getAutoRefreshInterval()
+        val autoRefresh = prefs.getAutoRefreshInterval()
         when (autoRefresh) {
             0 -> rgAutoRefresh.check(R.id.rbNever)
             1000 -> rgAutoRefresh.check(R.id.rb1s)
@@ -1292,14 +830,13 @@ v1.0 初始版本
             .setTitle(R.string.settings_title)
             .setView(dialogView)
             .setPositiveButton(R.string.save) { _, _ ->
-                // 保存设置
-                saveSettings(etQueryUrl.text.toString(), etQueryKey.text.toString())
-                saveAutoQuery(cbAutoQuery.isChecked)
-                saveCacheApInfo(cbCacheApInfo.isChecked)
+                prefs.saveSettings(etQueryUrl.text.toString(), etQueryKey.text.toString())
+                prefs.saveAutoQuery(cbAutoQuery.isChecked)
+                prefs.saveCacheApInfo(cbCacheApInfo.isChecked)
                 if (!cbCacheApInfo.isChecked) {
-                    apInfoCache.clear() // 关闭缓存时清空
+                    repository.clearApInfoCache()
                 }
-                // 保存自动刷新设置
+
                 val selectedId = rgAutoRefresh.checkedRadioButtonId
                 val newInterval = when (selectedId) {
                     R.id.rb1s -> 1000
@@ -1307,8 +844,7 @@ v1.0 初始版本
                     R.id.rb10s -> 10000
                     else -> 0
                 }
-                saveAutoRefreshInterval(newInterval)
-                // 如果间隔变化，重启自动刷新
+                prefs.saveAutoRefreshInterval(newInterval)
                 if (newInterval != autoRefresh) {
                     autoRefreshIntervalMs = newInterval
                     restartAutoRefresh()
@@ -1317,72 +853,6 @@ v1.0 初始版本
             }
             .setNegativeButton(R.string.cancel, null)
             .show()
-    }
-
-    /**
-     * 获取查询 URL
-     */
-    private fun getQueryUrl(): String {
-        return prefs.getString(KEY_QUERY_URL, DEFAULT_QUERY_URL) ?: DEFAULT_QUERY_URL
-    }
-
-    /**
-     * 获取查询 KEY
-     */
-    private fun getQueryKey(): String {
-        return prefs.getString(KEY_QUERY_KEY, "") ?: ""
-    }
-
-    /**
-     * 保存设置
-     */
-    private fun saveSettings(url: String, key: String) {
-        prefs.edit()
-            .putString(KEY_QUERY_URL, url.ifEmpty { DEFAULT_QUERY_URL })
-            .putString(KEY_QUERY_KEY, key)
-            .apply()
-    }
-
-    /**
-     * 获取自动查询设置
-     */
-    private fun getAutoQuery(): Boolean {
-        return prefs.getBoolean(KEY_AUTO_QUERY, false)
-    }
-
-    /**
-     * 保存自动查询设置
-     */
-    private fun saveAutoQuery(enabled: Boolean) {
-        prefs.edit()
-            .putBoolean(KEY_AUTO_QUERY, enabled)
-            .apply()
-    }
-
-    private fun getCacheApInfo(): Boolean {
-        return prefs.getBoolean(KEY_CACHE_AP_INFO, false)
-    }
-
-    private fun saveCacheApInfo(enabled: Boolean) {
-        prefs.edit()
-            .putBoolean(KEY_CACHE_AP_INFO, enabled)
-            .apply()
-    }
-
-    /**
-     * 获取自动刷新间隔（毫秒）
-     */
-    private fun getAutoRefreshInterval(): Int {
-        return prefs.getInt(KEY_AUTO_REFRESH, 0)
-    }
-
-    /**
-     * 保存自动刷新间隔
-     */
-    private fun saveAutoRefreshInterval(intervalMs: Int) {
-        prefs.edit()
-            .putInt(KEY_AUTO_REFRESH, intervalMs)
-            .apply()
     }
 
     /**
@@ -1414,66 +884,45 @@ v1.0 初始版本
      */
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
         return when (item.itemId) {
-            R.id.menu_settings -> {
-                showSettingsDialog()
-                true
-            }
-            R.id.menu_about -> {
-                showAboutDialog()
-                true
-            }
-            R.id.menu_history -> {
-                showHistoryDialog()
-                true
-            }
-            R.id.menu_bssmac -> {
-                showBssLocalDialog()
-                true
-            }
+            R.id.menu_settings -> { showSettingsDialog(); true }
+            R.id.menu_about -> { showAboutDialog(); true }
+            R.id.menu_history -> { showHistoryDialog(); true }
+            R.id.menu_bssmac -> { showBssLocalDialog(); true }
             else -> super.onOptionsItemSelected(item)
         }
-    }
-
-    /**
-     * 获取并格式化 BSSID
-     * 移除所有非十六进制字符（如 : - 等），只保留 12 位十六进制字符
-     */
-    @Suppress("DEPRECATION")
-    private fun getFormattedBssid(): String? {
-        val bssid = wifiManager.connectionInfo.bssid ?: return null
-
-        // 移除所有非十六进制字符，只保留 0-9, a-f, A-F
-        return bssid.replace(Regex("[^0-9a-fA-F]"), "").lowercase()
     }
 
     /**
      * 查询 BSS 信息（带重试，用于自动查询）
      */
     private fun queryBssInfoWithRetry(bssid: String) {
-        // 先检查本地数据
-        val localData = getBssLocalList().find { it.bssMac == bssid }
+        val localData = repository.getBssLocalList().find { it.bssMac == bssid }
         if (localData != null) {
             displayLocalBssInfo(localData)
             return
         }
 
         binding.tvResult.text = getString(R.string.querying)
-        // 清空之前的 AP 信息显示
-        binding.tvBssMac.text = "-"
-        binding.tvAcIp.text = "-"
-        binding.tvApIp.text = "-"
-        binding.tvApName.text = "-"
-        binding.tvApSn.text = "-"
-        binding.tvApBuilding.text = "-"
+        clearApInfoDisplay()
 
         lifecycleScope.launch {
             var success = false
             while (!success && autoQueryRetryCount < 3) {
                 try {
-                    val result = fetchBssInfo(bssid)
+                    val apInfo = repository.queryBssInfo(bssid)
                     withContext(Dispatchers.Main) {
-                        binding.tvResult.text = result.ifEmpty { "无相关信息" }
-                        parseAndDisplayApInfo(result)
+                        if (apInfo.bssMac != "-") {
+                            binding.tvBssMac.text = apInfo.bssMac
+                            binding.tvAcIp.text = apInfo.acIp
+                            binding.tvApIp.text = apInfo.apIp
+                            binding.tvApName.text = apInfo.apName
+                            binding.tvApSn.text = apInfo.apSn
+                            binding.tvApBuilding.text = apInfo.building
+                            binding.tvResult.text = "查询成功"
+                            repository.updateHistoryRecord(bssid, apInfo.apName, apInfo.building)
+                        } else {
+                            binding.tvResult.text = "无相关信息"
+                        }
                     }
                     success = true
                 } catch (e: Exception) {
@@ -1498,29 +947,32 @@ v1.0 初始版本
      * 查询 BSS 信息（手动查询，无重试）
      */
     private fun queryBssInfo(bssid: String) {
-        // 先检查本地数据
-        val localData = getBssLocalList().find { it.bssMac == bssid }
+        val localData = repository.getBssLocalList().find { it.bssMac == bssid }
         if (localData != null) {
             displayLocalBssInfo(localData)
             return
         }
 
         binding.tvResult.text = getString(R.string.querying)
-        // 清空之前的 AP 信息显示
-        binding.tvBssMac.text = "-"
-        binding.tvAcIp.text = "-"
-        binding.tvApIp.text = "-"
-        binding.tvApName.text = "-"
-        binding.tvApSn.text = "-"
-        binding.tvApBuilding.text = "-"
+        clearApInfoDisplay()
         binding.btnQuery.isEnabled = false
 
         lifecycleScope.launch {
             try {
-                val result = fetchBssInfo(bssid)
+                val apInfo = repository.queryBssInfo(bssid)
                 withContext(Dispatchers.Main) {
-                    binding.tvResult.text = result.ifEmpty { "无相关信息" }
-                    parseAndDisplayApInfo(result)
+                    if (apInfo.bssMac != "-") {
+                        binding.tvBssMac.text = apInfo.bssMac
+                        binding.tvAcIp.text = apInfo.acIp
+                        binding.tvApIp.text = apInfo.apIp
+                        binding.tvApName.text = apInfo.apName
+                        binding.tvApSn.text = apInfo.apSn
+                        binding.tvApBuilding.text = apInfo.building
+                        binding.tvResult.text = "查询成功"
+                        repository.updateHistoryRecord(bssid, apInfo.apName, apInfo.building)
+                    } else {
+                        binding.tvResult.text = "无相关信息"
+                    }
                 }
             } catch (e: Exception) {
                 withContext(Dispatchers.Main) {
@@ -1535,9 +987,15 @@ v1.0 初始版本
         }
     }
 
-    /**
-     * 显示本地 BSS 信息
-     */
+    private fun clearApInfoDisplay() {
+        binding.tvBssMac.text = "-"
+        binding.tvAcIp.text = "-"
+        binding.tvApIp.text = "-"
+        binding.tvApName.text = "-"
+        binding.tvApSn.text = "-"
+        binding.tvApBuilding.text = "-"
+    }
+
     private fun displayLocalBssInfo(localData: BssLocalEntry) {
         binding.tvBssMac.text = localData.bssMac
         binding.tvAcIp.text = "-"
@@ -1547,108 +1005,18 @@ v1.0 初始版本
         binding.tvApBuilding.text = localData.building
         binding.tvResult.text = "本地数据"
 
-        // 更新历史记录
-        val currentBssid = getFormattedBssid()
+        val currentBssid = WifiUtils.formatBssid(wifiManager.connectionInfo.bssid)
         if (currentBssid != null && currentBssid.length == 12) {
-            updateHistoryRecord(
-                bssid = currentBssid,
-                apName = localData.apName,
-                building = localData.building
-            )
+            repository.updateHistoryRecord(currentBssid, localData.apName, localData.building)
         }
     }
 
-    /**
-     * 解析 API 返回的 JSON 数据并显示 AP 信息
-     */
-    private fun parseAndDisplayApInfo(jsonString: String) {
-        if (jsonString.isEmpty()) return
-
-        try {
-            val json = JSONObject(jsonString)
-
-            // 检查是否返回成功
-            val status = json.optString("status", "")
-            if (status != "ok") {
-                val message = json.optString("message", "查询失败")
-                binding.tvResult.text = message
-                return
-            }
-
-            // 数据可能在 data 数组中
-            val data = json.optJSONArray("data")
-            if (data != null && data.length() > 0) {
-                val item = data.getJSONObject(0)
-                val bssMac = item.optString("BSS_MAC", "-")
-                val apName = item.optString("AP_NAME", "-")
-                val apBuilding = item.optString("AP_Building", "-")
-
-                binding.tvBssMac.text = bssMac
-                binding.tvAcIp.text = item.optString("AC_IP", "-")
-                binding.tvApIp.text = item.optString("AP_IP", "-")
-                binding.tvApName.text = apName
-                binding.tvApSn.text = item.optString("AP_SN", "-")
-                binding.tvApBuilding.text = apBuilding
-
-                // 更新历史记录（用 AP 信息填充最近一条同 BSSID 的记录）
-                val currentBssid = getFormattedBssid()
-                if (currentBssid != null && currentBssid.length == 12 && (apName != "-" || apBuilding != "-")) {
-                    updateHistoryRecord(
-                        bssid = currentBssid,
-                        apName = apName,
-                        building = apBuilding
-                    )
-                }
-            }
-        } catch (e: Exception) {
-            // JSON 解析失败，可能是返回的数据格式不对
-        }
-    }
-
-    /**
-     * 调用 API 获取 BSS 信息
-     */
-    private suspend fun fetchBssInfo(bssid: String): String = withContext(Dispatchers.IO) {
-        // 检查缓存（如果开启）
-        if (getCacheApInfo()) {
-            val cached = apInfoCache[bssid]
-            if (cached != null && System.currentTimeMillis() - cached.cachedAt < AP_INFO_CACHE_DURATION_MS) {
-                return@withContext cached.result
-            }
-        }
-
-        val baseUrl = getQueryUrl()
-        val queryKey = getQueryKey()
-        val url = "$baseUrl?bssid=$bssid"
-
-        val requestBuilder = Request.Builder().url(url)
-
-        // 如果设置了查询 KEY，添加 Authorization 头
-        if (queryKey.isNotEmpty()) {
-            requestBuilder.addHeader("Authorization", "Bearer $queryKey")
-        }
-
-        val request = requestBuilder.build()
-
-        val result = httpClient.newCall(request).execute().use { response ->
-            if (!response.isSuccessful) {
-                throw Exception("HTTP error: ${response.code}")
-            }
-            response.body?.string() ?: "无数据"
-        }
-
-        // 写入缓存
-        if (getCacheApInfo()) {
-            apInfoCache[bssid] = ApInfoCacheEntry(result, System.currentTimeMillis())
-        }
-
-        result
+    private fun addHistoryRecord(bssid: String, apName: String, building: String) {
+        repository.addHistoryRecord(bssid, apName, building)
     }
 
     /**
      * 检查所需权限
-     * Android 10-12: 需要位置权限
-     * Android 13+: 需要位置权限 + 近场设备权限
      */
     private fun checkPermissions(): Boolean {
         val locationGranted = ContextCompat.checkSelfPermission(
