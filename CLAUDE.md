@@ -43,11 +43,17 @@ Release 构建使用 `wifi-bss-key.jks` 签名。密钥库凭据在 `keystore.pr
 ```kotlin
 // MainActivity.kt
 private fun getVersionInfo(): String {
-    return "版本：1.28"  // 与 versionName 一致
+    return "版本：1.29"  // 与 versionName 一致
 }
 
 private fun getChangesText(): String {
     return """
+v1.29 同SSID附近AP信号显示
+- 支持显示同SSID其他AP的RSSI曲线（2个信号最强的AP）
+- 自动查询附近AP名称并在图表下方显示
+- 设置中增加缓存AP信息选项，减少查询次数
+- 图表布局和显示优化
+
 v1.28 显示文字优化
 - 优化关于页面描述文本，表达更清晰流畅
 - 设置项文字调整："BSSID 变化时自动查询"

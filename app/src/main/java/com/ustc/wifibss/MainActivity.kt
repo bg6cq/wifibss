@@ -59,8 +59,10 @@ class MainActivity : AppCompatActivity() {
         private const val KEY_AUTO_REFRESH = "auto_refresh"
         private const val KEY_HISTORY = "query_history"
         private const val KEY_BSS_LOCAL = "bss_local_data"
+        private const val KEY_CACHE_AP_INFO = "cache_ap_info"
         private const val DEFAULT_QUERY_URL = "https://linux.ustc.edu.cn/api/bssinfo.php"
         private const val MAX_HISTORY_COUNT = 50
+        private const val AP_INFO_CACHE_DURATION_MS = 10 * 60 * 1000L // 10 分钟
     }
 
     // 历史记录数据类
@@ -85,6 +87,8 @@ class MainActivity : AppCompatActivity() {
     private var bssidChangedForChart: Boolean = false // 标记当前刷新是否 BSSID 变化
     private var lastScanTimeMs: Long = 0 // 上次 WiFi 扫描时间
     private val scanIntervalMs = 30000L // WiFi 扫描间隔 30 秒
+    private val apInfoCache = mutableMapOf<String, ApInfoCacheEntry>() // AP 信息查询缓存
+    private data class ApInfoCacheEntry(val result: String, val cachedAt: Long)
 
     private val exportFileLauncher = registerForActivityResult(ActivityResultContracts.CreateDocument("text/plain")) { uri ->
         if (uri != null) {
@@ -420,16 +424,16 @@ class MainActivity : AppCompatActivity() {
     }
 
     /**
-     * 添加 RSSI 数据点到图表（旧 API 兼容）
+     * 添加 RSSI 数据点到图表（当前连接的 AP）
      */
     private fun addRssiDataPoint(rssi: Int) {
-        val bssid = getFormattedBssid() ?: return
         binding.rssiChart.addOrUpdateApSeries(
-            apId = bssid,
+            apId = "current",
             apName = "当前 AP",
-            bssid = bssid,
+            bssid = "current",
             isCurrentAp = true,
-            rssi = rssi
+            rssi = rssi,
+            bssidChanged = bssidChangedForChart
         )
         binding.tvRssiEmpty.visibility = android.view.View.GONE
     }
@@ -450,11 +454,14 @@ class MainActivity : AppCompatActivity() {
         val wifiInfo = wifiManager.connectionInfo ?: return
         val currentBssid = getFormattedBssid() ?: return
         val currentSsid = wifiInfo.ssid.removeSurroundingQuotes()
+        if (currentSsid.isEmpty()) return // 隐藏网络不扫描
+
+        // 提前设置时间戳，避免竞态条件
+        lastScanTimeMs = now
 
         lifecycleScope.launch {
             try {
                 val scanResults = wifiManager.scanResults
-                lastScanTimeMs = now
 
                 // 过滤同 SSID 的 AP（排除当前连接的）
                 val sameSsidAps = scanResults
@@ -463,21 +470,21 @@ class MainActivity : AppCompatActivity() {
                     .sortedByDescending { it.level } // 按信号强度降序
                     .take(2) // 取最强的 2 个
 
-                // 更新图表
+                // 更新 2 个固定附近 AP 数据流（查询名称用于显示）
+                val nearbyIds = listOf("nearby_1", "nearby_2")
                 for ((index, ap) in sameSsidAps.withIndex()) {
                     val apBssid = ap.BSSID.replace(Regex("[^0-9a-fA-F]"), "").lowercase()
-                    val apName = "${ap.SSID.removeSurroundingQuotes()} #${index + 1}"
+                    val apName = queryNearbyApName(apBssid)
+                        ?: "${currentSsid} #${index + 1}"
                     binding.rssiChart.addOrUpdateApSeries(
-                        apId = apBssid,
+                        apId = nearbyIds[index],
                         apName = apName,
                         bssid = apBssid,
                         isCurrentAp = false,
-                        rssi = ap.level
+                        rssi = ap.level,
+                        bssidChanged = false
                     )
                 }
-
-                // 移除已经不存在的 AP（可选）
-                // 这里简化处理，不移除，因为可能只是暂时扫描不到
             } catch (e: Exception) {
                 // 扫描失败，静默处理
             }
@@ -485,8 +492,43 @@ class MainActivity : AppCompatActivity() {
     }
 
     /**
-     * 显示关于对话框
+     * 查询附近 AP 名称：本地数据库 → API
      */
+    private suspend fun queryNearbyApName(bssid: String): String? {
+        // 1. 本地数据库
+        val localData = getBssLocalList().find { it.bssMac == bssid }
+        if (localData != null) {
+            if (localData.apName.isNotEmpty()) return localData.apName
+        }
+
+        // 2. API 查询
+        return try {
+            withContext(Dispatchers.IO) {
+                val baseUrl = getQueryUrl()
+                val queryKey = getQueryKey()
+                val url = "$baseUrl?bssid=$bssid"
+                val requestBuilder = Request.Builder().url(url)
+                if (queryKey.isNotEmpty()) {
+                    requestBuilder.addHeader("Authorization", "Bearer $queryKey")
+                }
+                val response = httpClient.newCall(requestBuilder.build()).execute()
+                if (response.isSuccessful) {
+                    val json = JSONObject(response.body?.string() ?: return@withContext null)
+                    if (json.optString("status") == "ok") {
+                        val data = json.optJSONArray("data")
+                        if (data != null && data.length() > 0) {
+                            val item = data.getJSONObject(0)
+                            val apName = item.optString("AP_NAME", "")
+                            if (apName.isNotEmpty()) return@withContext apName
+                        }
+                    }
+                }
+                null
+            }
+        } catch (e: Exception) {
+            null
+        }
+    }
     private fun showAboutDialog() {
         val dialogView = layoutInflater.inflate(R.layout.dialog_about, null)
         val tvVersion = dialogView.findViewById<TextView>(R.id.tvVersion)
@@ -511,7 +553,7 @@ class MainActivity : AppCompatActivity() {
      * 获取版本信息
      */
     private fun getVersionInfo(): String {
-        return "版本：1.28"
+        return "版本：1.29"
     }
 
     /**
@@ -526,6 +568,12 @@ class MainActivity : AppCompatActivity() {
      */
     private fun getChangesText(): String {
         return """
+v1.29 同SSID附近AP信号显示
+- 支持显示同SSID其他AP的RSSI曲线（2个信号最强的AP）
+- 自动查询附近AP名称并在图表下方显示
+- 设置中增加缓存AP信息选项，减少查询次数
+- 图表布局和显示优化
+
 v1.28 显示文字优化
 - 优化关于页面描述文本，表达更清晰流畅
 - 设置项文字调整："BSSID 变化时自动查询"
@@ -1218,11 +1266,13 @@ v1.0 初始版本
         val etQueryKey = dialogView.findViewById<EditText>(R.id.etQueryKey)
         val rgAutoRefresh = dialogView.findViewById<RadioGroup>(R.id.rgAutoRefresh)
         val cbAutoQuery = dialogView.findViewById<CheckBox>(R.id.cbAutoQuery)
+        val cbCacheApInfo = dialogView.findViewById<CheckBox>(R.id.cbCacheApInfo)
 
         // 加载当前设置
         etQueryUrl.setText(getQueryUrl())
         etQueryKey.setText(getQueryKey())
         cbAutoQuery.isChecked = getAutoQuery()
+        cbCacheApInfo.isChecked = getCacheApInfo()
 
         // 设置自动刷新选中状态
         val autoRefresh = getAutoRefreshInterval()
@@ -1240,6 +1290,10 @@ v1.0 初始版本
                 // 保存设置
                 saveSettings(etQueryUrl.text.toString(), etQueryKey.text.toString())
                 saveAutoQuery(cbAutoQuery.isChecked)
+                saveCacheApInfo(cbCacheApInfo.isChecked)
+                if (!cbCacheApInfo.isChecked) {
+                    apInfoCache.clear() // 关闭缓存时清空
+                }
                 // 保存自动刷新设置
                 val selectedId = rgAutoRefresh.checkedRadioButtonId
                 val newInterval = when (selectedId) {
@@ -1297,6 +1351,16 @@ v1.0 初始版本
     private fun saveAutoQuery(enabled: Boolean) {
         prefs.edit()
             .putBoolean(KEY_AUTO_QUERY, enabled)
+            .apply()
+    }
+
+    private fun getCacheApInfo(): Boolean {
+        return prefs.getBoolean(KEY_CACHE_AP_INFO, false)
+    }
+
+    private fun saveCacheApInfo(enabled: Boolean) {
+        prefs.edit()
+            .putBoolean(KEY_CACHE_AP_INFO, enabled)
             .apply()
     }
 
@@ -1539,6 +1603,14 @@ v1.0 初始版本
      * 调用 API 获取 BSS 信息
      */
     private suspend fun fetchBssInfo(bssid: String): String = withContext(Dispatchers.IO) {
+        // 检查缓存（如果开启）
+        if (getCacheApInfo()) {
+            val cached = apInfoCache[bssid]
+            if (cached != null && System.currentTimeMillis() - cached.cachedAt < AP_INFO_CACHE_DURATION_MS) {
+                return@withContext cached.result
+            }
+        }
+
         val baseUrl = getQueryUrl()
         val queryKey = getQueryKey()
         val url = "$baseUrl?bssid=$bssid"
@@ -1552,12 +1624,19 @@ v1.0 初始版本
 
         val request = requestBuilder.build()
 
-        httpClient.newCall(request).execute().use { response ->
+        val result = httpClient.newCall(request).execute().use { response ->
             if (!response.isSuccessful) {
                 throw Exception("HTTP error: ${response.code}")
             }
             response.body?.string() ?: "无数据"
         }
+
+        // 写入缓存
+        if (getCacheApInfo()) {
+            apInfoCache[bssid] = ApInfoCacheEntry(result, System.currentTimeMillis())
+        }
+
+        result
     }
 
     /**

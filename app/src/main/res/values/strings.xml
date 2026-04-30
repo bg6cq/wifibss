@@ -43,7 +43,8 @@
     <string name="auto_refresh_1s">1 秒</string>
     <string name="auto_refresh_5s">5 秒</string>
     <string name="auto_refresh_10s">10 秒</string>
-    <string name="auto_query_label">BSSID变化时自动查询</string>
+    <string name="auto_query_label">BSSID变化时自动查询AP信息</string>
+    <string name="cache_ap_info_label">缓存AP信息（10分钟）</string>
     <string name="save">保存</string>
     <string name="cancel">取消</string>
     <string name="about_description">为方便了解园区 WiFi 网络的运行状态，安卓手机可以获取WiFi连接的 BSS(AP) 信息，并将 BSS 的 MAC 地址（去掉中间的 -: 字符）通过参数 bssid=XXXXXXXXXXX 发送给配置的查询 URL。如果设置了查询 KEY，则放在 HTTP 请求头 Authorization: Bearer 后送给查询 URL。查询 URL 可以选择性返回 {\"status\":\"ok\",\"data\":[{\"BSS_MAC\":\"19c97ad55e00\",\"AP_NAME\":\"wlzx-13895-207\",\"AP_SN\":\"219801A6M28257E00XXX\",\"AP_MAC\":\"19c97ad55e00\",\"AC_IP\":\"x.x.x.x\",\"BAND\":\"2\",\"SSID\":\"ssid\",\"AP_Building\":\"东区 - 网络信息中心\",\"AP_IP\":\"x.x.x.x\"}]}。APP 会显示这些信息方便了解 WiFi网络运行情况。\n\n本地 BSSMAC 数据库：支持在手机编辑和保存 BSSMAC 信息（设置 → BSSMAC 信息），查询时优先使用本地数据，无数据时调用远程 API。支持批量添加、编辑、删除和导出功能。\n\n在历史记录中可以单击一条记录，编辑后存到本地。\n\n信号图中，红点表明发生了漫游切换AP。

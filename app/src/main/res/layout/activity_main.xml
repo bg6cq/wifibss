@@ -38,7 +38,7 @@
     <com.google.android.material.card.MaterialCardView
         android:id="@+id/rssiCard"
         android:layout_width="0dp"
-        android:layout_height="120dp"
+        android:layout_height="170dp"
         android:layout_marginTop="12dp"
         app:cardCornerRadius="8dp"
         app:cardElevation="2dp"
@@ -51,13 +51,6 @@
             android:layout_height="match_parent"
             android:orientation="vertical"
             android:padding="8dp">
-
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="信号强度（最近 10 分钟）"
-                android:textSize="12sp"
-                android:textStyle="bold" />
 
             <FrameLayout
                 android:layout_width="match_parent"

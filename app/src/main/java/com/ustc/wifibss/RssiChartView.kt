@@ -30,17 +30,22 @@ class RssiChartView @JvmOverloads constructor(
         val rssi: Int
     )
 
+    data class BssidChangeMarker(
+        val timestamp: Long,
+        val rssi: Int
+    )
+
     /**
      * AP 数据系列：存储单个 AP 的 RSSI 历史数据
      */
     data class ApDataSeries(
         val apId: String,           // 唯一标识（BSSID）
-        val apName: String,         // AP 名称/楼名
+        var apName: String,         // AP 名称/楼名
         val bssid: String,          // BSSID 用于显示
-        val isCurrentAp: Boolean,   // 是否为当前连接的 AP
+        var isCurrentAp: Boolean,   // 是否为当前连接的 AP
         val lineColor: Int,         // 线条颜色
-        val isDashed: Boolean,      // 是否虚线
-        val dataPoints: ConcurrentLinkedQueue<RssiDataPoint> = ConcurrentLinkedQueue()
+        val dataPoints: ConcurrentLinkedQueue<RssiDataPoint> = ConcurrentLinkedQueue(),
+        val bssidChangeMarkers: MutableList<BssidChangeMarker> = mutableListOf()
     ) {
         fun addDataPoint(rssi: Int) {
             val now = System.currentTimeMillis()
@@ -50,9 +55,12 @@ class RssiChartView @JvmOverloads constructor(
 
         fun cleanupOldData(maxDurationMs: Long = 10 * 60 * 1000L) {
             val now = System.currentTimeMillis()
-            while (dataPoints.isNotEmpty() && now - dataPoints.peek().timestamp > maxDurationMs) {
+            while (dataPoints.isNotEmpty()) {
+                val ts = dataPoints.peek()?.timestamp ?: break
+                if (now - ts <= maxDurationMs) break
                 dataPoints.poll()
             }
+            bssidChangeMarkers.removeAll { now - it.timestamp > maxDurationMs }
         }
 
         fun getRecentRssi(): Int {
@@ -65,11 +73,11 @@ class RssiChartView @JvmOverloads constructor(
     private val maxDurationMs = 10 * 60 * 1000L // 10 分钟
 
     // 图表边距
-    private val marginTop = 20f
-    private val marginBottom = 50f
+    private val marginTop = 2f
+    private val marginBottom = 2f
     private val marginLeft = 50f
     private val marginRight = 20f
-    private val legendHeight = 80f // 图例区域高度
+    private val bottomZoneHeight = 65f // 底部区域（时间标签 + AP 名称）
 
     // 画笔
     private val gridPaint = Paint().apply {
@@ -92,28 +100,50 @@ class RssiChartView @JvmOverloads constructor(
     }
 
     private val legendPaint = Paint().apply {
-        textSize = 28f
+        textSize = 26f
+        isAntiAlias = true
+    }
+
+    private val bssidChangedPaint = Paint().apply {
+        color = Color.parseColor("#F44336")
+        style = Paint.Style.FILL
         isAntiAlias = true
     }
 
     private val dateFormat = SimpleDateFormat("HH:mm", Locale.getDefault())
 
     // 添加或更新 AP 数据系列
-    fun addOrUpdateApSeries(apId: String, apName: String, bssid: String, isCurrentAp: Boolean, rssi: Int) {
+    fun addOrUpdateApSeries(
+        apId: String,
+        apName: String,
+        bssid: String,  // 仅用于显示，不用于标识数据流
+        isCurrentAp: Boolean,
+        rssi: Int,
+        bssidChanged: Boolean = false
+    ) {
         val existing = apSeries.find { it.apId == apId }
         if (existing != null) {
+            existing.apName = apName
             existing.addDataPoint(rssi)
+            if (bssidChanged && existing.isCurrentAp) {
+                existing.bssidChangeMarkers.add(
+                    BssidChangeMarker(System.currentTimeMillis(), rssi)
+                )
+            }
         } else {
-            // 新 AP，创建新系列
             val newSeries = ApDataSeries(
                 apId = apId,
                 apName = apName.ifEmpty { "未知 AP" },
                 bssid = bssid,
                 isCurrentAp = isCurrentAp,
                 lineColor = getApColor(apSeries.size),
-                isDashed = !isCurrentAp
             )
             newSeries.addDataPoint(rssi)
+            if (bssidChanged && newSeries.isCurrentAp) {
+                newSeries.bssidChangeMarkers.add(
+                    BssidChangeMarker(System.currentTimeMillis(), rssi)
+                )
+            }
             apSeries.add(newSeries)
         }
         postInvalidate()
@@ -143,12 +173,6 @@ class RssiChartView @JvmOverloads constructor(
         postInvalidate()
     }
 
-    // 更新单个 AP 的 RSSI
-    fun updateRssi(apId: String, rssi: Int) {
-        apSeries.find { it.apId == apId }?.addDataPoint(rssi)
-        postInvalidate()
-    }
-
     override fun onDraw(canvas: Canvas) {
         super.onDraw(canvas)
 
@@ -160,7 +184,7 @@ class RssiChartView @JvmOverloads constructor(
         }
 
         val chartWidth = width - marginLeft - marginRight
-        val chartHeight = height - marginTop - marginBottom - legendHeight
+        val chartHeight = height - marginTop - marginBottom - bottomZoneHeight
 
         if (chartWidth <= 0 || chartHeight <= 0) {
             return
@@ -169,19 +193,28 @@ class RssiChartView @JvmOverloads constructor(
         // 绘制区域
         val chartRect = RectF(marginLeft, marginTop, marginLeft + chartWidth, marginTop + chartHeight)
 
-        // 绘制网格线
+        // 计算底部文字位置
+        val timeLabelY = chartRect.bottom + marginBottom + textPaint.textSize + 2f
+        val apNameY = timeLabelY + textPaint.textSize + 7f
+
+        // 绘制网格线和时间竖线
         drawGridLines(canvas, chartRect)
+        drawTimeLines(canvas, chartRect, timeLabelY)
 
-        // 绘制时间竖线
-        drawTimeLines(canvas, chartRect)
-
-        // 绘制所有 AP 的曲线
+        // 先画附近 AP 的点（非当前 AP），再画当前 AP 的曲线
         for (series in apSeries) {
-            drawApSeries(canvas, series, chartRect)
+            if (!series.isCurrentAp) {
+                drawApDotsOnly(canvas, series, chartRect)
+            }
+        }
+        for (series in apSeries) {
+            if (series.isCurrentAp) {
+                drawApSeriesWithLine(canvas, series, chartRect)
+            }
         }
 
-        // 绘制图例
-        drawLegend(canvas, width, height - legendHeight)
+        // 绘制 AP 名称（在时间标签下方）
+        drawApNames(canvas, width, apNameY)
     }
 
     private fun drawGridLines(canvas: Canvas, rect: RectF) {
@@ -193,7 +226,7 @@ class RssiChartView @JvmOverloads constructor(
         }
     }
 
-    private fun drawTimeLines(canvas: Canvas, rect: RectF) {
+    private fun drawTimeLines(canvas: Canvas, rect: RectF, labelY: Float) {
         val now = System.currentTimeMillis()
         val startTime = now - maxDurationMs
         val startMinute = (startTime / 60000L) * 60000L + 60000L
@@ -204,9 +237,22 @@ class RssiChartView @JvmOverloads constructor(
             canvas.drawLine(x, rect.top, x, rect.bottom, timeLinePaint)
             time += 60000L
         }
+
+        // 在图表下方绘制时间标签
+        textPaint.textAlign = Paint.Align.CENTER
+        var labelTime = startMinute
+        while (labelTime < now) {
+            val x = getXForTimestamp(labelTime, startTime, now, rect.right - rect.left) + rect.left
+            canvas.drawText(dateFormat.format(Date(labelTime)), x, labelY, textPaint)
+            labelTime += 60000L
+        }
+        textPaint.textAlign = Paint.Align.LEFT
     }
 
-    private fun drawApSeries(canvas: Canvas, series: ApDataSeries, rect: RectF) {
+    /**
+     * 仅为当前 AP 绘制完整曲线（实线 + 数据点 + BSSID 切换标记）
+     */
+    private fun drawApSeriesWithLine(canvas: Canvas, series: ApDataSeries, rect: RectF) {
         val dataList = series.dataPoints.toList()
         if (dataList.isEmpty()) return
 
@@ -226,18 +272,14 @@ class RssiChartView @JvmOverloads constructor(
 
         if (points.isEmpty()) return
 
-        // 设置线型
+        // 绘制实线
         val seriesPaint = Paint().apply {
             color = series.lineColor
             strokeWidth = 4f
             style = Paint.Style.STROKE
             isAntiAlias = true
-            if (series.isDashed) {
-                pathEffect = DashPathEffect(floatArrayOf(15f, 10f), 0f)
-            }
         }
 
-        // 绘制折线
         path.moveTo(points[0].first, points[0].second)
         for (i in 1 until points.size) {
             path.lineTo(points[i].first, points[i].second)
@@ -253,40 +295,62 @@ class RssiChartView @JvmOverloads constructor(
         for ((x, y) in points) {
             canvas.drawCircle(x, y, 3f, pointPaint)
         }
+
+        // 绘制 BSSID 切换标记（红色大圆点）
+        for (marker in series.bssidChangeMarkers) {
+            if (marker.timestamp < startTime) continue
+            val x = getXForTimestamp(marker.timestamp, startTime, now, chartWidth) + rect.left
+            val y = getYForRssi(marker.rssi.toFloat(), rect)
+            canvas.drawCircle(x, y, 8f, bssidChangedPaint)
+        }
     }
 
-    private fun drawLegend(canvas: Canvas, width: Float, yPosition: Float) {
-        if (apSeries.isEmpty()) return
+    /**
+     * 仅为附近 AP 绘制离散点（不连线）
+     */
+    private fun drawApDotsOnly(canvas: Canvas, series: ApDataSeries, rect: RectF) {
+        val dataList = series.dataPoints.toList()
+        if (dataList.isEmpty()) return
 
-        var currentX = marginLeft
-        var currentY = yPosition + 10f
-        val lineHeight = 35f
-        val maxPerRow = 2 // 每行最多 2 个图例
+        val now = System.currentTimeMillis()
+        val startTime = now - maxDurationMs
+        val chartWidth = rect.right - rect.left
 
-        for ((index, series) in apSeries.withIndex()) {
-            val column = index % maxPerRow
-            val row = index / maxPerRow
+        val pointPaint = Paint().apply {
+            color = series.lineColor
+            style = Paint.Style.FILL
+            isAntiAlias = true
+        }
 
-            currentX = if (column == 0) {
-                marginLeft
-            } else {
-                width / 2
-            }
-            currentY = yPosition + 10f + row * lineHeight
+        for (point in dataList) {
+            val x = getXForTimestamp(point.timestamp, startTime, now, chartWidth) + rect.left
+            val y = getYForRssi(point.rssi.toFloat(), rect)
+            canvas.drawCircle(x, y, 5f, pointPaint) // 比当前 AP 的点稍大
+        }
+    }
+
+    private fun drawApNames(canvas: Canvas, width: Float, yPosition: Float) {
+        // 只显示非当前 AP 的名称（最多 2 个）, 不显示 dBm
+        val nearbySeries = apSeries.filter { !it.isCurrentAp }.take(2)
+        if (nearbySeries.isEmpty()) return
+
+        val halfWidth = width / 2
+
+        for ((index, series) in nearbySeries.withIndex()) {
+            val startX = if (index == 0) marginLeft else halfWidth
+            val maxChars = if (index == 0) 20 else 20
 
             // 绘制颜色点
             val dotPaint = Paint().apply {
                 color = series.lineColor
-                style = if (series.isDashed) Paint.Style.STROKE else Paint.Style.FILL
-                strokeWidth = 2f
+                style = Paint.Style.FILL
                 isAntiAlias = true
             }
-            canvas.drawCircle(currentX + 15f, currentY - 10f, 6f, dotPaint)
+            canvas.drawCircle(startX + 10f, yPosition - 8f, 5f, dotPaint)
 
-            // 绘制文字
-            val rssi = series.getRecentRssi()
-            val legendText = "${series.apName.take(10)} (${series.bssid.take(6)})  $rssi dBm"
-            canvas.drawText(legendText, currentX + 30f, currentY, legendPaint)
+            // AP 名称（一行显示，允许更长文字）
+            val displayName = series.apName.take(maxChars)
+            canvas.drawText(displayName, startX + 22f, yPosition, legendPaint)
         }
     }
 
