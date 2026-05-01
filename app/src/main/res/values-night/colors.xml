@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- 文字颜色（暗主题） -->
+    <color name="text_primary">#E0E0E0</color>
+    <color name="text_secondary">#AAAAAA</color>
+    <color name="text_hint">#888888</color>
+
+    <!-- 输入框背景（暗主题） -->
+    <color name="input_background">#1E1E1E</color>
+    <color name="input_stroke">#555555</color>
+
+    <!-- 图表颜色（暗主题） -->
+    <color name="chart_grid">#444444</color>
+    <color name="chart_time_line">#555555</color>
+    <color name="chart_text">#AAAAAA</color>
+</resources>

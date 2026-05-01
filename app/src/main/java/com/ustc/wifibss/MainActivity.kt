@@ -18,7 +18,7 @@ import android.widget.RadioGroup
 import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.appcompat.app.AlertDialog
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
@@ -173,7 +173,7 @@ class MainActivity : AppCompatActivity() {
             ${versionInfo.updateLog.ifEmpty { "发现新版本，是否立即下载更新？" }}
         """.trimIndent()
 
-        AlertDialog.Builder(this)
+        MaterialAlertDialogBuilder(this)
             .setTitle(R.string.new_version_found)
             .setMessage(message)
             .setPositiveButton(R.string.download_now) { _, _ ->
@@ -394,14 +394,14 @@ class MainActivity : AppCompatActivity() {
                 useWideViewPort = true
             }
 
-            AlertDialog.Builder(this)
+            MaterialAlertDialogBuilder(this)
                 .setTitle(R.string.introduction_button)
                 .setView(webView)
                 .setPositiveButton(android.R.string.ok, null)
                 .show()
         }
 
-        AlertDialog.Builder(this)
+        MaterialAlertDialogBuilder(this)
             .setView(dialogView)
             .setPositiveButton(android.R.string.ok, null)
             .show()
@@ -444,7 +444,7 @@ class MainActivity : AppCompatActivity() {
             updateAdapter()
 
             btnClear.setOnClickListener {
-                AlertDialog.Builder(this@MainActivity)
+                MaterialAlertDialogBuilder(this@MainActivity)
                     .setTitle(R.string.history_clear)
                     .setMessage(R.string.history_clear_confirm)
                     .setPositiveButton(android.R.string.ok) { _, _ ->
@@ -460,7 +460,7 @@ class MainActivity : AppCompatActivity() {
                     .show()
             }
 
-            AlertDialog.Builder(this@MainActivity)
+            MaterialAlertDialogBuilder(this@MainActivity)
                 .setView(dialogView)
                 .setPositiveButton(android.R.string.ok, null)
                 .show()
@@ -477,7 +477,7 @@ class MainActivity : AppCompatActivity() {
         etApName.setText(history.apName)
         etBuilding.setText(history.building)
 
-        AlertDialog.Builder(this)
+        MaterialAlertDialogBuilder(this)
             .setTitle(R.string.edit_record_title)
             .setView(dialogView)
             .setPositiveButton(R.string.bssmac_save) { _, _ ->
@@ -614,7 +614,7 @@ class MainActivity : AppCompatActivity() {
                     val position = vh.adapterPosition
                     if (position >= 0 && position < bssList.size) {
                         val entry = bssList[position]
-                        AlertDialog.Builder(this@MainActivity)
+                        MaterialAlertDialogBuilder(this@MainActivity)
                             .setTitle(R.string.bssmac_delete)
                             .setMessage(getString(R.string.bssmac_delete_confirm, entry.bssMac))
                             .setPositiveButton(R.string.bssmac_delete) { _, _ ->
@@ -638,7 +638,7 @@ class MainActivity : AppCompatActivity() {
             }
             ItemTouchHelper(touchCallback).attachToRecyclerView(rvBssLocal)
 
-            AlertDialog.Builder(this@MainActivity)
+            MaterialAlertDialogBuilder(this@MainActivity)
                 .setView(dialogView)
                 .setPositiveButton(android.R.string.ok, null)
                 .show()
@@ -655,7 +655,7 @@ class MainActivity : AppCompatActivity() {
         etApName.setText(entry.apName)
         etBuilding.setText(entry.building)
 
-        AlertDialog.Builder(this)
+        MaterialAlertDialogBuilder(this)
             .setTitle(R.string.bssmac_edit_title)
             .setView(dialogView)
             .setPositiveButton(R.string.bssmac_save) { _, _ ->
@@ -797,7 +797,7 @@ class MainActivity : AppCompatActivity() {
                 checkUpdate()
             }
 
-            AlertDialog.Builder(this@MainActivity)
+            MaterialAlertDialogBuilder(this@MainActivity)
                 .setTitle(R.string.settings_title)
                 .setView(dialogView)
                 .setPositiveButton(R.string.save) { _, _ ->
@@ -1038,7 +1038,7 @@ class MainActivity : AppCompatActivity() {
             return
         }
 
-        AlertDialog.Builder(this)
+        MaterialAlertDialogBuilder(this)
             .setTitle(R.string.need_permission)
             .setMessage(getString(R.string.permission_message, missingPerms.joinToString("\n")))
             .setPositiveButton(android.R.string.ok) { _, _ ->

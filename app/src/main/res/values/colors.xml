@@ -7,4 +7,18 @@
     <color name="teal_700">#FF018786</color>
     <color name="black">#FF000000</color>
     <color name="white">#FFFFFFFF</color>
+
+    <!-- 文字颜色 -->
+    <color name="text_primary">#333333</color>
+    <color name="text_secondary">#666666</color>
+    <color name="text_hint">#999999</color>
+
+    <!-- 输入框背景 -->
+    <color name="input_background">#FFFFFF</color>
+    <color name="input_stroke">#CCCCCC</color>
+
+    <!-- 图表颜色 -->
+    <color name="chart_grid">#E0E0E0</color>
+    <color name="chart_time_line">#CCCCCC</color>
+    <color name="chart_text">#999999</color>
 </resources>

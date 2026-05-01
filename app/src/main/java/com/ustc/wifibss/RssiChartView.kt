@@ -37,12 +37,6 @@ class RssiChartView @JvmOverloads constructor(
         const val MARGIN_RIGHT = 20f
         const val BOTTOM_ZONE_HEIGHT = 65f
 
-        // 颜色
-        const val COLOR_GRID = "#E0E0E0"
-        const val COLOR_TIME_LINE = "#CCCCCC"
-        const val COLOR_TEXT = "#999999"
-        const val COLOR_BSSID_CHANGED = "#F44336"
-
         // 画笔
         const val STROKE_WIDTH_THIN = 1f
         const val STROKE_WIDTH_LINE = 4f
@@ -144,22 +138,25 @@ class RssiChartView @JvmOverloads constructor(
     private val marginRight = MARGIN_RIGHT
     private val bottomZoneHeight = BOTTOM_ZONE_HEIGHT
 
+    // 颜色（主题感知，从资源加载）
+    private var colorGrid: Int = 0
+    private var colorTimeLine: Int = 0
+    private var colorText: Int = 0
+    private var colorBssidChanged: Int = Color.parseColor("#F44336")
+
     // 画笔
     private val gridPaint = Paint().apply {
-        color = Color.parseColor(COLOR_GRID)
         strokeWidth = STROKE_WIDTH_THIN
         style = Paint.Style.STROKE
     }
 
     private val timeLinePaint = Paint().apply {
-        color = Color.parseColor(COLOR_TIME_LINE)
         strokeWidth = STROKE_WIDTH_THIN
         style = Paint.Style.STROKE
         pathEffect = DashPathEffect(floatArrayOf(DASH_WIDTH, DASH_GAP), 0f)
     }
 
     private val textPaint = Paint().apply {
-        color = Color.parseColor(COLOR_TEXT)
         textSize = TEXT_SIZE_LABEL
         isAntiAlias = true
     }
@@ -170,9 +167,26 @@ class RssiChartView @JvmOverloads constructor(
     }
 
     private val bssidChangedPaint = Paint().apply {
-        color = Color.parseColor(COLOR_BSSID_CHANGED)
         style = Paint.Style.FILL
         isAntiAlias = true
+    }
+
+    init {
+        loadColors()
+    }
+
+    /**
+     * 从资源加载颜色（主题感知）
+     */
+    private fun loadColors() {
+        colorGrid = context.getColor(R.color.chart_grid)
+        colorTimeLine = context.getColor(R.color.chart_time_line)
+        colorText = context.getColor(R.color.chart_text)
+        gridPaint.color = colorGrid
+        timeLinePaint.color = colorTimeLine
+        textPaint.color = colorText
+        legendPaint.color = context.getColor(R.color.text_primary)
+        bssidChangedPaint.color = colorBssidChanged
     }
 
     // 系列线条画笔（复用，避免 onDraw 中重复创建）

@@ -17,7 +17,7 @@
             android:layout_height="wrap_content"
             android:layout_weight="1"
             android:textSize="12sp"
-            android:textColor="#666666"
+            android:textColor="@color/text_secondary"
             android:fontFamily="monospace" />
 
         <TextView
@@ -26,7 +26,7 @@
             android:layout_height="wrap_content"
             android:textSize="12sp"
             android:fontFamily="monospace"
-            android:textColor="#333333" />
+            android:textColor="@color/text_primary" />
     </LinearLayout>
 
     <!-- AP 名字和楼 -->
@@ -42,14 +42,14 @@
             android:layout_height="wrap_content"
             android:layout_weight="1"
             android:textSize="13sp"
-            android:textColor="#333333" />
+            android:textColor="@color/text_primary" />
 
         <TextView
             android:id="@+id/tvHistoryBuilding"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:textSize="13sp"
-            android:textColor="#666666" />
+            android:textColor="@color/text_secondary" />
     </LinearLayout>
 
 </LinearLayout>

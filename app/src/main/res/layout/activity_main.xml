@@ -71,7 +71,7 @@
                     android:gravity="center"
                     android:text="@string/rssi_empty_hint"
                     android:textSize="12sp"
-                    android:textColor="#999999" />
+                    android:textColor="@color/text_hint" />
             </FrameLayout>
         </LinearLayout>
 
