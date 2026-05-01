@@ -26,68 +26,47 @@ class BssRepository(
     }
 
     suspend fun addHistoryRecord(bssid: String, apName: String, building: String) {
-        val list = historyDao.getLatest(MAX_HISTORY_COUNT + 1)
-            .map(QueryHistoryEntity::toQueryHistory)
-            .toMutableList()
+        val lastRecords = historyDao.getLatest(1)
+        val lastRecord = lastRecords.firstOrNull()
 
-        val lastRecord = list.lastOrNull()
         if (lastRecord != null && lastRecord.bssid == bssid) {
-            if (lastRecord.apName.isEmpty() && apName.isNotEmpty()) {
-                list.removeAt(list.size - 1)
-                list.add(QueryHistory(System.currentTimeMillis(), bssid, apName, building))
-                saveHistoryList(list)
-                return
+            // 与最后一条 BSSID 相同：根据是否有名称决定跳过或更新
+            when {
+                lastRecord.apName.isEmpty() && apName.isNotEmpty() -> {
+                    // 最后一条刚记录的 BSSID 有 MAC 但无名称，现在有查询结果了 → 更新它
+                    historyDao.update(lastRecord.copy(
+                        apName = apName,
+                        building = building
+                    ))
+                }
+                lastRecord.apName.isNotEmpty() && apName.isNotEmpty() -> return  // 重复记录，跳过
+                lastRecord.apName.isEmpty() && apName.isEmpty() -> return         // 重复记录，跳过
             }
-            if (lastRecord.apName.isNotEmpty() && apName.isNotEmpty()) return
-            if (lastRecord.apName.isEmpty() && apName.isEmpty()) return
+            return
         }
 
-        list.add(QueryHistory(System.currentTimeMillis(), bssid, apName, building))
-        if (list.size > MAX_HISTORY_COUNT) list.removeAt(0)
-        saveHistoryList(list)
+        // BSSID 不同 → 插入新记录
+        historyDao.insert(QueryHistoryEntity(
+            timestamp = System.currentTimeMillis(),
+            bssid = bssid,
+            apName = apName,
+            building = building
+        ))
+        // 删除超出上限的旧记录
+        historyDao.trimExcess(MAX_HISTORY_COUNT)
     }
 
     suspend fun updateHistoryRecord(bssid: String, apName: String, building: String) {
-        val list = historyDao.getLatest(MAX_HISTORY_COUNT + 1)
-            .map(QueryHistoryEntity::toQueryHistory)
-            .toMutableList()
-
-        for (i in list.size - 1 downTo 0) {
-            if (list[i].bssid == bssid && list[i].apName.isEmpty()) {
-                // 找到对应的 entity 并更新
-                val entities = historyDao.getLatest(MAX_HISTORY_COUNT)
-                for (entity in entities) {
-                    if (entity.bssid == bssid && entity.apName.isEmpty()) {
-                        val updated = entity.copy(
-                            apName = apName,
-                            building = building
-                        )
-                        historyDao.update(updated)
-                        return
-                    }
-                }
-                break
-            }
+        val pending = historyDao.getByBssidWithEmptyName(bssid)
+        if (pending != null) {
+            historyDao.update(pending.copy(apName = apName, building = building))
+        } else {
+            addHistoryRecord(bssid, apName, building)
         }
-        addHistoryRecord(bssid, apName, building)
     }
 
     suspend fun clearHistory() {
         historyDao.clearAll()
-    }
-
-    private suspend fun saveHistoryList(list: List<QueryHistory>) {
-        val entities = list.mapIndexed { index, h ->
-            QueryHistoryEntity(
-                id = index.toLong(),
-                timestamp = h.timestamp,
-                bssid = h.bssid,
-                apName = h.apName,
-                building = h.building
-            )
-        }
-        historyDao.clearAll()
-        historyDao.insertAll(entities)
     }
 
     // ==================== 本地 BSSMAC ====================

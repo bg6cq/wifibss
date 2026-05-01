@@ -175,6 +175,31 @@ class RssiChartView @JvmOverloads constructor(
         isAntiAlias = true
     }
 
+    // 系列线条画笔（复用，避免 onDraw 中重复创建）
+    private val seriesLinePaint = Paint().apply {
+        strokeWidth = STROKE_WIDTH_LINE
+        style = Paint.Style.STROKE
+        isAntiAlias = true
+    }
+
+    // 数据点画笔（复用）
+    private val dataPointPaint = Paint().apply {
+        style = Paint.Style.FILL
+        isAntiAlias = true
+    }
+
+    // 附近 AP 点画笔（复用）
+    private val nearbyPointPaint = Paint().apply {
+        style = Paint.Style.FILL
+        isAntiAlias = true
+    }
+
+    // 图例圆点画笔（复用）
+    private val legendDotPaint = Paint().apply {
+        style = Paint.Style.FILL
+        isAntiAlias = true
+    }
+
     private val dateFormat = SimpleDateFormat("HH:mm", Locale.getDefault())
 
     // 添加或更新 AP 数据系列
@@ -329,28 +354,18 @@ class RssiChartView @JvmOverloads constructor(
 
         if (points.isEmpty()) return
 
-        // 绘制实线
-        val seriesPaint = Paint().apply {
-            color = series.lineColor
-            strokeWidth = STROKE_WIDTH_LINE
-            style = Paint.Style.STROKE
-            isAntiAlias = true
-        }
-
+        // 绘制实线（复用画笔，仅更新颜色）
+        seriesLinePaint.color = series.lineColor
         path.moveTo(points[0].first, points[0].second)
         for (i in 1 until points.size) {
             path.lineTo(points[i].first, points[i].second)
         }
-        canvas.drawPath(path, seriesPaint)
+        canvas.drawPath(path, seriesLinePaint)
 
-        // 绘制数据点
-        val pointPaint = Paint().apply {
-            color = series.lineColor
-            style = Paint.Style.FILL
-            isAntiAlias = true
-        }
+        // 绘制数据点（复用画笔，仅更新颜色）
+        dataPointPaint.color = series.lineColor
         for ((x, y) in points) {
-            canvas.drawCircle(x, y, RADIUS_DATA_POINT, pointPaint)
+            canvas.drawCircle(x, y, RADIUS_DATA_POINT, dataPointPaint)
         }
 
         // 绘制 BSSID 切换标记（红色大圆点）
@@ -373,16 +388,12 @@ class RssiChartView @JvmOverloads constructor(
         val startTime = now - maxDurationMs
         val chartWidth = rect.right - rect.left
 
-        val pointPaint = Paint().apply {
-            color = series.lineColor
-            style = Paint.Style.FILL
-            isAntiAlias = true
-        }
+        nearbyPointPaint.color = series.lineColor
 
         for (point in dataList) {
             val x = getXForTimestamp(point.timestamp, startTime, now, chartWidth) + rect.left
             val y = getYForRssi(point.rssi.toFloat(), rect)
-            canvas.drawCircle(x, y, RADIUS_NEARBY_POINT, pointPaint)
+            canvas.drawCircle(x, y, RADIUS_NEARBY_POINT, nearbyPointPaint)
         }
     }
 
@@ -395,13 +406,9 @@ class RssiChartView @JvmOverloads constructor(
 
         for ((index, series) in nearbySeries.withIndex()) {
             val startX = if (index == 0) marginLeft else halfWidth
-            // 绘制颜色点
-            val dotPaint = Paint().apply {
-                color = series.lineColor
-                style = Paint.Style.FILL
-                isAntiAlias = true
-            }
-            canvas.drawCircle(startX + LEGEND_DOT_X_OFFSET, yPosition - LEGEND_DOT_Y_OFFSET, RADIUS_LEGEND_DOT, dotPaint)
+            // 绘制颜色点（复用画笔，仅更新颜色）
+            legendDotPaint.color = series.lineColor
+            canvas.drawCircle(startX + LEGEND_DOT_X_OFFSET, yPosition - LEGEND_DOT_Y_OFFSET, RADIUS_LEGEND_DOT, legendDotPaint)
 
             // AP 名称（一行显示，允许更长文字）
             val displayName = series.apName.take(MAX_AP_NAME_CHARS)

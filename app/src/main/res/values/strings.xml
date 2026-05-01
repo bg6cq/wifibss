@@ -101,4 +101,19 @@
     <string name="bssmac_added_new">已添加新记录</string>
     <string name="bssmac_format_invalid">BSS MAC 格式错误</string>
     <string name="rssi_empty_hint">正在收集信号数据...</string>
+
+    <!-- 隐私说明 -->
+    <string name="privacy_title">隐私说明</string>
+    <string name="privacy_description">本应用在运行时会收集以下信息：
+
+1. 当前连接 WiFi 的 BSSID（MAC 地址）——用于查询 AP 信息
+2. 周围同 SSID 的 AP 信号强度（RSSI）——用于显示信号图表
+
+以上信息将发送到您在「设置」中配置的查询 URL，您可以在设置中修改或清空该地址。
+
+需要位置权限是 Android 系统的要求，本应用不采集、处理位置信息。
+
+所有历史记录和 BSSMAC 数据仅存储在设备本地，不会自动上传到其他服务器。
+
+本应用不会收集任何个人身份信息（姓名、账号、位置轨迹等）。</string>
 </resources>

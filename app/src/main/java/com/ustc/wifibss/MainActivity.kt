@@ -363,12 +363,14 @@ class MainActivity : AppCompatActivity() {
         val tvVersion = dialogView.findViewById<TextView>(R.id.tvVersion)
         val tvDescription = dialogView.findViewById<TextView>(R.id.tvDescription)
         val tvChanges = dialogView.findViewById<TextView>(R.id.tvChanges)
+        val tvPrivacy = dialogView.findViewById<TextView>(R.id.tvPrivacy)
         val tvAuthor = dialogView.findViewById<TextView>(R.id.tvAuthor)
         val tvGithub = dialogView.findViewById<TextView>(R.id.tvGithub)
 
         tvVersion.text = getVersionInfo()
         tvDescription.text = getDescriptionText()
         tvChanges.text = getChangesText()
+        tvPrivacy.text = getString(R.string.privacy_description)
         tvAuthor.text = getAuthorText()
         tvGithub.text = "GitHub: https://github.com/bg6cq/wifibss"
 
