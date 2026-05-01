@@ -375,6 +375,7 @@ class MainActivity : AppCompatActivity() {
         val tvPrivacy = dialogView.findViewById<TextView>(R.id.tvPrivacy)
         val tvAuthor = dialogView.findViewById<TextView>(R.id.tvAuthor)
         val tvGithub = dialogView.findViewById<TextView>(R.id.tvGithub)
+        val btnIntroduction = dialogView.findViewById<Button>(R.id.btnIntroduction)
 
         tvVersion.text = getVersionInfo()
         tvDescription.text = getDescriptionText()
@@ -382,6 +383,28 @@ class MainActivity : AppCompatActivity() {
         tvPrivacy.text = getString(R.string.privacy_description)
         tvAuthor.text = getAuthorText()
         tvGithub.text = "GitHub: https://github.com/bg6cq/wifibss"
+
+        btnIntroduction.setOnClickListener {
+            try {
+                val inputStream = assets.open("introduction.html")
+                val html = inputStream.bufferedReader().use { it.readText() }
+                val cacheDir = java.io.File(cacheDir, "introduction")
+                cacheDir.mkdirs()
+                val file = java.io.File(cacheDir, "introduction.html")
+                file.writeText(html)
+                val uri = androidx.core.content.FileProvider.getUriForFile(
+                    this,
+                    "${packageName}.fileprovider",
+                    file
+                )
+                val intent = android.content.Intent(android.content.Intent.ACTION_VIEW)
+                intent.setDataAndType(uri, "text/html")
+                intent.addFlags(android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                startActivity(intent)
+            } catch (e: Exception) {
+                Toast.makeText(this, "无法打开项目介绍：${e.message}", Toast.LENGTH_SHORT).show()
+            }
+        }
 
         AlertDialog.Builder(this)
             .setView(dialogView)

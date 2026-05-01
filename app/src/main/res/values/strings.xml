@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">WiFi BSS 查询</string>
+    <string name="introduction_button">WiFi BSS 查询系统详细说明</string>
     <string name="bssid_label">当前 BSSID:</string>
     <string name="bssid_value">未获取</string>
     <string name="query_button">查询 BSS 信息</string>

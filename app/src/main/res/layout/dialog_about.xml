@@ -29,6 +29,13 @@
             android:gravity="center"
             android:layout_marginBottom="16dp" />
 
+        <Button
+            android:id="@+id/btnIntroduction"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/introduction_button"
+            android:layout_marginBottom="16dp" />
+
         <!-- 功能说明 -->
         <TextView
             android:layout_width="match_parent"
