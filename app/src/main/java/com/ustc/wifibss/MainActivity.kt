@@ -8,6 +8,7 @@ import android.net.wifi.ScanResult
 import android.net.wifi.WifiManager
 import android.os.Build
 import android.os.Bundle
+import android.provider.MediaStore
 import android.view.Menu
 import android.view.MenuItem
 import android.view.LayoutInflater
@@ -388,19 +389,31 @@ class MainActivity : AppCompatActivity() {
             try {
                 val inputStream = assets.open("introduction.html")
                 val html = inputStream.bufferedReader().use { it.readText() }
-                val cacheDir = java.io.File(cacheDir, "introduction")
-                cacheDir.mkdirs()
-                val file = java.io.File(cacheDir, "introduction.html")
-                file.writeText(html)
-                val uri = androidx.core.content.FileProvider.getUriForFile(
-                    this,
-                    "${packageName}.fileprovider",
-                    file
-                )
-                val intent = android.content.Intent(android.content.Intent.ACTION_VIEW)
-                intent.setDataAndType(uri, "text/html")
-                intent.addFlags(android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                startActivity(intent)
+
+                val fileName = "wifi_bss_introduction.html"
+                val contentValues = android.content.ContentValues().apply {
+                    put(MediaStore.Downloads.DISPLAY_NAME, fileName)
+                    put(MediaStore.Downloads.MIME_TYPE, "text/html")
+                    put(MediaStore.Downloads.IS_PENDING, 1)
+                }
+                val resolver = contentResolver
+                val downloadUri = resolver.insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, contentValues)
+                if (downloadUri != null) {
+                    resolver.openOutputStream(downloadUri)?.use { outputStream ->
+                        outputStream.write(html.toByteArray())
+                    }
+                    contentValues.clear()
+                    contentValues.put(MediaStore.Downloads.IS_PENDING, 0)
+                    resolver.update(downloadUri, contentValues, null, null)
+
+                    val intent = android.content.Intent(android.content.Intent.ACTION_VIEW)
+                    intent.setDataAndType(downloadUri, "text/html")
+                    intent.addFlags(android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION or
+                        android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
+                    startActivity(android.content.Intent.createChooser(intent, null))
+                } else {
+                    Toast.makeText(this, "无法创建文件", Toast.LENGTH_SHORT).show()
+                }
             } catch (e: Exception) {
                 Toast.makeText(this, "无法打开项目介绍：${e.message}", Toast.LENGTH_SHORT).show()
             }
