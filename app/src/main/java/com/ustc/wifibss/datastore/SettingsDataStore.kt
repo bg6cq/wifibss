@@ -19,18 +19,22 @@ class SettingsDataStore(private val context: Context) {
         private val KEY_AUTO_QUERY = booleanPreferencesKey("auto_query")
         private val KEY_AUTO_REFRESH = intPreferencesKey("auto_refresh")
         private val KEY_CACHE_AP_INFO = booleanPreferencesKey("cache_ap_info")
+        private val KEY_AUTO_CHECK_UPDATE = booleanPreferencesKey("auto_check_update")
 
         const val DEFAULT_QUERY_URL = "https://linux.ustc.edu.cn/api/bssinfo.php"
     }
 
     val autoRefreshIntervalFlow: Flow<Int> = context.dataStore.data
-        .map { prefs -> prefs[KEY_AUTO_REFRESH] ?: 0 }
+        .map { prefs -> prefs[KEY_AUTO_REFRESH] ?: 1000 }
 
     val autoQueryEnabledFlow: Flow<Boolean> = context.dataStore.data
         .map { prefs -> prefs[KEY_AUTO_QUERY] ?: false }
 
     val cacheApInfoEnabledFlow: Flow<Boolean> = context.dataStore.data
-        .map { prefs -> prefs[KEY_CACHE_AP_INFO] ?: false }
+        .map { prefs -> prefs[KEY_CACHE_AP_INFO] ?: true }
+
+    val autoCheckUpdateFlow: Flow<Boolean> = context.dataStore.data
+        .map { prefs -> prefs[KEY_AUTO_CHECK_UPDATE] ?: true }
 
     suspend fun getQueryUrl(): String {
         return context.dataStore.data.map { prefs ->
@@ -61,5 +65,9 @@ class SettingsDataStore(private val context: Context) {
 
     suspend fun saveAutoRefreshInterval(intervalMs: Int) {
         context.dataStore.edit { prefs -> prefs[KEY_AUTO_REFRESH] = intervalMs }
+    }
+
+    suspend fun saveAutoCheckUpdate(enabled: Boolean) {
+        context.dataStore.edit { prefs -> prefs[KEY_AUTO_CHECK_UPDATE] = enabled }
     }
 }

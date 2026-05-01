@@ -5,9 +5,62 @@
     android:orientation="vertical"
     android:padding="24dp">
 
+    <!-- 刷新 WiFi 信息间隔 -->
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="@string/auto_refresh_label"
+        android:textSize="14sp"
+        android:textStyle="bold" />
+
+    <RadioGroup
+        android:id="@+id/rgAutoRefresh"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:orientation="vertical">
+
+        <RadioButton
+            android:id="@+id/rb1s"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/auto_refresh_1s" />
+
+        <RadioButton
+            android:id="@+id/rb3s"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/auto_refresh_3s" />
+
+        <RadioButton
+            android:id="@+id/rb5s"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/auto_refresh_5s" />
+
+    </RadioGroup>
+
+    <!-- 缓存 AP 信息 -->
+    <com.google.android.material.checkbox.MaterialCheckBox
+        android:id="@+id/cbCacheApInfo"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:text="@string/cache_ap_info_label" />
+
+    <!-- BSSID 变化时自动查询 -->
+    <com.google.android.material.checkbox.MaterialCheckBox
+        android:id="@+id/cbAutoQuery"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:text="@string/auto_query_label" />
+
+    <!-- 查询 URL -->
     <com.google.android.material.textfield.TextInputLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
+        android:layout_marginTop="16dp"
         android:hint="@string/query_url_label"
         style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox">
 
@@ -20,6 +73,7 @@
 
     </com.google.android.material.textfield.TextInputLayout>
 
+    <!-- 查询 KEY -->
     <com.google.android.material.textfield.TextInputLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
@@ -44,60 +98,20 @@
         android:textSize="12sp"
         android:textColor="?android:attr/textColorSecondary" />
 
-    <!-- 自动刷新时间设置 -->
-    <TextView
+    <!-- 自动检查更新 -->
+    <com.google.android.material.checkbox.MaterialCheckBox
+        android:id="@+id/cbAutoCheckUpdate"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="16dp"
-        android:text="@string/auto_refresh_label"
-        android:textSize="14sp"
-        android:textStyle="bold" />
+        android:text="@string/auto_check_update_label" />
 
-    <RadioGroup
-        android:id="@+id/rgAutoRefresh"
+    <!-- 检查软件更新按钮 -->
+    <Button
+        android:id="@+id/btnCheckUpdate"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="8dp"
-        android:orientation="vertical">
-
-        <RadioButton
-            android:id="@+id/rbNever"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="@string/auto_refresh_never" />
-
-        <RadioButton
-            android:id="@+id/rb1s"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="@string/auto_refresh_1s" />
-
-        <RadioButton
-            android:id="@+id/rb5s"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="@string/auto_refresh_5s" />
-
-        <RadioButton
-            android:id="@+id/rb10s"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="@string/auto_refresh_10s" />
-
-    </RadioGroup>
-
-    <com.google.android.material.checkbox.MaterialCheckBox
-        android:id="@+id/cbAutoQuery"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="16dp"
-        android:text="@string/auto_query_label" />
-
-    <com.google.android.material.checkbox.MaterialCheckBox
-        android:id="@+id/cbCacheApInfo"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="8dp"
-        android:text="@string/cache_ap_info_label" />
+        android:text="@string/check_update_button" />
 
 </LinearLayout>

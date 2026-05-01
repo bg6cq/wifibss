@@ -12,7 +12,7 @@ class AppPreferences(private val context: Context,
     companion object {
         const val PREFS_NAME = "app_settings"
         const val DEFAULT_QUERY_URL = "https://linux.ustc.edu.cn/api/bssinfo.php"
-        const val DEFAULT_AUTO_REFRESH = 0
+        const val DEFAULT_AUTO_REFRESH = 1000
     }
 
     // 设置存储（DataStore）
@@ -70,7 +70,7 @@ class AppPreferences(private val context: Context,
     suspend fun getAutoRefreshInterval(): Int {
         val fromStore = store.autoRefreshIntervalFlow.first()
         return if (fromStore == 0) {
-            prefs?.getInt("auto_refresh", 0) ?: 0
+            prefs?.getInt("auto_refresh", DEFAULT_AUTO_REFRESH) ?: DEFAULT_AUTO_REFRESH
         } else {
             fromStore
         }
@@ -81,11 +81,19 @@ class AppPreferences(private val context: Context,
     }
 
     fun getAutoRefreshLabelResId(interval: Int): Int = when (interval) {
-        0 -> string.auto_refresh_never
         1000 -> string.auto_refresh_1s
+        3000 -> string.auto_refresh_3s
         5000 -> string.auto_refresh_5s
-        10000 -> string.auto_refresh_10s
-        else -> string.auto_refresh_never
+        else -> string.auto_refresh_1s
+    }
+
+    // ==================== 自动检查更新 ====================
+    suspend fun isAutoCheckUpdateEnabled(): Boolean {
+        return store.autoCheckUpdateFlow.first()
+    }
+
+    suspend fun saveAutoCheckUpdate(enabled: Boolean) {
+        store.saveAutoCheckUpdate(enabled)
     }
 
     // ==================== 历史记录（迁移中，旧方法保留） ====================

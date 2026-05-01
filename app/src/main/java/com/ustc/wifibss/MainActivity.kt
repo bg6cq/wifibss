@@ -87,6 +87,7 @@ class MainActivity : AppCompatActivity() {
         // 加载自动刷新设置
         lifecycleScope.launch {
             autoRefreshIntervalMs = prefs.getAutoRefreshInterval()
+            restartAutoRefresh()
 
             // 执行数据迁移
             DataMigration.migrateIfNeeded(database, getSharedPreferences(AppPreferences.PREFS_NAME, Context.MODE_PRIVATE))
@@ -94,11 +95,19 @@ class MainActivity : AppCompatActivity() {
 
         setupUI()
         setupRssiChart()
-        checkUpdate()
+        // 检查更新（移入协程延迟执行，等待设置加载）
+        lifecycleScope.launch {
+            if (prefs.isAutoCheckUpdateEnabled()) {
+                checkUpdate()
+            }
+        }
     }
 
     override fun onResume() {
         super.onResume()
+        if (!checkPermissions()) {
+            showPermissionRationale()
+        }
         updateWifiInfo()
         scanAndUpdateNearbyAps()
         restartAutoRefresh()
@@ -185,7 +194,6 @@ class MainActivity : AppCompatActivity() {
     @Suppress("DEPRECATION")
     private fun updateWifiInfo() {
         if (!checkPermissions()) {
-            showPermissionRationale()
             clearWifiInfo()
             return
         }
@@ -846,18 +854,25 @@ v1.0 初始版本
             val rgAutoRefresh = dialogView.findViewById<RadioGroup>(R.id.rgAutoRefresh)
             val cbAutoQuery = dialogView.findViewById<CheckBox>(R.id.cbAutoQuery)
             val cbCacheApInfo = dialogView.findViewById<CheckBox>(R.id.cbCacheApInfo)
+            val cbAutoCheckUpdate = dialogView.findViewById<CheckBox>(R.id.cbAutoCheckUpdate)
+            val btnCheckUpdate = dialogView.findViewById<Button>(R.id.btnCheckUpdate)
 
             etQueryUrl.setText(prefs.getQueryUrl())
             etQueryKey.setText(prefs.getQueryKey())
             cbAutoQuery.isChecked = prefs.isAutoQueryEnabled()
             cbCacheApInfo.isChecked = prefs.isCacheApInfoEnabled()
+            cbAutoCheckUpdate.isChecked = prefs.isAutoCheckUpdateEnabled()
 
             val autoRefresh = prefs.getAutoRefreshInterval()
             when (autoRefresh) {
-                0 -> rgAutoRefresh.check(R.id.rbNever)
                 1000 -> rgAutoRefresh.check(R.id.rb1s)
+                3000 -> rgAutoRefresh.check(R.id.rb3s)
                 5000 -> rgAutoRefresh.check(R.id.rb5s)
-                10000 -> rgAutoRefresh.check(R.id.rb10s)
+            }
+
+            // 检查软件更新按钮
+            btnCheckUpdate.setOnClickListener {
+                checkUpdate()
             }
 
             AlertDialog.Builder(this@MainActivity)
@@ -866,9 +881,9 @@ v1.0 初始版本
                 .setPositiveButton(R.string.save) { _, _ ->
                     val newInterval = when (rgAutoRefresh.checkedRadioButtonId) {
                         R.id.rb1s -> 1000
+                        R.id.rb3s -> 3000
                         R.id.rb5s -> 5000
-                        R.id.rb10s -> 10000
-                        else -> 0
+                        else -> 1000
                     }
                     lifecycleScope.launch {
                         prefs.saveSettings(etQueryUrl.text.toString(), etQueryKey.text.toString())
@@ -878,6 +893,7 @@ v1.0 初始版本
                             repository.clearApInfoCache()
                         }
                         prefs.saveAutoRefreshInterval(newInterval)
+                        prefs.saveAutoCheckUpdate(cbAutoCheckUpdate.isChecked)
                         if (newInterval != autoRefresh) {
                             autoRefreshIntervalMs = newInterval
                             restartAutoRefresh()
