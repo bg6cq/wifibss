@@ -24,6 +24,16 @@
 - **BSS 信息 API**: `GET https://linux.ustc.edu.cn/api/bssinfo.php?bssid=<12 位十六进制>` — 返回包含 `data` 数组的 JSON；第一个元素包含 `AC_IP`、`AP_IP`、`AP_NAME`、`AP_SN`、`AP_Building`。
 - **自动更新**: 启动时获取 `https://noc.ustc.edu.cn/version.json`（字段：`versionCode`、`versionName`、`updateUrl`、`updateLog`），与当前 `versionCode` 比较，如果服务器版本更高则显示更新对话框。更新只是在浏览器中打开 `updateUrl`。
 
+### 数据存储
+
+- **DataStore Preferences** (`SettingsDataStore`) — 存储所有应用设置（查询 URL/KEY、自动刷新间隔、开关等）。首次从 `SharedPreferences` 迁移后使用。
+- **Room** (`WifiBssDatabase`) — 存储历史记录 (`query_history`) 和本地 BSSMAC 数据 (`bss_local`)。
+- **缓存** — `BssInfoApiService` 中有内存缓存，缓存 AP 查询结果 10 分钟。
+
+### 关于页面
+
+`dialog_about.xml` 使用 ScrollView + LinearLayout 布局。更新日志内容通过 `strings.xml` 的 `about_changes` 字符串资源加载。新增"项目介绍"按钮，从 `assets/introduction.html` 读取，通过 `FileProvider` 写入缓存目录后用系统浏览器打开。
+
 ## Maven 镜像
 
 `settings.gradle.kts` 将 Google 和 Maven Central 重定向到阿里云镜像。如果同步时出现网络问题，可能需要更新这些配置。
@@ -38,85 +48,15 @@ Release 构建使用 `wifi-bss-key.jks` 签名。密钥库凭据在 `keystore.pr
 
 1. **app/build.gradle.kts** - 更新 `versionCode` 和 `versionName`
 2. **MainActivity.kt** - 更新 `getVersionInfo()` 返回的版本号
-3. **MainActivity.kt** - 更新 `getChangesText()` 添加新版本更新说明
+3. **app/src/main/res/values/strings.xml** - 在 `about_changes` 开头添加新版本更新说明
+4. **README.md** - 在更新历史中添加新版本条目
 
 ```kotlin
 // MainActivity.kt
 private fun getVersionInfo(): String {
-    return "版本：1.31"  // 与 versionName 一致
+    return "版本：1.32"  // 与 versionName 一致
 }
 
-private fun getChangesText(): String {
-    return """
-v1.31 设置界面重构和数据记录调整
-- 数据记录改用 Room
-- 设置布局重排，新增"自动检查更新"和"检查软件更新"
-- 修复自动刷新每秒检查权限导致的弹窗闪烁
-- 设置项改为"1秒/3秒/5秒"，新安装默认 1 秒刷新
-- 缓存AP信息默认开启
-
-v1.30 显示可能漫游切换的AP信号
-- 自动查询附近AP名称并在图表下方显示
-- 设置中增加缓存AP信息选项，减少查询次数
-- 图表布局和显示优化
-
-v1.28 显示文字优化
-- 优化关于页面描述文本，表达更清晰流畅
-- 设置项文字调整："BSSID 变化时自动查询"
-- 作者信息格式简化
-
-v1.27 构建系统升级
-- AGP 7.4.2 → 8.5.2
-- Kotlin 1.8.22 → 2.0.0
-- Gradle 8.0 → 8.7
-- Java 11 → 17
-
-v1.26 BSSMAC 编辑优化
-- 修改 MAC 地址时保留原记录并添加新记录
-
-v1.24 历史记录修复
-- 修复本地 BSSMAC 数据未更新历史记录的问题
-
-v1.23 功能增强
-- BSSMAC 支持按 MAC/所在楼/AP 名字排序
-- BSSMAC 信息支持导出到文件
-- 权限不足时显示详细说明，解释为什么需要各项权限
-
-v1.21 BSSMAC 编辑修复
-- 修复 BSSMAC 信息编辑后列表不刷新的问题
-
-v1.19 权限和体验优化
-- 添加屏幕唤醒保持，APP 运行时屏幕不会休眠
-- 自动查询关闭时也会检查本地数据库
-
-v1.18 WiFi 技术标准显示
-- 链路速度后显示 WiFi 技术标准（WiFi 4/WiFi 5/WiFi 6/WiFi 6E/WiFi 7）
-
-v1.17 RSSI 图表优化
-- 添加每分钟一条的竖向虚线网格，方便查看时间
-
-v1.16 历史记录增强
-- 点击历史记录可保存到本地 BSSMAC 数据库
-
-v1.15 本地 BSS MAC 数据库
-- 新增本地 BSSMAC 信息编辑功能（设置 → BSSMAC 信息）
-- 支持批量添加：每行格式"BSSMAC AP 名字 所在楼"
-- 支持多种 BSSMAC 格式自动识别（xx:xx:xx:xx:xx:xx、xxxx-xxxx-xxxx 等）
-- 左滑删除记录，点击记录可编辑
-- 查询时优先使用本地数据，无数据时调用远程 API
-
-v1.13 历史记录优化
-- BSSID 变化时立即记录历史（无需等待查询结果）
-- 查询到 AP 信息后自动更新对应历史记录
-- 历史记录时间精确到秒
-
-v1.12 信号强度图表
-- 新增 RSSI 信号强度曲线图，显示最近 5 分钟变化
-- BSSID 切换时用红色大圆点标记
-
-v1.11 历史记录功能
-- 新增查询历史记录，保存 BSSID、AP 名字、楼名和查询时间
-- BSSID 变化时自动记录，相同 BSSID 智能合并
-    """.trimIndent()
-}
+// about_changes 在 strings.xml 中维护
+// README.md 手动同步更新历史
 ```
