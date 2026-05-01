@@ -1,11 +1,11 @@
 package com.ustc.wifibss.repository
 
 import com.ustc.wifibss.api.BssInfoApiService
+import com.ustc.wifibss.api.BssQueryResult
 import com.ustc.wifibss.data.AppPreferences
 import com.ustc.wifibss.database.BssLocalEntity
 import com.ustc.wifibss.database.QueryHistoryEntity
 import com.ustc.wifibss.database.WifiBssDatabase
-import com.ustc.wifibss.model.ApInfo
 import com.ustc.wifibss.model.BssLocalEntry
 import com.ustc.wifibss.model.QueryHistory
 import com.ustc.wifibss.util.WifiUtils
@@ -101,7 +101,7 @@ class BssRepository(
 
     // ==================== BSS 信息查询 ====================
 
-    suspend fun queryBssInfo(bssid: String): ApInfo = apiService.queryBssInfo(bssid)
+    suspend fun queryBssInfo(bssid: String): BssQueryResult = apiService.queryBssInfo(bssid)
 
     suspend fun queryNearbyApName(bssid: String): String? = apiService.queryNearbyApName(bssid)
 

@@ -27,6 +27,7 @@ import androidx.recyclerview.widget.ItemTouchHelper
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.ustc.wifibss.api.BssInfoApiService
+import com.ustc.wifibss.api.BssQueryResult
 import com.ustc.wifibss.database.DataMigration
 import com.ustc.wifibss.database.WifiBssDatabase
 import com.ustc.wifibss.data.AppPreferences
@@ -863,7 +864,8 @@ class MainActivity : AppCompatActivity() {
             var success = false
             while (!success && autoQueryRetryCount < 3) {
                 try {
-                    val apInfo = repository.queryBssInfo(bssid)
+                    val queryResult = repository.queryBssInfo(bssid)
+                    val apInfo = queryResult.apInfo
                     withContext(Dispatchers.Main) {
                         if (apInfo.bssMac != "-") {
                             binding.tvBssMac.text = apInfo.bssMac
@@ -872,10 +874,10 @@ class MainActivity : AppCompatActivity() {
                             binding.tvApName.text = apInfo.apName
                             binding.tvApSn.text = apInfo.apSn
                             binding.tvApBuilding.text = apInfo.building
-                            binding.tvResult.text = getString(R.string.query_success)
+                            binding.tvResult.text = queryResult.rawJson
                             repository.updateHistoryRecord(bssid, apInfo.apName, apInfo.building)
                         } else {
-                            binding.tvResult.text = getString(R.string.query_no_info)
+                            binding.tvResult.text = queryResult.rawJson
                         }
                     }
                     success = true
@@ -898,7 +900,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     /**
-     * 查询 BSS 信息（手动查询，无重试）
+     * 查询 BSS 信息（手动查询）
      */
     private fun queryBssInfo(bssid: String) {
         lifecycleScope.launch {
@@ -913,7 +915,8 @@ class MainActivity : AppCompatActivity() {
             binding.btnQuery.isEnabled = false
 
             try {
-                val apInfo = repository.queryBssInfo(bssid)
+                val queryResult = repository.queryBssInfo(bssid)
+                val apInfo = queryResult.apInfo
                 withContext(Dispatchers.Main) {
                     if (apInfo.bssMac != "-") {
                         binding.tvBssMac.text = apInfo.bssMac
@@ -922,16 +925,15 @@ class MainActivity : AppCompatActivity() {
                         binding.tvApName.text = apInfo.apName
                         binding.tvApSn.text = apInfo.apSn
                         binding.tvApBuilding.text = apInfo.building
-                        binding.tvResult.text = getString(R.string.query_success)
+                        binding.tvResult.text = queryResult.rawJson
                         repository.updateHistoryRecord(bssid, apInfo.apName, apInfo.building)
                     } else {
-                        binding.tvResult.text = getString(R.string.query_no_info)
+                        binding.tvResult.text = queryResult.rawJson
                     }
                 }
             } catch (e: Exception) {
                 withContext(Dispatchers.Main) {
                     binding.tvResult.text = "${getString(R.string.query_error)}: ${e.message}"
-                    Toast.makeText(this@MainActivity, getString(R.string.query_error), Toast.LENGTH_SHORT).show()
                 }
             } finally {
                 withContext(Dispatchers.Main) {

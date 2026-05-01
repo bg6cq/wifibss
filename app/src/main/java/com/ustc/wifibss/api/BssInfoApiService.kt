@@ -9,6 +9,8 @@ import okhttp3.Request
 import org.json.JSONObject
 import java.util.concurrent.TimeUnit
 
+data class BssQueryResult(val rawJson: String, val apInfo: ApInfo)
+
 class BssInfoApiService(
     private val prefs: AppPreferences,
     private val httpClient: OkHttpClient = OkHttpClient.Builder()
@@ -17,10 +19,10 @@ class BssInfoApiService(
         .build()
 ) {
     private val apInfoCache = mutableMapOf<String, CacheEntry>()
-    private data class CacheEntry(val result: ApInfo, val cachedAt: Long)
+    private data class CacheEntry(val result: BssQueryResult, val cachedAt: Long)
     private val cacheDurationMs = 10 * 60 * 1000L
 
-    suspend fun queryBssInfo(bssid: String): ApInfo = withContext(kotlinx.coroutines.Dispatchers.IO) {
+    suspend fun queryBssInfo(bssid: String): BssQueryResult = withContext(kotlinx.coroutines.Dispatchers.IO) {
         if (prefs.isCacheApInfoEnabled()) {
             val cached = apInfoCache[bssid]
             if (cached != null && System.currentTimeMillis() - cached.cachedAt < cacheDurationMs) {
@@ -33,23 +35,26 @@ class BssInfoApiService(
         val queryKey = prefs.getQueryKey()
         if (queryKey.isNotBlank()) requestBuilder.addHeader("Authorization", "Bearer $queryKey")
 
-        val result = httpClient.newCall(requestBuilder.build()).execute().use { response ->
+        val rawJson = httpClient.newCall(requestBuilder.build()).execute().use { response ->
             if (!response.isSuccessful) throw Exception("HTTP error: ${response.code}")
             response.body?.string() ?: "无数据"
         }
 
-        val apInfo = parseBssInfoJson(result)
-        if (apInfo != null && prefs.isCacheApInfoEnabled()) {
-            apInfoCache[bssid] = CacheEntry(apInfo, System.currentTimeMillis())
+        val queryResult = BssQueryResult(
+            rawJson = rawJson,
+            apInfo = parseBssInfoJson(rawJson) ?: ApInfo.empty()
+        )
+        if (prefs.isCacheApInfoEnabled()) {
+            apInfoCache[bssid] = CacheEntry(queryResult, System.currentTimeMillis())
         }
-        apInfo ?: ApInfo.empty()
+        queryResult
     }
 
     suspend fun queryNearbyApName(bssid: String): String? {
         return try {
             withContext(kotlinx.coroutines.Dispatchers.IO) {
-                val apInfo = queryBssInfo(bssid)
-                if (apInfo.apName != "-") apInfo.apName else null
+                val result = queryBssInfo(bssid)
+                if (result.apInfo.apName != "-") result.apInfo.apName else null
             }
         } catch (_: Exception) {
             null
