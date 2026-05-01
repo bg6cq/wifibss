@@ -84,23 +84,23 @@ class MainActivity : AppCompatActivity() {
         // 保持屏幕唤醒
         window.addFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
 
-        // 加载自动刷新设置
+        // 加载自动刷新设置、迁移、检查更新（在同一协程中顺序执行）
         lifecycleScope.launch {
             autoRefreshIntervalMs = prefs.getAutoRefreshInterval()
             restartAutoRefresh()
 
             // 执行数据迁移
-            DataMigration.migrateIfNeeded(database, getSharedPreferences(AppPreferences.PREFS_NAME, Context.MODE_PRIVATE))
-        }
+            val sp = getSharedPreferences(AppPreferences.PREFS_NAME, Context.MODE_PRIVATE)
+            DataMigration.migrateIfNeeded(database, sp, prefs.store)
 
-        setupUI()
-        setupRssiChart()
-        // 检查更新（移入协程延迟执行，等待设置加载）
-        lifecycleScope.launch {
+            // 检查更新（在 DataStore 初始化之后）
             if (prefs.isAutoCheckUpdateEnabled()) {
                 checkUpdate()
             }
         }
+
+        setupUI()
+        setupRssiChart()
     }
 
     override fun onResume() {
@@ -392,111 +392,7 @@ class MainActivity : AppCompatActivity() {
 
     private fun getDescriptionText(): String = getString(R.string.about_description)
 
-    private fun getChangesText(): String {
-        return """
-v1.31 设置界面重构和数据记录调整
-- 数据记录改用 Room
-- 设置布局重排，新增"自动检查更新"和"检查软件更新"
-- 修复自动刷新每秒检查权限导致的弹窗闪烁
-- 设置项改为"1秒/3秒/5秒"，新安装默认 1 秒刷新
-- 缓存AP信息默认开启
-
-v1.30 显示可能漫游切换的 AP 信号
-- 自动查询附近 AP 名称并在图表下方显示
-- 设置中增加缓存 AP 信息选项，减少查询次数
-- 图表布局和显示优化
-
-v1.28 显示文字优化
-- 优化关于页面描述文本，表达更清晰流畅
-- 设置项文字调整："BSSID 变化时自动查询"
-- 作者信息格式简化
-
-v1.27 构建系统升级
-- AGP 7.4.2 → 8.5.2
-- Kotlin 1.8.22 → 2.0.0
-- Gradle 8.0 → 8.7
-- Java 11 → 17
-
-v1.26 BSSMAC 编辑优化
-- 修改 MAC 地址时保留原记录并添加新记录
-
-v1.24 历史记录修复
-- 修复本地 BSSMAC 数据未更新历史记录的问题
-
-v1.23 功能增强
-- BSSMAC 支持按 MAC/所在楼/AP 名字排序
-- BSSMAC 信息支持导出到文件
-- 权限不足时显示详细说明，解释为什么需要各项权限
-
-v1.21 BSSMAC 编辑修复
-- 修复 BSSMAC 信息编辑后列表不刷新的问题
-
-v1.19 权限和体验优化
-- 添加屏幕唤醒保持，APP 运行时屏幕不会休眠
-- 自动查询关闭时也会检查本地数据库
-
-v1.18 WiFi 技术标准显示
-- 链路速度后显示 WiFi 技术标准（WiFi 4/WiFi 5/WiFi 6/WiFi 6E/WiFi 7）
-
-v1.17 RSSI 图表优化
-- 添加每分钟一条的竖向虚线网格，方便查看时间
-
-v1.16 历史记录增强
-- 点击历史记录可保存到本地 BSSMAC 数据库
-
-v1.15 本地 BSS MAC 数据库
-- 新增本地 BSSMAC 信息编辑功能（设置 → BSSMAC 信息）
-- 支持批量添加：每行格式"BSSMAC AP 名字 所在楼"
-- 支持多种 BSSMAC 格式自动识别（xx:xx:xx:xx:xx:xx、xxxx-xxxx-xxxx 等）
-- 左滑删除记录，点击记录可编辑
-- 查询时优先使用本地数据，无数据时调用远程 API
-
-v1.13 历史记录优化
-- BSSID 变化时立即记录历史（无需等待查询结果）
-- 查询到 AP 信息后自动更新对应历史记录
-- 历史记录时间精确到秒
-
-v1.12 信号强度图表
-- 新增 RSSI 信号强度曲线图，显示最近 5 分钟变化
-- BSSID 切换时用红色大圆点标记
-
-v1.11 历史记录功能
-- 新增查询历史记录，保存 BSSID、AP 名字、楼名和查询时间
-- BSSID 变化时自动记录，相同 BSSID 智能合并
-
-v1.10 图标修复
-- 修复应用图标显示问题（标准 WiFi 信号图案：3 条弧线 + 中心圆点）
-
-v1.9 应用图标更新
-- 更换为 WiFi 信号主题图标（青绿色背景 + 白色信号弧线）
-
-v1.8 包名更新
-- 包名从 com.example.wifibssquery 更名为 com.ustc.wifibss
-
-v1.7 修正频段显示
-- 修正 5GHz/6GHz 频段判断逻辑（5925MHz 以上为 6GHz）
-- 无效频率时不显示频段标识
-
-v1.6 自动刷新 WiFi 信息
-- 设置中增加自动刷新时间选项（不刷新/1s/5s/10s）
-- 按设定间隔自动刷新 WiFi 信息（RSSI、频率/信道等）
-- 刷新后 BSSID 变化时触发自动查询（如果已开启）
-- 自动查询失败时 1 秒后重试，最多 3 次
-
-v1.2 新增 BSS MAC 显示
-- 在查询结果最上方显示返回的 BSS MAC 地址
-
-v1.1 菜单功能和 WiFi 信息增强
-- 设置可配置查询 URL 和 KEY（Authorization: Bearer）
-- WiFi 信息卡片显示：SSID、BSSID、IP 地址、信号强度、频率/信道、链路速度
-- 信号强度分级显示（优秀/良好/一般/较差/弱）
-- 自动感知 WiFi 连接变化并刷新显示
-
-v1.0 初始版本
-- 获取当前 WiFi BSSID
-- 查询 BSS 信息并显示
-        """.trimIndent()
-    }
+    private fun getChangesText(): String = getString(R.string.about_changes)
 
     private fun getAuthorText(): String = "作者：james@ustc.edu.cn 2026"
 
@@ -976,10 +872,10 @@ v1.0 初始版本
                             binding.tvApName.text = apInfo.apName
                             binding.tvApSn.text = apInfo.apSn
                             binding.tvApBuilding.text = apInfo.building
-                            binding.tvResult.text = "查询成功"
+                            binding.tvResult.text = getString(R.string.query_success)
                             repository.updateHistoryRecord(bssid, apInfo.apName, apInfo.building)
                         } else {
-                            binding.tvResult.text = "无相关信息"
+                            binding.tvResult.text = getString(R.string.query_no_info)
                         }
                     }
                     success = true
@@ -987,12 +883,12 @@ v1.0 初始版本
                     autoQueryRetryCount++
                     if (autoQueryRetryCount < 3) {
                         withContext(Dispatchers.Main) {
-                            binding.tvResult.text = "查询失败，${1}s 后重试 (${autoQueryRetryCount}/3)..."
+                            binding.tvResult.text = getString(R.string.query_retry_format, autoQueryRetryCount)
                         }
                         delay(1000)
                     } else {
                         withContext(Dispatchers.Main) {
-                            binding.tvResult.text = "${getString(R.string.query_error)}: 已达最大重试次数"
+                            binding.tvResult.text = "${getString(R.string.query_error)}: ${getString(R.string.query_max_retries)}"
                             Toast.makeText(this@MainActivity, getString(R.string.query_error), Toast.LENGTH_SHORT).show()
                         }
                     }
@@ -1026,10 +922,10 @@ v1.0 初始版本
                         binding.tvApName.text = apInfo.apName
                         binding.tvApSn.text = apInfo.apSn
                         binding.tvApBuilding.text = apInfo.building
-                        binding.tvResult.text = "查询成功"
+                        binding.tvResult.text = getString(R.string.query_success)
                         repository.updateHistoryRecord(bssid, apInfo.apName, apInfo.building)
                     } else {
-                        binding.tvResult.text = "无相关信息"
+                        binding.tvResult.text = getString(R.string.query_no_info)
                     }
                 }
             } catch (e: Exception) {
@@ -1061,7 +957,7 @@ v1.0 初始版本
         binding.tvApName.text = localData.apName
         binding.tvApSn.text = "-"
         binding.tvApBuilding.text = localData.building
-        binding.tvResult.text = "本地数据"
+        binding.tvResult.text = getString(R.string.query_from_local)
 
         lifecycleScope.launch {
             val currentBssid = WifiUtils.formatBssid(wifiManager.connectionInfo.bssid)
@@ -1105,7 +1001,7 @@ v1.0 初始版本
             this, Manifest.permission.ACCESS_FINE_LOCATION
         ) == PackageManager.PERMISSION_GRANTED
         if (!locationGranted) {
-            missingPerms.add("• 位置权限：Android 10+ 要求位置权限才能获取 WiFi BSSID 信息")
+            missingPerms.add(getString(R.string.permission_location))
         }
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
@@ -1113,7 +1009,7 @@ v1.0 初始版本
                 this, Manifest.permission.NEARBY_WIFI_DEVICES
             ) == PackageManager.PERMISSION_GRANTED
             if (!nearbyGranted) {
-                missingPerms.add("• 附近设备权限：Android 13+ 需要此权限以扫描附近 WiFi 设备")
+                missingPerms.add(getString(R.string.permission_nearby))
             }
         }
 

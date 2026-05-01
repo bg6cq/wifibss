@@ -1,6 +1,7 @@
 package com.ustc.wifibss.database
 
 import android.content.SharedPreferences
+import com.ustc.wifibss.datastore.SettingsDataStore
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.json.JSONArray
@@ -15,7 +16,8 @@ object DataMigration {
 
     suspend fun migrateIfNeeded(
         database: WifiBssDatabase,
-        prefs: SharedPreferences
+        prefs: SharedPreferences,
+        settingsDataStore: SettingsDataStore
     ) {
         val alreadyMigrated = prefs.getBoolean(KEY_MIGRATED_TO_ROOM, false)
         if (alreadyMigrated) return
@@ -27,6 +29,9 @@ object DataMigration {
 
                 // 迁移本地 BSSMAC
                 migrateBssLocal(database, prefs)
+
+                // 迁移设置到 DataStore
+                settingsDataStore.migrateFromSharedPreferencesIfNeeded(prefs)
 
                 // 标记迁移完成
                 prefs.edit().putBoolean(KEY_MIGRATED_TO_ROOM, true).apply()
