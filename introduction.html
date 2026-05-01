@@ -26,7 +26,6 @@
     line-height: 1.7;
   }
 
-  /* Header */
   header {
     background: linear-gradient(135deg, #1565C0, #1E88E5);
     color: white;
@@ -44,7 +43,6 @@
     margin-top: 16px;
   }
 
-  /* Navigation */
   nav {
     background: var(--card);
     border-bottom: 1px solid var(--border);
@@ -68,10 +66,8 @@
     border-bottom-color: var(--primary);
   }
 
-  /* Main container */
   .container { max-width: 960px; margin: 0 auto; padding: 30px 20px; }
 
-  /* Sections */
   section { margin-bottom: 50px; }
   section h2 {
     font-size: 1.6em;
@@ -87,7 +83,6 @@
   }
   section p { margin-bottom: 14px; color: var(--text-secondary); }
 
-  /* Cards */
   .card {
     background: var(--card);
     border-radius: 10px;
@@ -101,7 +96,6 @@
     font-size: 1.05em;
   }
 
-  /* Feature grid */
   .feature-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
@@ -118,7 +112,6 @@
   .feature-card h4 { margin-bottom: 6px; }
   .feature-card p { font-size: 0.9em; color: var(--text-secondary); margin: 0; }
 
-  /* Architecture diagram */
   .arch {
     background: var(--card);
     border-radius: 10px;
@@ -135,7 +128,6 @@
     display: inline-block;
   }
 
-  /* Code blocks */
   pre.code {
     background: #263238;
     color: #EEFFFF;
@@ -160,7 +152,6 @@
   pre.code .string { color: #C3E88D; }
   pre.code .number { color: #F78C6C; }
 
-  /* Tables */
   table {
     width: 100%;
     border-collapse: collapse;
@@ -179,7 +170,6 @@
   }
   tr:nth-child(even) { background: #FAFAFA; }
 
-  /* Tech stack */
   .tech-list {
     display: flex;
     flex-wrap: wrap;
@@ -195,7 +185,6 @@
     border: 1px solid #BBDEFB;
   }
 
-  /* Data flow */
   .flow-diagram {
     background: var(--card);
     border-radius: 10px;
@@ -220,7 +209,6 @@
     margin: 0 4px;
   }
 
-  /* Info boxes */
   .info-box {
     border-left: 4px solid var(--info);
     background: #E1F5FE;
@@ -230,7 +218,15 @@
   }
   .info-box strong { color: var(--info); }
 
-  /* Footer */
+  .warning-box {
+    border-left: 4px solid var(--warning);
+    background: #FFF8E1;
+    padding: 14px 18px;
+    border-radius: 0 8px 8px 0;
+    margin: 14px 0;
+  }
+  .warning-box strong { color: var(--warning); }
+
   footer {
     text-align: center;
     padding: 40px 20px;
@@ -239,7 +235,6 @@
     border-top: 1px solid var(--border);
   }
 
-  /* Responsive */
   @media (max-width: 600px) {
     header h1 { font-size: 1.6em; }
     .feature-grid { grid-template-columns: 1fr; }
@@ -278,17 +273,17 @@
     <div class="feature-card">
       <div class="icon">&#128241;</div>
       <h4>Android App</h4>
-      <p>WiFi 信息实时显示、RSSI 图表、BSSMAC 本地数据库、远程 API 查询</p>
+      <p>WiFi 信息实时显示、RSSI 图表、Room 本地数据库、DataStore 设置、远程 API 查询</p>
     </div>
     <div class="feature-card" style="border-top-color: var(--success);">
       <div class="icon">&#128421;</div>
       <h4>API 服务端</h4>
-      <p>构建内存数据库，提供 REST API 查询服务</p>
+      <p>Python 标准库 http.server，内存数据库，REST API 查询，支持 Bearer Token 认证</p>
     </div>
     <div class="feature-card" style="border-top-color: var(--warning);">
       <div class="icon">&#128202;</div>
       <h4>AC 数据采集</h4>
-      <p>解析不同厂商 AC 命令输出，提取 AP 和 BSS 信息，供 API 服务端查询使用</p>
+      <p>解析 H3C / 华为 AC 命令输出，提取 AP 和 BSS 信息，供 API 服务端查询使用</p>
     </div>
   </div>
 </section>
@@ -342,6 +337,9 @@
       <span class="tech-tag">OkHttp 4.11</span>
       <span class="tech-tag">Coroutines</span>
       <span class="tech-tag">ViewBinding</span>
+      <span class="tech-tag">Room</span>
+      <span class="tech-tag">DataStore</span>
+      <span class="tech-tag">KSP</span>
       <span class="tech-tag">Material Design</span>
       <span class="tech-tag">Min SDK 29 (Android 10)</span>
       <span class="tech-tag">Target SDK 34 (Android 14)</span>
@@ -356,55 +354,71 @@
     </div>
     <div class="feature-card">
       <h4>RSSI 信号强度图表</h4>
-      <p>自定义 <code>RssiChartView</code> 控件绘制最近 10 分钟的信号变化曲线，BSSID 切换时用红色圆点标记，每分钟竖向虚线网格</p>
+      <p>自定义 <code>RssiChartView</code> 控件 Canvas 绘制最近 10 分钟信号变化曲线，支持多 AP 同屏显示（当前 AP 蓝色曲线 + 附近 AP 散点），BSSID 切换红色圆点标记，每分钟竖向虚线网格</p>
     </div>
     <div class="feature-card">
-      <h4>本地 BSSMAC 数据库</h4>
-      <p>通过 SharedPreferences 存储 JSON 数据，支持批量添加、排序（MAC/楼名/AP 名）、编辑、左滑删除和文件导出</p>
+      <h4>Room 本地数据库</h4>
+      <p>替换 SharedPreferences 存储，Room + KSP 编译期处理。提供 <code>QueryHistoryDao</code>、<code>BssLocalDao</code>，支持排序（MAC/楼名/AP 名）、批量添加、编辑、左滑删除</p>
     </div>
     <div class="feature-card">
-      <h4>查询历史记录</h4>
-      <p>自动记录 BSSID 变化，智能合并相同 BSSID，右滑保存到本地数据库，左滑删除，点击快速保存</p>
+      <h4>DataStore 设置管理</h4>
+      <p>使用 Jetpack DataStore Preferences 存储应用设置，Flow 响应式读取。提供自动迁移机制从旧 SharedPreferences 平滑过渡</p>
     </div>
     <div class="feature-card">
-      <h4>自动查询 &amp; 刷新</h4>
-      <p>BSSID 变化时触发自动查询（优先本地，失败重试 3 次），可选 1s/5s/10s 定时刷新 WiFi 信息</p>
+      <h4>自动刷新 &amp; 查询</h4>
+      <p>1s/3s/5s 可选刷新间隔（默认 1 秒），BSSID 变化时自动查询 AP 信息（优先本地 Room 数据库，失败重试 3 次）。权限不足时静默跳过，仅启动时弹窗提示一次</p>
     </div>
     <div class="feature-card">
       <h4>版本更新检查</h4>
-      <p>启动时从 <code>noc.ustc.edu.cn/version.json</code> 获取版本信息，发现新版本时弹窗提示下载</p>
+      <p>启动时从 <code>noc.ustc.edu.cn/version.json</code> 获取版本信息，可设置为自动检查或手动触发。发现新版本弹窗提示下载</p>
     </div>
   </div>
 
-  <h3>架构说明</h3>
+  <h3>分层架构</h3>
   <div class="info-box">
-    <strong>单 Activity 架构：</strong>无 Fragment、无 ViewModel。网络请求通过协程在 Activity 中直接完成，ViewBinding 访问视图。代码集中在 <code>MainActivity.kt</code>（约 1575 行），包含所有 UI 逻辑、网络请求、数据持久化和适配器。
+    <strong>单 Activity + 分层包结构：</strong>无 Fragment、无 ViewModel。代码按功能分包组织：
+    <ul style="margin-left:20px;margin-top:8px;color:var(--text-secondary)">
+      <li><code>com.ustc.wifibss</code> — 主 Activity + 自定义 View</li>
+      <li><code>.api</code> — OkHttp 网络请求和 API 服务定义</li>
+      <li><code>.data</code> — AppPreferences 封装（DataStore + 旧 SharedPreferences 兼容）</li>
+      <li><code>.database</code> — Room 数据库、DAO、Entity、DataMigration</li>
+      <li><code>.datastore</code> — DataStore Preferences 底层实现</li>
+      <li><code>.model</code> — 数据模型（ApInfo、BssLocalEntry、QueryHistory）</li>
+      <li><code>.repository</code> — BssRepository 数据仓库</li>
+      <li><code>.util</code> — WifiUtils 工具类</li>
+    </ul>
   </div>
+
+  <h3>数据持久化演变</h3>
+  <div class="card">
+    <p><strong>v1.28 之前：</strong>全部使用 SharedPreferences 以 JSON 字符串存储历史记录和 BSSMAC 数据。</p>
+    <p><strong>v1.31 (当前)：</strong>App 设置迁移到 DataStore Preferences，数据存储使用 Room 数据库，提供类型安全的 DAO 操作接口。旧数据通过 <code>DataMigration</code> 类自动迁移。</p>
+  </div>
+
+  <h3>权限处理</h3>
+  <p>权限弹窗仅在 <code>onResume</code> 时检查并提示一次，自动刷新循环中权限不足时静默清除显示。避免早期版本中每秒自动刷新触发权限对话框闪烁的问题。</p>
 
   <h3>BSSID 标准化</h3>
-  <p>App 从 <code>WifiManager.connectionInfo.bssid</code> 获取原始 BSSID（格式如 <code>bc:d0:eb:0c:66:91</code>），然后移除非十六进制字符并转为小写，得到 12 位标准化格式（如 <code>bcd0eb0c6691</code>），用于本地数据库索引和 API 查询参数。</p>
-
-  <h3>查询优先级</h3>
-  <div class="card">
-    <p><strong>查询时：</strong>本地数据库 &rarr; 远程 API</p>
-    <p><strong>远程 API 返回后：</strong>解析 JSON &rarr; 更新 UI &rarr; 同步更新历史记录</p>
-    <p><strong>数据源标记：</strong>使用本地数据显示"本地数据"，API 数据显示具体查询结果</p>
-  </div>
+  <p>App 从 <code>WifiManager.connectionInfo.bssid</code> 获取原始 BSSID，移除非十六进制字符并转为小写，得到 12 位标准化格式，用于 Room 数据库索引和 API 查询参数。</p>
 
   <h3>关键类文件</h3>
   <table>
     <tr><th>文件</th><th>说明</th></tr>
-    <tr><td><code>MainActivity.kt</code></td><td>主 Activity：UI、网络、数据持久化、适配器、权限处理（约 1575 行）</td></tr>
-    <tr><td><code>RssiChartView.kt</code></td><td>自定义 View：RSSI 信号强度曲线图（Canvas 绘制，10 分钟窗口）</td></tr>
-    <tr><td><code>activity_main.xml</code></td><td>主布局：BSSID 标题、RSSI 图表卡片、WiFi 信息卡片、AP 信息卡片、查询结果区</td></tr>
-    <tr><td><code>AndroidManifest.xml</code></td><td>权限声明：WiFi 状态、位置（Android 10+）、近场设备（Android 13+）、网络、唤醒锁</td></tr>
+    <tr><td><code>MainActivity.kt</code></td><td>主 Activity：UI、网络、数据持久化、适配器、权限处理</td></tr>
+    <tr><td><code>RssiChartView.kt</code></td><td>自定义 View：RSSI 信号强度曲线图（Canvas 绘制，多 AP 系列）</td></tr>
+    <tr><td><code>WifiBssDatabase.kt</code></td><td>Room 数据库定义</td></tr>
+    <tr><td><code>QueryHistoryDao.kt / BssLocalDao.kt</code></td><td>Room DAO 接口</td></tr>
+    <tr><td><code>SettingsDataStore.kt</code></td><td>DataStore 设置存储</td></tr>
+    <tr><td><code>DataMigration.kt</code></td><td>SharedPreferences → Room 数据迁移</td></tr>
+    <tr><td><code>BssRepository.kt</code></td><td>数据仓库：封装 Room DAO 和 API 调用</td></tr>
+    <tr><td><code>BssInfoApiService.kt</code></td><td>OkHttp API 客户端 + 版本检查</td></tr>
+    <tr><td><code>WifiUtils.kt</code></td><td>WiFi 工具类：BSSID 格式化、信号等级、频段判断</td></tr>
   </table>
 </section>
 
 <!-- ====== API Server ====== -->
 <section id="api-server">
   <h2>API 服务端</h2>
-  <p>构建内存数据库，提供 REST API 查询服务</p>
   <p>基于 Python 标准库 <code>http.server</code>，无需第三方依赖。启动时将所有数据加载到内存中，提供 REST API 查询。</p>
 
   <h3>启动参数</h3>
@@ -414,8 +428,8 @@
     <tr><td><code>port</code></td><td>TCP 监听端口号</td></tr>
     <tr><td><code>ap_info</code></td><td>AP 信息文件（process_ap.py 输出）</td></tr>
     <tr><td><code>bss_info</code></td><td>BSS 信息文件（process_bss.py 输出）</td></tr>
-    <tr><td><code>group_map</code></td><td>AP 组名&rarr;楼名映射文件（最长前缀匹配）</td></tr>
-    <tr><td><code>name_map</code></td><td>AP 名字&rarr;楼名映射文件（最长前缀匹配）</td></tr>
+    <tr><td><code>group_map</code></td><td>AP 组名→楼名映射文件（最长前缀匹配）</td></tr>
+    <tr><td><code>name_map</code></td><td>AP 名字→楼名映射文件（最长前缀匹配）</td></tr>
     <tr><td><code>auth_key</code></td><td>（可选）Bearer Token 认证密钥</td></tr>
   </table>
 
@@ -427,9 +441,7 @@
   </ol>
 
   <h3>认证机制</h3>
-  <p>启动时若指定第 6 个参数 <code>auth_key</code>，则启用 Bearer Token 认证。</p>
-  <p>认证失败时，返回数据中的 <code>AP_SN</code>、<code>AC_IP</code>、<code>AP_IP</code> 置为空字符串，隐藏敏感信息。</p>
-  <p>请求示例：</p>
+  <p>启动时若指定 <code>auth_key</code> 参数，则启用 Bearer Token 认证。认证失败时，<code>AP_SN</code>、<code>AC_IP</code>、<code>AP_IP</code> 置为空字符串，隐藏敏感信息。</p>
   <pre class="code">curl -H "Authorization: Bearer xyz" \
   "http://127.0.0.1:8000/api/bssinfo?bssid=7cde78d69fc0"</pre>
 </section>
@@ -458,16 +470,16 @@
   </div>
 
   <h4>数据采集</h4>
-  <p>在 H3C AC 上执行以下两条命令，将输出保存为文本文件：</p>
+  <p>在 H3C AC 上执行以下两条命令：</p>
   <pre class="code"><span class="comment"># 采集 AP 详细信息</span>
 display wlan ap all verbose  &gt; display_ap_all_verbose.txt
 
 <span class="comment"># 采集 BSS 详细信息</span>
 display wlan bss all verbose &gt; display_ap_bss_all_verbose.txt</pre>
-  <p>如果有多台 AC，可将多台 AC 的输出内容直接合并到同一文件。</p>
+  <p>多台 AC 的输出可直接合并到同一文件。</p>
 
   <h4>process_ap.py</h4>
-  <p>解析 <code>display wlan ap all verbose</code> 输出，按 <code>AP name</code> 块划分，提取关键字段：</p>
+  <p>解析 <code>display wlan ap all verbose</code> 输出，按 <code>AP name</code> 块划分：</p>
   <table>
     <tr><th>字段</th><th>说明</th><th>提取方式</th></tr>
     <tr><td>AP_NAME</td><td>AP 名称</td><td>行首 <code>AP name</code> 后的值</td></tr>
@@ -477,11 +489,11 @@ display wlan bss all verbose &gt; display_ap_bss_all_verbose.txt</pre>
     <tr><td>AP_IP</td><td>AP IP 地址</td><td>行首 <code>IP address</code> 后的值</td></tr>
     <tr><td>AC_IP</td><td>AC IP 地址</td><td>行首 <code>Current AC IP</code> 后的值</td></tr>
   </table>
-  <p>输出为空格分隔的文本文件，每行一个 AP：</p>
+  <p>输出格式：</p>
   <pre class="code">AP_NAME AP_GROUP AP_SN AP_MAC AP_IP AC_IP</pre>
 
   <h4>process_bss.py</h4>
-  <p>解析 <code>display wlan bss all verbose</code> 输出，按 <code>AP name</code> 块划分，提取：</p>
+  <p>解析 <code>display wlan bss all verbose</code> 输出：</p>
   <table>
     <tr><th>字段</th><th>说明</th></tr>
     <tr><td>BSSID</td><td>BSS MAC 地址</td></tr>
@@ -496,7 +508,7 @@ display wlan bss all verbose &gt; display_ap_bss_all_verbose.txt</pre>
   <p><code>api/huawei/</code> 目录包含华为 AC 的数据采集和解析程序。</p>
 
   <h4>数据采集</h4>
-  <p>在华为 AC 上执行以下命令，保存输出：</p>
+  <p>在华为 AC 上执行以下命令：</p>
   <pre class="code"><span class="comment"># 采集 AP 列表</span>
 display ap all          &gt; display_ap_all.txt
 
@@ -506,27 +518,17 @@ display ap elabel all   &gt; display_ap_elabel_all.txt
 <span class="comment"># 采集 VAP 信息（含 BSSID）</span>
 display vap all         &gt; display_vap_all.txt</pre>
 
-  <h4>数据处理脚本</h4>
-
-  <h5>process_ap.py</h5>
+  <h4>process_ap.py</h4>
   <p>解析 <code>display ap all</code> 和 <code>display ap elabel all</code> 两个文件，通过 MAC 地址关联：</p>
   <ul style="margin-left:20px;margin-bottom:12px;color:var(--text-secondary)">
     <li><code>display ap all</code>：提取 MAC、名称、组名、IP（固定列宽解析）</li>
     <li><code>display ap elabel all</code>：提取 MAC 和序列号（固定列宽解析）</li>
     <li>通过 MAC 地址关联两个文件的数据</li>
-    <li>输出格式与 H3C 版本完全一致，可被 <code>server.py</code> 直接使用</li>
+    <li>输出格式与 H3C 版本一致，可被 <code>server.py</code> 直接使用</li>
   </ul>
-  <p>使用方法：</p>
-  <pre class="code"><span class="comment"># 不指定 AC_IP</span>
-python3 process_ap.py display_ap_all.txt display_ap_elabel_all.txt &gt; ap_info.txt
 
-<span class="comment"># 指定 AC_IP</span>
-python3 process_ap.py display_ap_all.txt display_ap_elabel_all.txt 10.10.0.1 &gt; ap_info.txt</pre>
-
-  <h5>process_bss.py</h5>
-  <p>解析 <code>display vap all</code> 输出，通过固定列宽提取字段：</p>
-  <pre class="code">python3 process_bss.py display_vap_all.txt &gt; bss_info.txt</pre>
-  <p>提取字段：BSSID（标准化为 12 位小写十六进制）、AP_NAME、SSID、BAND（Radio ID）</p>
+  <h4>process_bss.py</h4>
+  <p>解析 <code>display vap all</code> 输出，通过固定列宽提取 BSSID、AP_NAME、SSID、BAND（Radio ID）。</p>
 
   <div class="info-box">
     <strong>与 H3C 的关键区别：</strong>华为 AC 输出为固定列宽的表格格式，解析时使用字符位置而非关键字匹配。两个 AP 信息文件需通过 MAC 地址关联才能获得完整的 AP 数据。
@@ -540,15 +542,15 @@ python3 process_ap.py display_ap_all.txt display_ap_elabel_all.txt 10.10.0.1 &gt
   <div class="card">
     <h4>一条查询的完整生命周期</h4>
     <ol style="margin-left:20px;color:var(--text-secondary);line-height:2">
-      <li><strong>权限检查：</strong>App 检查位置权限（Android 10-12）或近场设备权限（Android 13+），不足时弹出说明对话框</li>
+      <li><strong>权限检查：</strong>App 检查位置/近场设备权限，不足时在 <code>onResume</code> 弹出说明对话框（仅一次，自动刷新周期不重复弹窗）</li>
       <li><strong>获取 BSSID：</strong>通过 <code>WifiManager.connectionInfo.bssid</code> 获取当前连接 AP 的 MAC 地址</li>
-      <li><strong>标准化：</strong>移除非十六进制字符，转为 12 位小写字符串（如 <code>bc:d0:eb:0c:66:91</code> &rarr; <code>bcd0eb0c6691</code>）</li>
-      <li><strong>记录历史：</strong>BSSID 变化时立即记录到历史（时间戳 + BSSID），AP 信息为空待后续填充</li>
-      <li><strong>本地查询：</strong>在 SharedPreferences 存储的本地 BSSMAC 数据库中查找</li>
-      <li><strong>命中本地：</strong>直接显示本地数据（标记"本地数据"），更新历史记录中的 AP 信息</li>
-      <li><strong>未命中本地 + 自动查询开启：</strong>调用远程 API，失败则 1s 后重试，最多 3 次</li>
-      <li><strong>API 服务端处理：</strong>server.py 查询 BSS 索引 &rarr; 获取 AP_NAME &rarr; 查询 AP 信息 &rarr; 楼名映射 &rarr; 返回 JSON</li>
-      <li><strong>App 解析显示：</strong>解析 JSON 数据 &rarr; 更新 AP 信息卡片 &rarr; 同步更新历史记录</li>
+      <li><strong>标准化：</strong>移除非十六进制字符，转为 12 位小写字符串</li>
+      <li><strong>记录历史：</strong>BSSID 变化时通过 Room DAO 记录到 QueryHistoryEntity，AP 信息为空待后续填充</li>
+      <li><strong>本地查询：</strong>在 Room 数据库 BssLocalEntity 中查找</li>
+      <li><strong>命中本地：</strong>直接显示本地数据，更新历史记录中的 AP 信息</li>
+      <li><strong>未命中本地 + 自动查询开启：</strong>调用远程 API，失败后重试最多 3 次</li>
+      <li><strong>API 服务端处理：</strong>server.py 查询 BSS 索引 → 获取 AP_NAME → 查询 AP 信息 → 楼名映射 → 返回 JSON</li>
+      <li><strong>App 解析显示：</strong>解析 JSON 数据 → 更新 AP 信息卡片 → 同步更新历史记录</li>
     </ol>
   </div>
 
@@ -577,27 +579,25 @@ python3 process_ap.py display_ap_all.txt display_ap_elabel_all.txt 10.10.0.1 &gt
   <table>
     <tr><th>项目</th><th>说明</th></tr>
     <tr><td>端点</td><td><code>GET /api/bssinfo</code></td></tr>
-    <tr><td>参数</td><td><code>bssid</code>（必填，12 位十六进制，大小写不敏感，<code>-</code> 自动删除）</td></tr>
-    <tr><td>认证</td><td><code>Authorization: Bearer &lt;key&gt;</code>（可选，启动时配置）</td></tr>
-    <tr><td>响应</td><td>JSON，<code>status</code> 字段为 <code>"ok"</code> 或 <code>"error"</code></td></tr>
+    <tr><td>参数</td><td><code>bssid</code>（必填，12 位十六进制，大小写不敏感）</td></tr>
+    <tr><td>认证</td><td><code>Authorization: Bearer &lt;key&gt;</code>（可选）</td></tr>
+    <tr><td>响应</td><td>JSON，<code>status</code> 为 <code>"ok"</code> 或 <code>"error"</code></td></tr>
     <tr><td>未认证处理</td><td>AP_SN、AC_IP、AP_IP 返回空字符串</td></tr>
   </table>
 
-  <h3>版本更新接口（App 启动时调用）</h3>
+  <h3>版本更新接口</h3>
   <table>
     <tr><th>项目</th><th>说明</th></tr>
     <tr><td>端点</td><td><code>GET https://noc.ustc.edu.cn/version.json</code></td></tr>
     <tr><td>响应字段</td><td><code>versionCode</code>、<code>versionName</code>、<code>updateUrl</code>、<code>updateLog</code></td></tr>
-    <tr><td>更新方式</td><td>在浏览器中打开 <code>updateUrl</code> 下载 APK</td></tr>
+    <tr><td>更新方式</td><td>浏览器中打开 <code>updateUrl</code> 下载 APK</td></tr>
   </table>
 
   <h3>BSSID 标准化</h3>
-  <p>系统中所有 BSSID/MAC 地址统一为 12 位小写十六进制格式：</p>
   <table>
     <tr><th>原始格式</th><th>标准化结果</th></tr>
     <tr><td><code>BC:D0:EB:0C:66:91</code></td><td><code>bcd0eb0c6691</code></td></tr>
     <tr><td><code>bc-d0-eb-0c-66-91</code></td><td><code>bcd0eb0c6691</code></td></tr>
-    <tr><td><code>bc d0 eb 0c 66 91</code></td><td><code>bcd0eb0c6691</code></td></tr>
     <tr><td><code>bcd0eb0c6691</code></td><td><code>bcd0eb0c6691</code></td></tr>
   </table>
 </section>
@@ -621,23 +621,22 @@ python3 process_ap.py display_ap_all.txt display_ap_elabel_all.txt 10.10.0.1 &gt
   <p>构建产物：<code>app/build/outputs/apk/release/app-release.apk</code></p>
 
   <div class="info-box">
-    <strong>关于签名：</strong>Release 构建使用 <code>wifi-bss-key.jks</code> 签名，凭据在 <code>keystore.properties</code> 中（已加入 .gitignore）。<br>
-    <strong>Maven 镜像：</strong><code>settings.gradle.kts</code> 将 Google 和 Maven Central 重定向到阿里云镜像，解决国内网络访问问题。
+    <strong>签名：</strong>Release 构建使用 <code>wifi-bss-key.jks</code>，凭据在 <code>keystore.properties</code> 中（已加入 .gitignore）。<br>
+    <strong>Maven 镜像：</strong><code>settings.gradle.kts</code> 将 Google 和 Maven Central 重定向到阿里云镜像。
   </div>
 
   <h3>API 服务端部署</h3>
   <pre class="code"><span class="comment"># 1. 登录 AC 采集数据（H3C）</span>
-<span class="comment"># 在 AC 上执行：</span>
 <span class="comment"># display wlan ap all verbose &gt; display_ap_all_verbose.txt</span>
 <span class="comment"># display wlan bss all verbose &gt; display_ap_bss_all_verbose.txt</span>
 
-<span class="comment"># 2. 处理数据（在 api/h3c/ 目录下）</span>
+<span class="comment"># 2. 处理数据</span>
 cd h3c
 python3 process_ap.py display_ap_all_verbose.txt &gt; ap_info.txt
 python3 process_bss.py display_ap_bss_all_verbose.txt &gt; bss_info.txt
 cd ..
 
-<span class="comment"># 3. 启动 API 服务（在 api/ 目录下）</span>
+<span class="comment"># 3. 启动 API 服务</span>
 python3 server.py 8000 h3c/ap_info.txt h3c/bss_info.txt h3c/group_map.txt h3c/name_map.txt my_secret_key
 
 <span class="comment"># 4. 测试查询</span>
@@ -645,11 +644,13 @@ curl -H "Authorization: Bearer my_secret_key" \
   "http://your-server:8000/api/bssinfo?bssid=bcd0eb0c6691"</pre>
 
   <h3>版本发布检查清单</h3>
-  <p>每次更新版本时需要同步修改以下三处：</p>
+  <p>每次更新版本时需要同步修改：</p>
   <ol style="margin-left:20px;color:var(--text-secondary)">
-    <li><strong>app/build.gradle.kts</strong> &mdash; <code>versionCode</code> 和 <code>versionName</code></li>
-    <li><strong>MainActivity.kt</strong> &mdash; <code>getVersionInfo()</code> 返回的版本号</li>
-    <li><strong>MainActivity.kt</strong> &mdash; <code>getChangesText()</code> 添加新版本更新说明</li>
+    <li><strong>app/build.gradle.kts</strong> — <code>versionCode</code> 和 <code>versionName</code></li>
+    <li><strong>MainActivity.kt</strong> — <code>getVersionInfo()</code> 返回的版本号</li>
+    <li><strong>MainActivity.kt</strong> — <code>getChangesText()</code> 添加新版本更新说明</li>
+    <li><strong>README.md</strong> — 更新功能说明和更新日志</li>
+    <li><strong>CLAUDE.md</strong> — 更新版本参考和变更日志</li>
   </ol>
 </section>
 
@@ -658,48 +659,64 @@ curl -H "Authorization: Bearer my_secret_key" \
   <h2>完整目录结构</h2>
   <pre class="code" style="line-height:1.7">ustc-wifi/
 &#9500;&#9472;&#9472; app/                          <span class="comment"># Android App</span>
-&#9474;&#9474; &#9500;&#9472;&#9472; build.gradle.kts          <span class="comment"># 构建配置（versionCode/Name, 签名, 依赖）</span>
+&#9474;&#9474; &#9500;&#9472;&#9472; build.gradle.kts          <span class="comment"># 构建配置（versionCode/Name, 签名, Room, KSP）</span>
 &#9474;&#9474; &#9492;&#9472;&#9472; src/main/
 &#9474;&#9474;     &#9500;&#9472;&#9472; AndroidManifest.xml   <span class="comment"># 权限声明、Activity 注册</span>
-&#9474;&#9474;     &#9500;&#9472;&#9472; java/com/ustc/wifibss/
-&#9474;&#9474;     &#9474;   &#9500;&#9472;&#9472; MainActivity.kt   <span class="comment"># 主 Activity（UI + 网络 + 数据存储）</span>
-&#9474;&#9474;     &#9474;   &#9492;&#9472;&#9472; RssiChartView.kt  <span class="comment"># RSSI 图表自定义 View</span>
-&#9474;&#9474;     &#9492;&#9472;&#9472; res/
-&#9474;&#9474;         &#9500;&#9472;&#9472; layout/           <span class="comment"># 布局文件（主界面、对话框、列表项）</span>
-&#9474;&#9474;         &#9500;&#9472;&#9472; menu/             <span class="comment"># 菜单配置</span>
-&#9474;&#9474;         &#9500;&#9472;&#9472; values/           <span class="comment"># 字符串、颜色、主题</span>
-&#9474;&#9474;         &#9492;&#9472;&#9472; drawable/         <span class="comment"># WiFi 图标</span>
-&#9500;&#9472;&#9472; api/
-&#9474;&#9474;   &#9500;&#9472;&#9472; server.py             <span class="comment"># REST API 服务端（通用，支持任意 AC）</span>
-&#9474;&#9474;   &#9500;&#9472;&#9472; README.md             <span class="comment"># API 服务端文档</span>
-&#9474;&#9474;   &#9500;&#9472;&#9472; h3c/                      <span class="comment"># H3C AC 数据采集</span>
-&#9474;&#9474;   &#9474;   &#9500;&#9472;&#9472; process_ap.py         <span class="comment"># 解析 AP 命令输出</span>
-&#9474;&#9474;   &#9474;   &#9500;&#9472;&#9472; process_bss.py        <span class="comment"># 解析 BSS 命令输出</span>
-&#9474;&#9474;   &#9474;   &#9500;&#9472;&#9472; group_map.txt         <span class="comment"># 组名&rarr;楼名映射</span>
-&#9474;&#9474;   &#9474;   &#9500;&#9472;&#9472; name_map.txt          <span class="comment"># AP 名&rarr;楼名映射</span>
-&#9474;&#9474;   &#9474;   &#9500;&#9472;&#9472; ap_info.txt           <span class="comment"># 处理后的 AP 数据</span>
-&#9474;&#9474;   &#9474;   &#9500;&#9472;&#9472; bss_info.txt          <span class="comment"># 处理后的 BSS 数据</span>
-&#9474;&#9474;   &#9474;   &#9500;&#9472;&#9472; display_*_verbose.txt <span class="comment"># AC 命令输出示例</span>
-&#9474;&#9474;   &#9492;&#9472;&#9472; huawei/                   <span class="comment"># 华为 AC 数据采集</span>
-&#9474;&#9474;       &#9500;&#9472;&#9472; process_ap.py         <span class="comment"># 解析 display ap（双文件关联）</span>
-&#9474;&#9474;       &#9500;&#9472;&#9472; process_bss.py        <span class="comment"># 解析 display vap</span>
-&#9474;&#9474;       &#9500;&#9472;&#9472; display_*.txt         <span class="comment"># AC 命令输出示例</span>
+&#9474;&#9474;     &#9492;&#9472;&#9472; java/com/ustc/wifibss/
+&#9474;&#9474;         &#9500;&#9472;&#9472; MainActivity.kt   <span class="comment"># 主 Activity</span>
+&#9474;&#9474;         &#9500;&#9472;&#9472; RssiChartView.kt  <span class="comment"># RSSI 图表自定义 View</span>
+&#9474;&#9474;         &#9500;&#9472;&#9472; api/
+&#9474;&#9474;         &#9474;   &#9492;&#9472;&#9472; BssInfoApiService.kt <span class="comment"># API 客户端</span>
+&#9474;&#9474;         &#9500;&#9472;&#9472; data/
+&#9474;&#9474;         &#9474;   &#9492;&#9472;&#9472; AppPreferences.kt <span class="comment"># 设置管理（DataStore + 旧兼容）</span>
+&#9474;&#9474;         &#9500;&#9472;&#9472; database/
+&#9474;&#9474;         &#9474;   &#9500;&#9472;&#9472; WifiBssDatabase.kt <span class="comment"># Room 数据库</span>
+&#9474;&#9474;         &#9474;   &#9500;&#9472;&#9472; QueryHistoryDao.kt <span class="comment"># 历史记录 DAO</span>
+&#9474;&#9474;         &#9474;   &#9500;&#9472;&#9472; BssLocalDao.kt     <span class="comment"># BSSMAC 本地 DAO</span>
+&#9474;&#9474;         &#9474;   &#9500;&#9472;&#9472; QueryHistoryEntity.kt <span class="comment"># 历史记录实体</span>
+&#9474;&#9474;         &#9474;   &#9500;&#9472;&#9472; BssLocalEntity.kt <span class="comment"># BSSMAC 实体</span>
+&#9474;&#9474;         &#9474;   &#9492;&#9472;&#9472; DataMigration.kt  <span class="comment"># SharedPreferences → Room 迁移</span>
+&#9474;&#9474;         &#9500;&#9472;&#9472; datastore/
+&#9474;&#9474;         &#9474;   &#9492;&#9472;&#9472; SettingsDataStore.kt <span class="comment"># DataStore Preferences</span>
+&#9474;&#9474;         &#9500;&#9472;&#9472; model/
+&#9474;&#9474;         &#9474;   &#9500;&#9472;&#9472; ApInfo.kt         <span class="comment"># AP 信息模型</span>
+&#9474;&#9474;         &#9474;   &#9500;&#9472;&#9472; BssLocalEntry.kt  <span class="comment"># 本地条目模型</span>
+&#9474;&#9474;         &#9474;   &#9492;&#9472;&#9472; QueryHistory.kt   <span class="comment"># 历史记录模型</span>
+&#9474;&#9474;         &#9500;&#9472;&#9472; repository/
+&#9474;&#9474;         &#9474;   &#9492;&#9472;&#9472; BssRepository.kt <span class="comment"># 数据仓库</span>
+&#9474;&#9474;         &#9492;&#9472;&#9472; util/
+&#9474;&#9474;             &#9492;&#9472;&#9472; WifiUtils.kt     <span class="comment"># WiFi 工具类</span>
+&#9500;&#9472;&#9472; api/                         <span class="comment"># 服务端</span>
+&#9474;&#9474;   &#9500;&#9472;&#9472; server.py             <span class="comment"># REST API 服务端</span>
+&#9474;&#9474;   &#9500;&#9472;&#9472; README.md
+&#9474;&#9474;   &#9500;&#9472;&#9472; h3c/                  <span class="comment"># H3C 数据采集</span>
+&#9474;&#9474;   &#9474;   &#9500;&#9472;&#9472; process_ap.py
+&#9474;&#9474;   &#9474;   &#9500;&#9472;&#9472; process_bss.py
+&#9474;&#9474;   &#9474;   &#9500;&#9472;&#9472; group_map.txt
+&#9474;&#9474;   &#9474;   &#9500;&#9472;&#9472; name_map.txt
+&#9474;&#9474;   &#9474;   &#9500;&#9472;&#9472; ap_info.txt
+&#9474;&#9474;   &#9474;   &#9500;&#9472;&#9472; bss_info.txt
+&#9474;&#9474;   &#9474;   &#9492;&#9472;&#9472; display_*_verbose.txt
+&#9474;&#9474;   &#9492;&#9472;&#9472; huawei/               <span class="comment"># 华为数据采集</span>
+&#9474;&#9474;       &#9500;&#9472;&#9472; process_ap.py
+&#9474;&#9474;       &#9500;&#9472;&#9472; process_bss.py
+&#9474;&#9474;       &#9500;&#9472;&#9472; display_*.txt
 &#9474;&#9474;       &#9492;&#9472;&#9472; README.md
-&#9500;&#9472;&#9472; settings.gradle.kts           <span class="comment"># Gradle 设置（阿里云镜像）</span>
-&#9500;&#9472;&#9472; build.gradle.kts              <span class="comment"># 根项目构建配置</span>
-&#9500;&#9472;&#9472; gradle.properties             <span class="comment"># Gradle 属性</span>
-&#9500;&#9472;&#9472; gradlew / gradlew.bat         <span class="comment"># Gradle Wrapper</span>
-&#9500;&#9472;&#9472; wifi-bss-key.jks              <span class="comment"># 签名密钥库</span>
-&#9500;&#9472;&#9472; keystore.properties           <span class="comment"># 密钥凭据（.gitignore）</span>
-&#9500;&#9472;&#9472; CLAUDE.md                     <span class="comment"># Claude Code 项目指引</span>
-&#9500;&#9472;&#9472; introduction.html             <span class="comment"># 本文件</span>
-&#9492;&#9472;&#9472; README.md                     <span class="comment"># 项目 README</span></pre>
+&#9500;&#9472;&#9472; settings.gradle.kts
+&#9500;&#9472;&#9472; build.gradle.kts
+&#9500;&#9472;&#9472; gradle.properties
+&#9500;&#9472;&#9472; gradlew / gradlew.bat
+&#9500;&#9472;&#9472; wifi-bss-key.jks
+&#9500;&#9472;&#9472; keystore.properties
+&#9500;&#9472;&#9472; CLAUDE.md
+&#9500;&#9472;&#9472; README.md
+&#9492;&#9472;&#9472; introduction.html</pre>
 </section>
 
 </div>
 
 <footer>
-  <p>WiFi BSS 查询系统 &mdash;<a href="https://github.com/bg6cq/wifibss" style="color:var(--primary)">GitHub</a></p>
+  <p>WiFi BSS 查询系统 &mdash; <a href="https://github.com/bg6cq/wifibss" style="color:var(--primary)">GitHub</a></p>
 </footer>
 
 </body>

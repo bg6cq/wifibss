@@ -43,11 +43,18 @@ Release 构建使用 `wifi-bss-key.jks` 签名。密钥库凭据在 `keystore.pr
 ```kotlin
 // MainActivity.kt
 private fun getVersionInfo(): String {
-    return "版本：1.30"  // 与 versionName 一致
+    return "版本：1.31"  // 与 versionName 一致
 }
 
 private fun getChangesText(): String {
     return """
+v1.31 设置界面重构和数据记录调整
+- 数据记录改用 Room
+- 设置布局重排，新增"自动检查更新"和"检查软件更新"
+- 修复自动刷新每秒检查权限导致的弹窗闪烁
+- 设置项改为"1秒/3秒/5秒"，新安装默认 1 秒刷新
+- 缓存AP信息默认开启
+
 v1.30 显示可能漫游切换的AP信号
 - 自动查询附近AP名称并在图表下方显示
 - 设置中增加缓存AP信息选项，减少查询次数

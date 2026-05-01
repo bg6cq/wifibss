@@ -12,10 +12,10 @@
     <string name="query_error">查询失败</string>
     <string name="ac_ip_label">AC IP 地址：</string>
     <string name="ap_ip_label">AP IP 地址：</string>
-    <string name="ap_name_label">AP 名字：</string>
-    <string name="ap_sn_label">AP SN：</string>
-    <string name="ap_building_label">所在楼：</string>
-    <string name="bss_mac_label">BSS MAC:</string>
+    <string name="ap_name_label">AP   名字：</string>
+    <string name="ap_sn_label">AP 序列号：</string>
+    <string name="ap_building_label">所在楼宇：</string>
+    <string name="bss_mac_label">BSS  MAC:</string>
     <string name="about_button">关于</string>
     <string name="about_title">关于</string>
     <string name="loading_commits">加载中...</string>
@@ -48,7 +48,7 @@
     <string name="check_update_button">检查软件更新</string>
     <string name="save">保存</string>
     <string name="cancel">取消</string>
-    <string name="about_description">为方便了解园区 WiFi 网络的运行状态，安卓手机可以获取WiFi连接的 BSS(AP) 信息，并将 BSS 的 MAC 地址（去掉中间的 -: 字符）通过参数 bssid=XXXXXXXXXXX 发送给配置的查询 URL。如果设置了查询 KEY，则放在 HTTP 请求头 Authorization: Bearer 后送给查询 URL。查询 URL 可以选择性返回 {\"status\":\"ok\",\"data\":[{\"BSS_MAC\":\"19c97ad55e00\",\"AP_NAME\":\"wlzx-13895-207\",\"AP_SN\":\"219801A6M28257E00XXX\",\"AP_MAC\":\"19c97ad55e00\",\"AC_IP\":\"x.x.x.x\",\"BAND\":\"2\",\"SSID\":\"ssid\",\"AP_Building\":\"东区 - 网络信息中心\",\"AP_IP\":\"x.x.x.x\"}]}。APP 会显示这些信息方便了解 WiFi网络运行情况。\n\n本地 BSSMAC 数据库：支持在手机编辑和保存 BSSMAC 信息（设置 → BSSMAC 信息），查询时优先使用本地数据，无数据时调用远程 API。支持批量添加、编辑、删除和导出功能。\n\n在历史记录中可以单击一条记录，编辑后存到本地。\n\n信号图中，红点表明发生了漫游切换AP。
+    <string name="about_description">为方便了解 WiFi 网络的运行状态，安卓手机可以获取WiFi连接的 AP BSS 信息，并将 BSS 的 MAC 地址（去掉中间的 -: 字符）通过参数 bssid=XXXXXXXXXXX 发送给配置的查询 URL。如果设置了查询 KEY，则放在 HTTP 请求头 Authorization: Bearer 后送给查询 URL。查询 URL 可以选择性返回 {\"status\":\"ok\",\"data\":[{\"BSS_MAC\":\"19c97ad55e00\",\"AP_NAME\":\"wlzx-13895-207\",\"AP_SN\":\"219801A6M28257E00XXX\",\"AP_MAC\":\"19c97ad55e00\",\"AC_IP\":\"x.x.x.x\",\"BAND\":\"2\",\"SSID\":\"ssid\",\"AP_Building\":\"东区 - 网络信息中心\",\"AP_IP\":\"x.x.x.x\"}]}。APP 会显示这些信息方便了解 WiFi网络运行情况。\n\n自建查询API的有关信息，请参考项目源码api目录。\n\n本地 BSSMAC 数据库：支持在手机编辑和保存 BSSMAC 信息（设置 → BSSMAC 信息），查询时优先使用本地数据，无数据时调用远程 API。支持批量添加、编辑、删除和导出功能。\n\n在历史记录中可以单击一条记录，编辑后存到本地。\n\n信号图中，红点表明发生了漫游切换AP。
 </string>
     <string name="wifi_info_title">WiFi 连接信息</string>
     <string name="wifi_ssid_label">SSID:</string>
@@ -56,7 +56,7 @@
     <string name="wifi_ip_label">IP 地址:</string>
     <string name="wifi_rssi_label">信号强度:</string>
     <string name="wifi_frequency_label">频率/信道:</string>
-    <string name="wifi_linkspeed_label">链路速度:</string>
+    <string name="wifi_linkspeed_label">速率/标准:</string>
     <string name="signal_excellent">优秀</string>
     <string name="signal_good">良好</string>
     <string name="signal_fair">一般</string>
@@ -72,7 +72,7 @@
     <string name="bssmac_cleared">记录已清除</string>
     <string name="bssmac_bulk_add">批量添加</string>
     <string name="bssmac_input_hint">每行格式：BSSMAC AP名字 [所在楼]（BSSMAC 支持 xx:xx:xx:xx:xx:xx 或 xxxx-xxxx-xxxx 格式，所在楼可选）</string>
-    <string name="bssmac_add">添加</string>
+    <string name="bssmac_add">批量添加</string>
     <string name="bssmac_edit">编辑</string>
     <string name="bssmac_delete">删除</string>
     <string name="bssmac_save">保存</string>
@@ -105,5 +105,5 @@
 
     <!-- 隐私说明 -->
     <string name="privacy_title">隐私说明</string>
-    <string name="privacy_description">本应用在运行时会收集以下信息：\n当前连接及周边同SSID的 WiFi AP BSSID（MAC 地址）和信号强度（RSSI），用于查询 AP 信息和显示信号图表.\n\n上述BSSID(MAC地址)信息将发送到您在「设置」中配置的查询 URL，您可以在设置中禁止查询、修改或清空该URL禁止外发。\n\n所有历史记录和 BSSMAC 数据仅存储在设备本地，不会传输到其他服务器。\n\n需要位置权限是 Android 系统的要求，本应用不采集、处理位置信息。\n\n本应用不收集、处理任何个人身份信息（姓名、账号、设备、位置等信息）。</string>
+    <string name="privacy_description">本应用在运行时会收集以下信息：\n\n当前连接及周边同SSID的 WiFi AP BSSID（MAC 地址）和信号强度（RSSI），用于查询 AP 信息和显示信号图表。\n\n上述BSSID(MAC地址)信息将发送到您在「设置」中配置的查询 URL，您可以在设置中禁止查询、修改或清空该URL禁止外发。\n\n所有历史记录和 BSSMAC 数据仅存储在设备本地，不会传输到其他服务器。\n\n需要位置权限是 Android 系统的要求，本应用不采集、处理位置信息。\n\n本应用不收集、处理任何个人身份信息（姓名、账号、设备、位置等信息）。</string>
 </resources>

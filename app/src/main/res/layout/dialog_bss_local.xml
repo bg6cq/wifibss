@@ -94,19 +94,29 @@
         android:textSize="12sp"
         android:fontFamily="monospace" />
 
-    <!-- 添加按钮 -->
-    <Button
-        android:id="@+id/btnBulkAdd"
+    <!-- 添加 + 导出按钮并排 -->
+    <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="8dp"
-        android:text="@string/bssmac_add" />
+        android:orientation="horizontal">
 
-    <Button
-        android:id="@+id/btnExport"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="8dp"
-        android:text="@string/bssmac_export" />
+        <Button
+            android:id="@+id/btnBulkAdd"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_marginEnd="4dp"
+            android:text="@string/bssmac_add" />
+
+        <Button
+            android:id="@+id/btnExport"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_marginStart="4dp"
+            android:text="@string/bssmac_export" />
+
+    </LinearLayout>
 
 </LinearLayout>
