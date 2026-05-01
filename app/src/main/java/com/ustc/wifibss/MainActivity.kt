@@ -412,7 +412,7 @@ class MainActivity : AppCompatActivity() {
             .show()
     }
 
-    private fun getVersionInfo(): String = "版本：1.31"
+    private fun getVersionInfo(): String = "版本：1.32"
 
     private fun getDescriptionText(): String = getString(R.string.about_description)
 
