@@ -9,3 +9,7 @@
 # Keep coroutine classes
 -keepnames class kotlinx.coroutines.internal.MainDispatcherFactory {}
 -keepnames class kotlinx.coroutines.CoroutineExceptionHandler {}
+
+# Room - keep entities, DAOs and database
+-keep class com.ustc.wifibss.database.** { *; }
+-keep class com.ustc.wifibss.model.** { *; }
