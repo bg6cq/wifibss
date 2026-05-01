@@ -1,9 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
-    android:layout_height="wrap_content"
-    android:orientation="vertical"
-    android:padding="24dp">
+    android:layout_height="wrap_content">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="24dp">
 
     <!-- 刷新 WiFi 信息间隔 -->
     <TextView
@@ -114,4 +118,6 @@
         android:layout_marginTop="8dp"
         android:text="@string/check_update_button" />
 
-</LinearLayout>
+    </LinearLayout>
+
+</ScrollView>

@@ -18,6 +18,11 @@
         app:showAsAction="never" />
 
     <item
+        android:id="@+id/menu_stats"
+        android:title="@string/menu_stats"
+        app:showAsAction="never" />
+
+    <item
         android:id="@+id/menu_bssmac"
         android:title="@string/bssmac_menu"
         app:showAsAction="never" />

@@ -223,9 +223,11 @@ class MainActivity : AppCompatActivity() {
             addHistoryRecord(bssid, "", "")
 
             lifecycleScope.launch {
-                val localData = repository.getBssLocalList().find { it.bssMac == bssid }
+                prefs.incrementApSwitch()
+                val localData = repository.getBssLocalByMac(bssid)
                 if (localData != null) {
                     displayLocalBssInfo(localData)
+                    prefs.incrementLocalHit()
                 } else if (prefs.isAutoQueryEnabled() && bssid.length == 12) {
                     autoQueryRetryCount = 0
                     queryBssInfoWithRetry(bssid)
@@ -351,7 +353,7 @@ class MainActivity : AppCompatActivity() {
                 val nearbyIds = listOf("nearby_1", "nearby_2")
                 for ((index, ap) in sameSsidAps.withIndex()) {
                     val apBssid = ap.BSSID.replace(Regex("[^0-9a-fA-F]"), "").lowercase()
-                    val apName = repository.queryNearbyApName(apBssid) ?: apBssid
+                    val apName = repository.lookupApName(apBssid) ?: apBssid
                     binding.rssiChart.addOrUpdateApSeries(
                         apId = nearbyIds[index],
                         apName = apName,
@@ -407,7 +409,7 @@ class MainActivity : AppCompatActivity() {
             .show()
     }
 
-    private fun getVersionInfo(): String = "版本：1.32"
+    private fun getVersionInfo(): String = "版本：1.33"
 
     private fun getDescriptionText(): String = getString(R.string.about_description)
 
@@ -861,6 +863,7 @@ class MainActivity : AppCompatActivity() {
             R.id.menu_about -> { showAboutDialog(); true }
             R.id.menu_history -> { showHistoryDialog(); true }
             R.id.menu_bssmac -> { showBssLocalDialog(); true }
+            R.id.menu_stats -> { showStatsDialog(); true }
             else -> super.onOptionsItemSelected(item)
         }
     }
@@ -870,14 +873,20 @@ class MainActivity : AppCompatActivity() {
      */
     private fun queryBssInfoWithRetry(bssid: String) {
         lifecycleScope.launch {
-            val localData = repository.getBssLocalList().find { it.bssMac == bssid }
+            val localData = repository.getBssLocalByMac(bssid)
             if (localData != null) {
                 displayLocalBssInfo(localData)
                 return@launch
+                    prefs.incrementLocalHit()
             }
 
             binding.tvResult.text = getString(R.string.querying)
             clearApInfoDisplay()
+
+            // 缓存命中统计
+            if (repository.isInApiCache(bssid)) {
+                prefs.incrementCacheHit()
+            }
 
             var success = false
             while (!success && autoQueryRetryCount < 3) {
@@ -899,6 +908,7 @@ class MainActivity : AppCompatActivity() {
                         }
                     }
                     success = true
+                    prefs.incrementQuerySuccess()
                 } catch (e: Exception) {
                     autoQueryRetryCount++
                     if (autoQueryRetryCount < 3) {
@@ -911,6 +921,7 @@ class MainActivity : AppCompatActivity() {
                             binding.tvResult.text = "${getString(R.string.query_error)}: ${getString(R.string.query_max_retries)}"
                             Toast.makeText(this@MainActivity, getString(R.string.query_error), Toast.LENGTH_SHORT).show()
                         }
+                        prefs.incrementQueryFailure()
                     }
                 }
             }
@@ -922,15 +933,20 @@ class MainActivity : AppCompatActivity() {
      */
     private fun queryBssInfo(bssid: String) {
         lifecycleScope.launch {
-            val localData = repository.getBssLocalList().find { it.bssMac == bssid }
+            val localData = repository.getBssLocalByMac(bssid)
             if (localData != null) {
                 displayLocalBssInfo(localData)
                 return@launch
+                    prefs.incrementLocalHit()
             }
 
             binding.tvResult.text = getString(R.string.querying)
             clearApInfoDisplay()
             binding.btnQuery.isEnabled = false
+
+            if (repository.isInApiCache(bssid)) {
+                prefs.incrementCacheHit()
+            }
 
             try {
                 val queryResult = repository.queryBssInfo(bssid)
@@ -949,7 +965,9 @@ class MainActivity : AppCompatActivity() {
                         binding.tvResult.text = queryResult.rawJson
                     }
                 }
+                prefs.incrementQuerySuccess()
             } catch (e: Exception) {
+                prefs.incrementQueryFailure()
                 withContext(Dispatchers.Main) {
                     binding.tvResult.text = "${getString(R.string.query_error)}: ${e.message}"
                 }
@@ -958,6 +976,58 @@ class MainActivity : AppCompatActivity() {
                     binding.btnQuery.isEnabled = true
                 }
             }
+        }
+    }
+
+    private fun showStatsDialog() {
+        lifecycleScope.launch {
+            val apSwitch = prefs.getStatsApSwitch()
+            val querySuccess = prefs.getStatsQuerySuccess()
+            val queryFailure = prefs.getStatsQueryFailure()
+            val cacheHit = prefs.getStatsCacheHit()
+            val localHit = prefs.getStatsLocalHit()
+
+            val dialogView = layoutInflater.inflate(R.layout.dialog_stats, null)
+            dialogView.findViewById<TextView>(R.id.tvStatsApSwitch).text =
+                "${getString(R.string.stats_ap_switch)}：$apSwitch"
+            dialogView.findViewById<TextView>(R.id.tvStatsCacheHit).text =
+                "${getString(R.string.stats_cache_hit)}：$cacheHit"
+            dialogView.findViewById<TextView>(R.id.tvStatsLocalHit).text =
+                "${getString(R.string.stats_local_hit)}：$localHit"
+            dialogView.findViewById<TextView>(R.id.tvStatsQuerySuccess).text =
+                "${getString(R.string.stats_query_success)}：$querySuccess"
+            dialogView.findViewById<TextView>(R.id.tvStatsQueryFailure).text =
+                "${getString(R.string.stats_query_failure)}：$queryFailure"
+
+            dialogView.findViewById<Button>(R.id.btnResetStats).setOnClickListener {
+                MaterialAlertDialogBuilder(this@MainActivity)
+                    .setTitle(R.string.stats_reset)
+                    .setMessage(R.string.stats_reset_confirm)
+                    .setPositiveButton(android.R.string.ok) { _, _ ->
+                        lifecycleScope.launch {
+                            prefs.resetAllStats()
+                            dialogView.findViewById<TextView>(R.id.tvStatsApSwitch).text =
+                                "${getString(R.string.stats_ap_switch)}：0"
+                            dialogView.findViewById<TextView>(R.id.tvStatsCacheHit).text =
+                                "${getString(R.string.stats_cache_hit)}：0"
+                            dialogView.findViewById<TextView>(R.id.tvStatsLocalHit).text =
+                                "${getString(R.string.stats_local_hit)}：0"
+                            dialogView.findViewById<TextView>(R.id.tvStatsQuerySuccess).text =
+                                "${getString(R.string.stats_query_success)}：0"
+                            dialogView.findViewById<TextView>(R.id.tvStatsQueryFailure).text =
+                                "${getString(R.string.stats_query_failure)}：0"
+                            Toast.makeText(this@MainActivity, R.string.stats_reset_done, Toast.LENGTH_SHORT).show()
+                        }
+                    }
+                    .setNegativeButton(android.R.string.cancel, null)
+                    .show()
+            }
+
+            MaterialAlertDialogBuilder(this@MainActivity)
+                .setTitle(R.string.stats_title)
+                .setView(dialogView)
+                .setPositiveButton(android.R.string.ok, null)
+                .show()
         }
     }
 

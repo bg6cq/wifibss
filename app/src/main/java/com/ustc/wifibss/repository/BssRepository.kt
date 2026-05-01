@@ -74,6 +74,9 @@ class BssRepository(
     suspend fun getBssLocalList(): List<BssLocalEntry> =
         bssLocalDao.getAll().map(BssLocalEntity::toBssLocalEntry)
 
+    suspend fun getBssLocalByMac(bssMac: String): BssLocalEntry? =
+        bssLocalDao.getByBssMac(bssMac)?.toBssLocalEntry()
+
     suspend fun addBssLocal(bssMac: String, apName: String, building: String): Boolean {
         val normalizedMac = WifiUtils.normalizeBssMac(bssMac) ?: return false
         val existing = bssLocalDao.getByBssMac(normalizedMac)
@@ -101,9 +104,25 @@ class BssRepository(
 
     // ==================== BSS 信息查询 ====================
 
+    /**
+     * 根据 BSSID 查询 AP 名称
+     * 统一处理：本地数据库 → 远程 API
+     */
+    suspend fun lookupApName(bssid: String): String? {
+        // 先查本地数据库
+        val local = bssLocalDao.getByBssMac(bssid)
+        if (local != null && local.apName.isNotEmpty()) {
+            return local.apName
+        }
+        // 本地无数据时调用远程 API
+        return apiService.queryNearbyApName(bssid)
+    }
+
     suspend fun queryBssInfo(bssid: String): BssQueryResult = apiService.queryBssInfo(bssid)
 
-    suspend fun queryNearbyApName(bssid: String): String? = apiService.queryNearbyApName(bssid)
+    fun isInApiCache(bssid: String): Boolean = apiService.isInCache(bssid)
+
+    suspend fun queryNearbyApName(bssid: String): String? = lookupApName(bssid)
 
     fun clearApInfoCache() = apiService.clearCache()
 

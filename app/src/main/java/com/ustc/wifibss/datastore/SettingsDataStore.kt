@@ -23,6 +23,13 @@ class SettingsDataStore(private val context: Context) {
         private val KEY_AUTO_CHECK_UPDATE = booleanPreferencesKey("auto_check_update")
         private val KEY_SP_MIGRATED = booleanPreferencesKey("sp_migrated")
 
+        // 统计
+        private val KEY_STATS_AP_SWITCH = intPreferencesKey("stats_ap_switch")
+        private val KEY_STATS_QUERY_SUCCESS = intPreferencesKey("stats_query_success")
+        private val KEY_STATS_QUERY_FAILURE = intPreferencesKey("stats_query_failure")
+        private val KEY_STATS_CACHE_HIT = intPreferencesKey("stats_cache_hit")
+        private val KEY_STATS_LOCAL_HIT = intPreferencesKey("stats_local_hit")
+
         const val DEFAULT_QUERY_URL = "https://linux.ustc.edu.cn/api/bssinfo.php"
     }
 
@@ -89,5 +96,77 @@ class SettingsDataStore(private val context: Context) {
 
     suspend fun saveAutoCheckUpdate(enabled: Boolean) {
         context.dataStore.edit { prefs -> prefs[KEY_AUTO_CHECK_UPDATE] = enabled }
+    }
+
+    // ==================== 统计 ====================
+
+    val statsApSwitchFlow: Flow<Int> = context.dataStore.data
+        .map { prefs -> prefs[KEY_STATS_AP_SWITCH] ?: 0 }
+
+    val statsQuerySuccessFlow: Flow<Int> = context.dataStore.data
+        .map { prefs -> prefs[KEY_STATS_QUERY_SUCCESS] ?: 0 }
+
+    val statsQueryFailureFlow: Flow<Int> = context.dataStore.data
+        .map { prefs -> prefs[KEY_STATS_QUERY_FAILURE] ?: 0 }
+
+    val statsCacheHitFlow: Flow<Int> = context.dataStore.data
+        .map { prefs -> prefs[KEY_STATS_CACHE_HIT] ?: 0 }
+
+    val statsLocalHitFlow: Flow<Int> = context.dataStore.data
+        .map { prefs -> prefs[KEY_STATS_LOCAL_HIT] ?: 0 }
+
+    suspend fun getStatsApSwitch(): Int =
+        context.dataStore.data.map { it[KEY_STATS_AP_SWITCH] ?: 0 }.first()
+
+    suspend fun getStatsQuerySuccess(): Int =
+        context.dataStore.data.map { it[KEY_STATS_QUERY_SUCCESS] ?: 0 }.first()
+
+    suspend fun getStatsQueryFailure(): Int =
+        context.dataStore.data.map { it[KEY_STATS_QUERY_FAILURE] ?: 0 }.first()
+
+    suspend fun getStatsCacheHit(): Int =
+        context.dataStore.data.map { it[KEY_STATS_CACHE_HIT] ?: 0 }.first()
+
+    suspend fun getStatsLocalHit(): Int =
+        context.dataStore.data.map { it[KEY_STATS_LOCAL_HIT] ?: 0 }.first()
+
+    suspend fun incrementApSwitch() {
+        context.dataStore.edit { prefs ->
+            prefs[KEY_STATS_AP_SWITCH] = (prefs[KEY_STATS_AP_SWITCH] ?: 0) + 1
+        }
+    }
+
+    suspend fun incrementQuerySuccess() {
+        context.dataStore.edit { prefs ->
+            prefs[KEY_STATS_QUERY_SUCCESS] = (prefs[KEY_STATS_QUERY_SUCCESS] ?: 0) + 1
+        }
+    }
+
+    suspend fun incrementQueryFailure() {
+        context.dataStore.edit { prefs ->
+            prefs[KEY_STATS_QUERY_FAILURE] = (prefs[KEY_STATS_QUERY_FAILURE] ?: 0) + 1
+        }
+    }
+
+    suspend fun incrementCacheHit() {
+        context.dataStore.edit { prefs ->
+            prefs[KEY_STATS_CACHE_HIT] = (prefs[KEY_STATS_CACHE_HIT] ?: 0) + 1
+        }
+    }
+
+    suspend fun incrementLocalHit() {
+        context.dataStore.edit { prefs ->
+            prefs[KEY_STATS_LOCAL_HIT] = (prefs[KEY_STATS_LOCAL_HIT] ?: 0) + 1
+        }
+    }
+
+    suspend fun resetAllStats() {
+        context.dataStore.edit { prefs ->
+            prefs[KEY_STATS_AP_SWITCH] = 0
+            prefs[KEY_STATS_QUERY_SUCCESS] = 0
+            prefs[KEY_STATS_QUERY_FAILURE] = 0
+            prefs[KEY_STATS_CACHE_HIT] = 0
+            prefs[KEY_STATS_LOCAL_HIT] = 0
+        }
     }
 }

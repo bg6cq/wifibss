@@ -61,6 +61,11 @@ class BssInfoApiService(
         }
     }
 
+    fun isInCache(bssid: String): Boolean {
+        val cached = apInfoCache[bssid]
+        return cached != null && System.currentTimeMillis() - cached.cachedAt < cacheDurationMs
+    }
+
     fun clearCache() {
         apInfoCache.clear()
     }

@@ -62,4 +62,27 @@ class AppPreferences(private val context: Context,
     suspend fun saveAutoCheckUpdate(enabled: Boolean) {
         store.saveAutoCheckUpdate(enabled)
     }
+
+    // ==================== 统计 ====================
+    suspend fun getStatsApSwitch(): Int = store.getStatsApSwitch()
+
+    suspend fun getStatsQuerySuccess(): Int = store.getStatsQuerySuccess()
+
+    suspend fun getStatsQueryFailure(): Int = store.getStatsQueryFailure()
+
+    suspend fun getStatsCacheHit(): Int = store.getStatsCacheHit()
+
+    suspend fun getStatsLocalHit(): Int = store.getStatsLocalHit()
+
+    suspend fun incrementApSwitch() = store.incrementApSwitch()
+
+    suspend fun incrementQuerySuccess() = store.incrementQuerySuccess()
+
+    suspend fun incrementQueryFailure() = store.incrementQueryFailure()
+
+    suspend fun incrementCacheHit() = store.incrementCacheHit()
+
+    suspend fun incrementLocalHit() = store.incrementLocalHit()
+
+    suspend fun resetAllStats() = store.resetAllStats()
 }
