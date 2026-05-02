@@ -67,6 +67,7 @@ class MainActivity : AppCompatActivity() {
     private var autoRefreshIntervalMs: Int = 0
     private var bssidChangedForChart: Boolean = false
     private var lastScanTimeMs: Long = 0
+    private var currentChannelWidth: Int = -1
 
     private val exportFileLauncher = registerForActivityResult(ActivityResultContracts.CreateDocument("text/plain")) { uri ->
         if (uri != null) exportBssLocalToFile(uri)
@@ -239,10 +240,12 @@ class MainActivity : AppCompatActivity() {
         // IP 地址
         binding.tvIp.text = WifiUtils.formatIpAddress(wifiInfo.ipAddress)
 
-        // 信号强度 RSSI
+        // 频宽 + 信号强度 RSSI
+        val bandwidth = if (currentChannelWidth >= 0) WifiUtils.channelWidthToString(currentChannelWidth) else "?"
         val rssi = wifiInfo.rssi
         val signalLevel = WifiUtils.getSignalLevel(rssi)
-        binding.tvRssi.text = "$rssi dBm (${signalLevel.label})"
+        val bandwidthText = if (bandwidth.isNotEmpty()) "$bandwidth  " else ""
+        binding.tvRssi.text = "${bandwidthText}$rssi dBm (${signalLevel.label})"
 
         // 添加 RSSI 数据点到图表
         addRssiDataPoint(rssi)
@@ -344,6 +347,12 @@ class MainActivity : AppCompatActivity() {
             try {
                 if (!checkPermissions()) return@launch
                 val scanResults = wifiManager.scanResults
+
+                // 从扫描结果中获取当前 AP 的频宽
+                val currentAp = scanResults.firstOrNull {
+                    it.BSSID != null && WifiUtils.formatBssid(it.BSSID) == currentBssid
+                }
+                currentChannelWidth = currentAp?.channelWidth ?: -1
 
                 val sameSsidAps = scanResults
                     .filter { it.SSID.removeSurroundingQuotes() == currentSsid }

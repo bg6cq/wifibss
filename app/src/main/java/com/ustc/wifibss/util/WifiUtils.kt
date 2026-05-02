@@ -86,6 +86,21 @@ object WifiUtils {
         }
     }
 
+    /**
+     * 将信道宽度常量转为可读字符串
+     */
+    fun channelWidthToString(width: Int): String {
+        return when (width) {
+            android.net.wifi.ScanResult.CHANNEL_WIDTH_20MHZ -> "20 MHz"
+            android.net.wifi.ScanResult.CHANNEL_WIDTH_40MHZ -> "40 MHz"
+            android.net.wifi.ScanResult.CHANNEL_WIDTH_80MHZ -> "80 MHz"
+            android.net.wifi.ScanResult.CHANNEL_WIDTH_160MHZ -> "160 MHz"
+            android.net.wifi.ScanResult.CHANNEL_WIDTH_80MHZ_PLUS_MHZ -> "80+80 MHz"
+            android.net.wifi.ScanResult.CHANNEL_WIDTH_320MHZ -> "320 MHz"
+            else -> ""
+        }
+    }
+
     enum class SignalLevel(val label: String) {
         EXCELLENT("优秀"),
         GOOD("良好"),

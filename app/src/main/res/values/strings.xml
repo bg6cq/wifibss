@@ -46,7 +46,7 @@
 </string>
     <string name="wifi_ssid_label">SSID:</string>
     <string name="wifi_ip_label">IP 地址:</string>
-    <string name="wifi_rssi_label">信号强度:</string>
+    <string name="wifi_rssi_label">频宽/信号:</string>
     <string name="wifi_frequency_label">频率/信道:</string>
     <string name="wifi_linkspeed_label">速率/标准:</string>
     <string name="signal_excellent">优秀</string>
