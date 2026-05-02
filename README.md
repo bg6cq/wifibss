@@ -1,6 +1,6 @@
 # WiFi BSS 查询
 
-USTC 校园网 WiFi 信息查询工具。获取当前连接的 WiFi 详细信息，并查询 AP 设备信息。
+WiFi AP BSS信息查询工具。获取当前 WiFi 连接详细信息，并查询 AP 设备信息。
 
 可以添加 BSSMAC、AP 名字、楼信息，适合在小规模 WiFi 网络使用，观察信号和漫游情况。
 
@@ -10,15 +10,15 @@ USTC 校园网 WiFi 信息查询工具。获取当前连接的 WiFi 详细信息
 
 - **WiFi 信息显示**：SSID、BSSID、IP 地址、频宽、信号强度（RSSI 及等级）、频率/信道/频段、链路速度及 WiFi 标准（Wi-Fi 4/5/6/7）
 - **RSSI 信号强度图表**：显示最近 10 分钟的信号强度变化曲线，BSSID 切换时有红色标记
-- **BSS 信息查询**：通过 API 查询 AP 的 AC_IP、AP_IP、AP_NAME、AP_SN、AP_Building 等信息
+- **BSS 信息查询**：通过 API 查询 AP 的 AP_NAME、AP_SN、AP_Building、AP_IP、AC_IP 等信息
 - **本地 BSSMAC 数据库**：手动编辑和批量添加 BSSMAC 信息（设置 → BSSMAC 信息），查询时优先使用本地数据
 - **本地数据排序**：支持按 MAC、所在楼、AP 名字排序
 - **本地数据导出**：将 BSSMAC 数据库导出为文本文件
-- **查询历史记录**：自动记录 BSSID 变化历史，支持滑动删除和保存到本地数据库
+- **查询历史记录**：自动记录 BSSID 变化历史，支持保存到本地数据库
 - **自动查询**：BSSID 变化时自动查询（优先本地数据，失败自动重试 3 次）
 - **自动刷新**：可设置 1s/3s/5s 间隔自动刷新 WiFi 信息，默认 1 秒
-- **版本更新检查**：启动时自动检查新版本，提示下载更新
 - **可配置查询 API**：支持自定义查询 URL 和 Authorization Bearer Key
+- **版本更新检查**：启动时自动检查新版本，提示下载更新
 
 ## 技术栈
 
@@ -52,7 +52,7 @@ API 端点：`https://linux.ustc.edu.cn/api/bssinfo.php?bssid={bssid}`
 
 ## 工作原理
 
-为方便了解园区 WiFi 的使用状态，安卓手机可以运行本程序获取连接的 WiFi BSS 信息，并将 BSS 的 MAC 地址（去掉中间的 `-`、`:` 字符）通过参数 `bssid=XXXXXXXXXXX` 发送给配置的查询 URL。如果设置了查询 KEY，放在 HTTP 请求头 `Authorization: Bearer` 后送给查询 URL。
+为了解园区 WiFi 的连接状态，安卓手机可以运行本程序获取当前 WiFi 连接的信息，并将 BSS 的 MAC 地址（去掉中间的 `-`、`:` 字符）通过参数 `bssid=XXXXXXXXXXX` 发送给配置的查询 URL。如果设置了查询 KEY，放在 HTTP 请求头 `Authorization: Bearer` 后送给查询 URL。
 
 查询 URL 可以选择性返回如下 JSON，APP 会显示这些信息方便了解 WiFi 工作状态：
 
@@ -82,7 +82,7 @@ API 端点：`https://linux.ustc.edu.cn/api/bssinfo.php?bssid={bssid}`
 
 构建产物：`app/build/outputs/apk/release/app-release.apk`
 
-## 查询 API
+## 查询 API 服务
 
 api/ 目录下有通用的 API 查询服务端（server.py），支持任意 AC 厂商的数据。
 api/h3c 和 api/huawei 目录下分别有对应厂商的数据采集和处理脚本。
