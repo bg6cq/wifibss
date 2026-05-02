@@ -32,7 +32,7 @@
 
 ### 关于页面
 
-`dialog_about.xml` 使用 ScrollView + LinearLayout 布局。更新日志内容通过 `strings.xml` 的 `about_changes` 字符串资源加载。新增"项目介绍"按钮，从 `assets/introduction.html` 读取，通过 `FileProvider` 写入缓存目录后用系统浏览器打开。
+`dialog_about.xml` 使用 ScrollView + LinearLayout 布局。更新日志内容通过 `strings.xml` 的 `about_changes` 字符串资源加载。新增"项目介绍"按钮，使用 WebView 直接加载 `assets/introduction.html` 并在 MaterialAlertDialog 中显示。
 
 ## Maven 镜像
 

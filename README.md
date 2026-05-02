@@ -8,7 +8,7 @@ USTC 校园网 WiFi 信息查询工具。获取当前连接的 WiFi 详细信息
 
 ## 功能
 
-- **WiFi 信息显示**：SSID、BSSID、IP 地址、信号强度（RSSI 及等级）、频率/信道/频段、链路速度及 WiFi 标准（Wi-Fi 4/5/6/7）
+- **WiFi 信息显示**：SSID、BSSID、IP 地址、频宽、信号强度（RSSI 及等级）、频率/信道/频段、链路速度及 WiFi 标准（Wi-Fi 4/5/6/7）
 - **RSSI 信号强度图表**：显示最近 10 分钟的信号强度变化曲线，BSSID 切换时有红色标记
 - **BSS 信息查询**：通过 API 查询 AP 的 AC_IP、AP_IP、AP_NAME、AP_SN、AP_Building 等信息
 - **本地 BSSMAC 数据库**：手动编辑和批量添加 BSSMAC 信息（设置 → BSSMAC 信息），查询时优先使用本地数据
@@ -31,7 +31,6 @@ USTC 校园网 WiFi 信息查询工具。获取当前连接的 WiFi 详细信息
 
 ## 权限说明
 
-- `ACCESS_WIFI_STATE` — 获取 WiFi 状态
 - `ACCESS_FINE_LOCATION` / `ACCESS_COARSE_LOCATION` — Android 10+ 获取 BSSID 需要位置权限
 - `NEARBY_WIFI_DEVICES` — Android 13+ 需要此权限以扫描附近 WiFi 设备
 - `INTERNET` — 访问 API
