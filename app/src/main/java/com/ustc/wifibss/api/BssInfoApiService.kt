@@ -9,7 +9,7 @@ import okhttp3.Request
 import org.json.JSONObject
 import java.util.concurrent.TimeUnit
 
-data class BssQueryResult(val rawJson: String, val apInfo: ApInfo)
+data class BssQueryResult(val rawJson: String, val apInfo: ApInfo, val fromLocal: Boolean = false)
 
 class BssInfoApiService(
     private val prefs: AppPreferences,

@@ -224,13 +224,14 @@ class MainActivity : AppCompatActivity() {
 
             lifecycleScope.launch {
                 prefs.incrementApSwitch()
-                val localData = repository.getBssLocalByMac(bssid)
-                if (localData != null) {
-                    displayLocalBssInfo(localData)
-                    prefs.incrementLocalHit()
-                } else if (prefs.isAutoQueryEnabled() && bssid.length == 12) {
+                if (prefs.isAutoQueryEnabled() && bssid.length == 12) {
                     autoQueryRetryCount = 0
                     queryBssInfoWithRetry(bssid)
+                } else {
+                    val localData = repository.getBssLocalByMac(bssid)
+                    if (localData != null) {
+                        displayLocalBssInfo(localData)
+                    }
                 }
             }
         }
@@ -353,7 +354,8 @@ class MainActivity : AppCompatActivity() {
                 val nearbyIds = listOf("nearby_1", "nearby_2")
                 for ((index, ap) in sameSsidAps.withIndex()) {
                     val apBssid = ap.BSSID.replace(Regex("[^0-9a-fA-F]"), "").lowercase()
-                    val apName = repository.lookupApName(apBssid) ?: apBssid
+                    val result = trackedQuery(apBssid)
+                    val apName = result?.apInfo?.apName?.takeIf { it != "-" } ?: apBssid
                     binding.rssiChart.addOrUpdateApSeries(
                         apId = nearbyIds[index],
                         apName = apName,
@@ -869,47 +871,60 @@ class MainActivity : AppCompatActivity() {
     }
 
     /**
+     * 统一查询：本地 → 缓存 → API，包含统计
+     */
+    private suspend fun trackedQuery(bssid: String): BssQueryResult? {
+        val wasCached = repository.isInApiCache(bssid)
+        return try {
+            val result = repository.queryBssInfo(bssid)
+            if (result.fromLocal) prefs.incrementLocalHit()
+            else if (wasCached) prefs.incrementCacheHit()
+            else prefs.incrementQuerySuccess()
+            result
+        } catch (e: Exception) {
+            null
+        }
+    }
+
+    /**
+     * 显示查询结果（统一处理本地和远程）
+     */
+    private suspend fun displayQueryResult(bssid: String, result: BssQueryResult) {
+        val apInfo = result.apInfo
+        if (result.fromLocal) {
+            binding.tvBssMac.text = apInfo.bssMac
+            binding.tvAcIp.text = "-"
+            binding.tvApIp.text = "-"
+            binding.tvApName.text = apInfo.apName
+            binding.tvApSn.text = "-"
+            binding.tvApBuilding.text = apInfo.building
+            binding.tvResult.text = getString(R.string.query_from_local)
+        } else if (apInfo.bssMac != "-") {
+            binding.tvBssMac.text = apInfo.bssMac
+            binding.tvAcIp.text = apInfo.acIp
+            binding.tvApIp.text = apInfo.apIp
+            binding.tvApName.text = apInfo.apName
+            binding.tvApSn.text = apInfo.apSn
+            binding.tvApBuilding.text = apInfo.building
+            binding.tvResult.text = result.rawJson
+            repository.updateHistoryRecord(bssid, apInfo.apName, apInfo.building)
+        } else {
+            binding.tvResult.text = result.rawJson
+        }
+    }
+
+    /**
      * 查询 BSS 信息（带重试，用于自动查询）
      */
     private fun queryBssInfoWithRetry(bssid: String) {
         lifecycleScope.launch {
-            val localData = repository.getBssLocalByMac(bssid)
-            if (localData != null) {
-                displayLocalBssInfo(localData)
-                return@launch
-                    prefs.incrementLocalHit()
-            }
-
             binding.tvResult.text = getString(R.string.querying)
             clearApInfoDisplay()
 
-            // 缓存命中统计
-            if (repository.isInApiCache(bssid)) {
-                prefs.incrementCacheHit()
-            }
-
-            var success = false
-            while (!success && autoQueryRetryCount < 3) {
-                try {
-                    val queryResult = repository.queryBssInfo(bssid)
-                    val apInfo = queryResult.apInfo
-                    withContext(Dispatchers.Main) {
-                        if (apInfo.bssMac != "-") {
-                            binding.tvBssMac.text = apInfo.bssMac
-                            binding.tvAcIp.text = apInfo.acIp
-                            binding.tvApIp.text = apInfo.apIp
-                            binding.tvApName.text = apInfo.apName
-                            binding.tvApSn.text = apInfo.apSn
-                            binding.tvApBuilding.text = apInfo.building
-                            binding.tvResult.text = queryResult.rawJson
-                            repository.updateHistoryRecord(bssid, apInfo.apName, apInfo.building)
-                        } else {
-                            binding.tvResult.text = queryResult.rawJson
-                        }
-                    }
-                    success = true
-                    prefs.incrementQuerySuccess()
-                } catch (e: Exception) {
+            var result: BssQueryResult? = null
+            while (result == null && autoQueryRetryCount < 3) {
+                result = trackedQuery(bssid)
+                if (result == null) {
                     autoQueryRetryCount++
                     if (autoQueryRetryCount < 3) {
                         withContext(Dispatchers.Main) {
@@ -925,6 +940,9 @@ class MainActivity : AppCompatActivity() {
                     }
                 }
             }
+            if (result != null) {
+                displayQueryResult(bssid, result)
+            }
         }
     }
 
@@ -933,102 +951,70 @@ class MainActivity : AppCompatActivity() {
      */
     private fun queryBssInfo(bssid: String) {
         lifecycleScope.launch {
-            val localData = repository.getBssLocalByMac(bssid)
-            if (localData != null) {
-                displayLocalBssInfo(localData)
-                return@launch
-                    prefs.incrementLocalHit()
-            }
-
             binding.tvResult.text = getString(R.string.querying)
             clearApInfoDisplay()
             binding.btnQuery.isEnabled = false
 
-            if (repository.isInApiCache(bssid)) {
-                prefs.incrementCacheHit()
+            val result = trackedQuery(bssid)
+            if (result != null) {
+                displayQueryResult(bssid, result)
+            } else {
+                withContext(Dispatchers.Main) {
+                    binding.tvResult.text = "${getString(R.string.query_error)}: ${getString(R.string.query_max_retries)}"
+                }
             }
-
-            try {
-                val queryResult = repository.queryBssInfo(bssid)
-                val apInfo = queryResult.apInfo
-                withContext(Dispatchers.Main) {
-                    if (apInfo.bssMac != "-") {
-                        binding.tvBssMac.text = apInfo.bssMac
-                        binding.tvAcIp.text = apInfo.acIp
-                        binding.tvApIp.text = apInfo.apIp
-                        binding.tvApName.text = apInfo.apName
-                        binding.tvApSn.text = apInfo.apSn
-                        binding.tvApBuilding.text = apInfo.building
-                        binding.tvResult.text = queryResult.rawJson
-                        repository.updateHistoryRecord(bssid, apInfo.apName, apInfo.building)
-                    } else {
-                        binding.tvResult.text = queryResult.rawJson
-                    }
-                }
-                prefs.incrementQuerySuccess()
-            } catch (e: Exception) {
-                prefs.incrementQueryFailure()
-                withContext(Dispatchers.Main) {
-                    binding.tvResult.text = "${getString(R.string.query_error)}: ${e.message}"
-                }
-            } finally {
-                withContext(Dispatchers.Main) {
-                    binding.btnQuery.isEnabled = true
-                }
+            withContext(Dispatchers.Main) {
+                binding.btnQuery.isEnabled = true
             }
         }
     }
 
     private fun showStatsDialog() {
-        lifecycleScope.launch {
-            val apSwitch = prefs.getStatsApSwitch()
-            val querySuccess = prefs.getStatsQuerySuccess()
-            val queryFailure = prefs.getStatsQueryFailure()
-            val cacheHit = prefs.getStatsCacheHit()
-            val localHit = prefs.getStatsLocalHit()
+        val dialogView = layoutInflater.inflate(R.layout.dialog_stats, null)
+        val tvApSwitch = dialogView.findViewById<TextView>(R.id.tvStatsApSwitch)
+        val tvCacheHit = dialogView.findViewById<TextView>(R.id.tvStatsCacheHit)
+        val tvLocalHit = dialogView.findViewById<TextView>(R.id.tvStatsLocalHit)
+        val tvQuerySuccess = dialogView.findViewById<TextView>(R.id.tvStatsQuerySuccess)
+        val tvQueryFailure = dialogView.findViewById<TextView>(R.id.tvStatsQueryFailure)
 
-            val dialogView = layoutInflater.inflate(R.layout.dialog_stats, null)
-            dialogView.findViewById<TextView>(R.id.tvStatsApSwitch).text =
-                "${getString(R.string.stats_ap_switch)}：$apSwitch"
-            dialogView.findViewById<TextView>(R.id.tvStatsCacheHit).text =
-                "${getString(R.string.stats_cache_hit)}：$cacheHit"
-            dialogView.findViewById<TextView>(R.id.tvStatsLocalHit).text =
-                "${getString(R.string.stats_local_hit)}：$localHit"
-            dialogView.findViewById<TextView>(R.id.tvStatsQuerySuccess).text =
-                "${getString(R.string.stats_query_success)}：$querySuccess"
-            dialogView.findViewById<TextView>(R.id.tvStatsQueryFailure).text =
-                "${getString(R.string.stats_query_failure)}：$queryFailure"
+        suspend fun updateStats() {
+            tvApSwitch.text = "${getString(R.string.stats_ap_switch)}：${prefs.getStatsApSwitch()}"
+            tvCacheHit.text = "${getString(R.string.stats_cache_hit)}：${prefs.getStatsCacheHit()}"
+            tvLocalHit.text = "${getString(R.string.stats_local_hit)}：${prefs.getStatsLocalHit()}"
+            tvQuerySuccess.text = "${getString(R.string.stats_query_success)}：${prefs.getStatsQuerySuccess()}"
+            tvQueryFailure.text = "${getString(R.string.stats_query_failure)}：${prefs.getStatsQueryFailure()}"
+        }
 
-            dialogView.findViewById<Button>(R.id.btnResetStats).setOnClickListener {
-                MaterialAlertDialogBuilder(this@MainActivity)
-                    .setTitle(R.string.stats_reset)
-                    .setMessage(R.string.stats_reset_confirm)
-                    .setPositiveButton(android.R.string.ok) { _, _ ->
-                        lifecycleScope.launch {
-                            prefs.resetAllStats()
-                            dialogView.findViewById<TextView>(R.id.tvStatsApSwitch).text =
-                                "${getString(R.string.stats_ap_switch)}：0"
-                            dialogView.findViewById<TextView>(R.id.tvStatsCacheHit).text =
-                                "${getString(R.string.stats_cache_hit)}：0"
-                            dialogView.findViewById<TextView>(R.id.tvStatsLocalHit).text =
-                                "${getString(R.string.stats_local_hit)}：0"
-                            dialogView.findViewById<TextView>(R.id.tvStatsQuerySuccess).text =
-                                "${getString(R.string.stats_query_success)}：0"
-                            dialogView.findViewById<TextView>(R.id.tvStatsQueryFailure).text =
-                                "${getString(R.string.stats_query_failure)}：0"
-                            Toast.makeText(this@MainActivity, R.string.stats_reset_done, Toast.LENGTH_SHORT).show()
-                        }
-                    }
-                    .setNegativeButton(android.R.string.cancel, null)
-                    .show()
-            }
-
+        dialogView.findViewById<Button>(R.id.btnResetStats).setOnClickListener {
             MaterialAlertDialogBuilder(this@MainActivity)
-                .setTitle(R.string.stats_title)
-                .setView(dialogView)
-                .setPositiveButton(android.R.string.ok, null)
+                .setTitle(R.string.stats_reset)
+                .setMessage(R.string.stats_reset_confirm)
+                .setPositiveButton(android.R.string.ok) { _, _ ->
+                    lifecycleScope.launch {
+                        prefs.resetAllStats()
+                        updateStats()
+                        Toast.makeText(this@MainActivity, R.string.stats_reset_done, Toast.LENGTH_SHORT).show()
+                    }
+                }
+                .setNegativeButton(android.R.string.cancel, null)
                 .show()
         }
+
+        val dialog = MaterialAlertDialogBuilder(this@MainActivity)
+            .setTitle(R.string.stats_title)
+            .setView(dialogView)
+            .setPositiveButton(android.R.string.ok, null)
+            .show()
+
+        // 每 1 秒自动刷新
+        var refreshJob: kotlinx.coroutines.Job? = null
+        refreshJob = lifecycleScope.launch {
+            while (true) {
+                updateStats()
+                delay(1000)
+            }
+        }
+        dialog.setOnDismissListener { refreshJob?.cancel() }
     }
 
     private fun clearApInfoDisplay() {

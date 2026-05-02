@@ -102,27 +102,35 @@ class BssRepository(
             }
     }
 
-    // ==================== BSS 信息查询 ====================
+    // ==================== BSS 信息查询（统一入口） ====================
 
     /**
-     * 根据 BSSID 查询 AP 名称
-     * 统一处理：本地数据库 → 远程 API
+     * 统一查询入口：本地数据库 → 远程 API
+     * 不处理统计，由调用方负责
      */
-    suspend fun lookupApName(bssid: String): String? {
-        // 先查本地数据库
+    suspend fun queryBssInfo(bssid: String): BssQueryResult {
+        // 1. 查本地数据库
         val local = bssLocalDao.getByBssMac(bssid)
         if (local != null && local.apName.isNotEmpty()) {
-            return local.apName
+            return BssQueryResult(
+                rawJson = "来自本地数据库",
+                apInfo = com.ustc.wifibss.model.ApInfo(
+                    bssMac = local.bssMac,
+                    apName = local.apName,
+                    apSn = "-",
+                    acIp = "-",
+                    apIp = "-",
+                    building = local.building
+                ),
+                fromLocal = true
+            )
         }
-        // 本地无数据时调用远程 API
-        return apiService.queryNearbyApName(bssid)
+
+        // 2. 调用远程 API
+        return apiService.queryBssInfo(bssid)
     }
 
-    suspend fun queryBssInfo(bssid: String): BssQueryResult = apiService.queryBssInfo(bssid)
-
     fun isInApiCache(bssid: String): Boolean = apiService.isInCache(bssid)
-
-    suspend fun queryNearbyApName(bssid: String): String? = lookupApName(bssid)
 
     fun clearApInfoCache() = apiService.clearCache()
 
