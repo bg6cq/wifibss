@@ -1,0 +1,134 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">WiFi BSS Query</string>
+    <string name="introduction_button">About WiFi BSS Query</string>
+    <string name="bssid_label">Current BSSID:</string>
+    <string name="bssid_value">N/A</string>
+    <string name="query_button">Query BSS Info</string>
+    <string name="result_label">Result:</string>
+    <string name="result_default">Tap Query to fetch info</string>
+    <string name="permission_required">Location permission is required to get WiFi information</string>
+    <string name="no_wifi_connection">Not connected to WiFi</string>
+    <string name="querying">Querying...</string>
+    <string name="query_error">Query failed</string>
+    <string name="ac_ip_label">AC IP:</string>
+    <string name="ap_ip_label">AP IP:</string>
+    <string name="ap_name_label">AP Name:</string>
+    <string name="ap_sn_label">AP S/N:</string>
+    <string name="ap_building_label">Building:</string>
+    <string name="bss_mac_label">BSS MAC:</string>
+    <string name="new_version_found">New Version Available</string>
+    <string name="download_now">Download Now</string>
+    <string name="update_dialog_message">Current: %1$s\nLatest: %2$s\n\n%3$s</string>
+    <string name="update_dialog_default_log">New version available. Download now?</string>
+    <string name="menu_settings">Settings</string>
+    <string name="menu_about">About</string>
+    <string name="menu_history">History</string>
+    <string name="menu_stats">Statistics</string>
+    <string name="history_title">History</string>
+    <string name="history_empty">No query history</string>
+    <string name="history_clear">Clear History</string>
+    <string name="history_clear_confirm">Are you sure you want to clear all history?</string>
+    <string name="history_cleared">History cleared</string>
+    <string name="settings_title">Settings</string>
+    <string name="query_url_label">Query URL:</string>
+    <string name="query_key_label">Query KEY:</string>
+    <string name="query_key_hint">Optional. If set, appended as HTTP Authorization: Bearer header</string>
+    <string name="auto_refresh_label">WiFi RSSI refresh interval</string>
+    <string name="auto_refresh_1s">1 second</string>
+    <string name="auto_refresh_3s">3 seconds</string>
+    <string name="auto_refresh_5s">5 seconds</string>
+    <string name="cache_ap_info_label">Cache AP info (10 min)</string>
+    <string name="auto_query_label">Auto-query AP info on BSSID change</string>
+    <string name="auto_check_update_label">Auto-check for updates</string>
+    <string name="check_update_button">Check for Updates</string>
+    <string name="save">Save</string>
+    <string name="cancel">Cancel</string>
+
+    <!-- About page sections -->
+    <string name="about_section_features">Features</string>
+    <string name="about_section_changelog">Changelog</string>
+    <string name="about_section_privacy">Privacy</string>
+
+    <string name="about_description">This app helps you understand the operation status of campus WiFi networks on Android. It retrieves BSS information of the connected AP by sending the BSS MAC address (stripped of -: separators) as the bssid=XXXXXXXXXXXX parameter to the configured query URL. If a query KEY is set, it is included as the HTTP Authorization: Bearer header. The query URL may optionally return {\"status\":\"ok\",\"data\":[{\"BSS_MAC\":\"19c97ad55e00\",\"AP_NAME\":\"wlzx-13895-207\",\"AP_SN\":\"219801A6M28257E00XXX\",\"AP_MAC\":\"19c97ad55e00\",\"AC_IP\":\"x.x.x.x\",\"BAND\":\"2\",\"SSID\":\"ssid\",\"AP_Building\":\"Bldg A - Network Center\",\"AP_IP\":\"x.x.x.x\"}]}.\n\nFor self-hosted query API setup, refer to the api directory in the project source.\n\nLocal BSSMAC database: Supports editing and saving BSSMAC info on-device (Settings → BSSMAC Info). Queries use local data first, falling back to the remote API. Supports batch add, edit, delete, and export.\n\nIn the history view, tap a record to edit and save it locally.\n\nOn the signal chart, red dots indicate AP handover (roaming) events.</string>
+
+    <!-- WiFi info -->
+    <string name="wifi_ssid_label">SSID:</string>
+    <string name="wifi_ip_label">IP Address:</string>
+    <string name="wifi_rssi_label">Bandwidth/Signal:</string>
+    <string name="wifi_frequency_label">Frequency/Channel:</string>
+    <string name="wifi_linkspeed_label">Speed/Standard:</string>
+    <string name="signal_excellent">Excellent</string>
+    <string name="signal_good">Good</string>
+    <string name="signal_fair">Fair</string>
+    <string name="signal_weak">Weak</string>
+    <string name="signal_poor">Poor</string>
+    <string name="current_ap_label">Current AP</string>
+    <string name="unknown_ap">Unknown AP</string>
+    <string name="version_info">Version: %s</string>
+    <string name="author_text">Author: %s</string>
+    <string name="channel_label"> (ch %d)</string>
+    <string name="wifi_standard_unknown">WiFi code %d</string>
+
+    <!-- BSSMAC local database -->
+    <string name="bssmac_menu">BSSMAC Info</string>
+    <string name="bssmac_title">BSSMAC Info</string>
+    <string name="bssmac_empty">No local records</string>
+    <string name="bssmac_bulk_add">Batch Add</string>
+    <string name="bssmac_input_hint">One per line: BSSMAC AP-Name [Building] (BSSMAC supports xx:xx:xx:xx:xx:xx or xxxx-xxxx-xxxx format; building is optional)</string>
+    <string name="bssmac_add">Add Batch</string>
+    <string name="bssmac_delete">Delete</string>
+    <string name="bssmac_save">Save</string>
+    <string name="bssmac_cancel">Cancel</string>
+    <string name="bssmac_edit_title">Edit Record</string>
+    <string name="bssmac_field_bssmac">BSS MAC</string>
+    <string name="bssmac_field_ap_name">AP Name</string>
+    <string name="bssmac_field_building">Building</string>
+    <string name="bssmac_export">Export to File</string>
+    <string name="bssmac_sort">Sort by:</string>
+    <string name="bssmac_sort_mac">MAC</string>
+    <string name="bssmac_sort_building">Building</string>
+    <string name="bssmac_sort_apname">AP Name</string>
+    <string name="edit_record_title">Edit Record</string>
+    <string name="saved_to_local_db">Saved to local BSS MAC database</string>
+    <string name="save_failed_invalid_mac">Save failed: invalid BSS MAC format</string>
+    <string name="need_permission">Permission Required</string>
+    <string name="permission_message">This app needs the following permissions to read WiFi info:\n\n%1$s\n\nTap OK, then grant in the system prompt.</string>
+    <string name="bssmac_delete_confirm">Delete %1$s?</string>
+    <string name="bssmac_deleted">Deleted %1$s</string>
+    <string name="bssmac_export_success">Exported %1$d records</string>
+    <string name="bssmac_export_failed">Export failed: %1$s</string>
+    <string name="bssmac_format_error">Format error, please check input</string>
+    <string name="bssmac_added_count">Added %1$d records</string>
+    <string name="bssmac_added_new">New record added</string>
+    <string name="bssmac_format_invalid">Invalid BSS MAC format</string>
+    <string name="rssi_empty_hint">Collecting signal data...</string>
+
+    <!-- Query result status -->
+    <string name="query_success">Query succeeded</string>
+    <string name="query_no_info">No info available</string>
+    <string name="query_retry_format">Query failed, retry in 1s (%1$d/3)...</string>
+    <string name="query_max_retries">Max retries reached</string>
+    <string name="query_from_local">Local data</string>
+
+    <!-- Permission descriptions -->
+    <string name="permission_location">• Location: Android 10+ requires location permission to access WiFi BSSID</string>
+    <string name="permission_nearby">• Nearby devices: Android 13+ requires this to scan nearby WiFi devices</string>
+
+    <!-- Changelog -->
+    <string name="about_changes">v1.35 English UI support\n- Created values-en/strings.xml with English translations\n- Added English project introduction page (introduction_en.html)\n- Refactored SignalLevel enum to use string resource IDs\n- Migrated hardcoded Chinese strings in MainActivity.kt to strings.xml\n- UI automatically switches to English when system language is set to English\n\nv1.34 Bug fixes and local query improvements\n- Fixed auto-query not updating AP names from local BSSMAC results\n\nv1.33 Dark theme and UI optimization\n- Dark theme support (color resources, MaterialAlertDialog)\n- Locked portrait orientation\n- Prioritize local database for BSSMAC name lookup\n- Scrollable settings page\n- Stats menu (AP switch, local query, cache, remote query)\n\nv1.32 Display improvements and about page enhancements\n- DataStore migration, deprecated SharedPreferences\n- Moved hardcoded strings to strings.xml\n- Show raw JSON in query results\n- Added detailed intro button in About page\n\nFor full changelog, see Chinese version.</string>
+
+    <!-- Privacy -->
+    <string name="privacy_description">This app collects the following information at runtime:\n\nThe BSSID (MAC address) and signal strength (RSSI) of the currently connected and nearby APs sharing the same SSID, used for AP info queries and signal chart display.\n\nThe BSSID (MAC address) will be sent to the query URL configured in Settings. You can disable queries, modify, or clear the URL to prevent data transmission.\n\nAll history and BSSMAC data is stored locally on the device and is not transmitted to any other server.\n\nLocation permission is required by the Android system; this app does not collect or process location information.\n\nThis app does not collect or process any personally identifiable information (name, account, device, location, etc.).</string>
+
+    <!-- Statistics -->
+    <string name="stats_title">Statistics</string>
+    <string name="stats_ap_switch">AP switches: </string>
+    <string name="stats_query_success">Remote queries OK: </string>
+    <string name="stats_query_failure">Remote queries failed: </string>
+    <string name="stats_cache_hit">Cache hits: </string>
+    <string name="stats_local_hit">Local queries: </string>
+    <string name="stats_reset">Reset</string>
+    <string name="stats_reset_confirm">Reset all statistics?</string>
+    <string name="stats_reset_done">Statistics reset</string>
+</resources>

@@ -237,7 +237,7 @@ class RssiChartView @JvmOverloads constructor(
         } else {
             val newSeries = ApDataSeries(
                 apId = apId,
-                apName = apName.ifEmpty { "未知 AP" },
+                apName = apName.ifEmpty { context.getString(R.string.unknown_ap) },
                 bssid = bssid,
                 isCurrentAp = isCurrentAp,
                 lineColor = getApColor(apSeries.size),

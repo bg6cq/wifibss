@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>WiFi BSS Query - Project Introduction</title>
+<style>
+  :root {
+    --primary: #1976D2;
+    --primary-light: #BBDEFB;
+    --accent: #FF6F00;
+    --bg: #f5f7fa;
+    --card: #ffffff;
+    --text: #212121;
+    --text-secondary: #616161;
+    --border: #e0e0e0;
+    --success: #2E7D32;
+    --warning: #F57F17;
+    --info: #0288D1;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.7;
+  }
+  header {
+    background: linear-gradient(135deg, #1565C0, #1E88E5);
+    color: white;
+    padding: 60px 20px;
+    text-align: center;
+  }
+  header h1 { font-size: 2.4em; margin-bottom: 10px; }
+  header p { font-size: 1.1em; opacity: 0.9; max-width: 700px; margin: 0 auto; }
+  header .badge {
+    display: inline-block;
+    background: rgba(255,255,255,0.2);
+    border-radius: 20px;
+    padding: 4px 16px;
+    font-size: 0.85em;
+    margin-top: 16px;
+  }
+  nav {
+    background: var(--card);
+    border-bottom: 1px solid var(--border);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    overflow-x: auto;
+    white-space: nowrap;
+  }
+  nav a {
+    display: inline-block;
+    padding: 14px 20px;
+    color: var(--text-secondary);
+    text-decoration: none;
+    font-size: 0.9em;
+    border-bottom: 3px solid transparent;
+    transition: all 0.2s;
+  }
+  nav a:hover, nav a.active {
+    color: var(--primary);
+    border-bottom-color: var(--primary);
+  }
+  .container { max-width: 960px; margin: 0 auto; padding: 30px 20px; }
+  section { margin-bottom: 50px; }
+  section h2 {
+    font-size: 1.6em;
+    color: var(--primary);
+    border-left: 4px solid var(--primary);
+    padding-left: 14px;
+    margin-bottom: 20px;
+  }
+  section h3 { font-size: 1.2em; margin: 24px 0 12px; color: #333; }
+  section p { margin-bottom: 14px; color: var(--text-secondary); }
+  .card {
+    background: var(--card);
+    border-radius: 10px;
+    padding: 24px;
+    margin-bottom: 20px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+  }
+  .card h4 { color: var(--primary); margin-bottom: 8px; font-size: 1.05em; }
+  .feature-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 16px;
+  }
+  .feature-card {
+    background: var(--card);
+    border-radius: 10px;
+    padding: 20px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+    border-top: 3px solid var(--primary);
+  }
+  .feature-card h4 { margin-bottom: 6px; }
+  .feature-card p { font-size: 0.9em; color: var(--text-secondary); margin: 0; }
+  .tech-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin: 14px 0;
+  }
+  .tech-tag {
+    background: #E3F2FD;
+    color: var(--primary);
+    padding: 4px 14px;
+    border-radius: 20px;
+    font-size: 0.85em;
+    border: 1px solid #BBDEFB;
+  }
+  pre.code {
+    background: #263238;
+    color: #EEFFFF;
+    border-radius: 8px;
+    padding: 18px 20px;
+    overflow-x: auto;
+    font-size: 0.85em;
+    line-height: 1.6;
+    font-family: 'SF Mono', 'Fira Code', 'Courier New', monospace;
+    margin: 14px 0;
+  }
+  pre.code .comment { color: #546E7A; }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 14px 0;
+    font-size: 0.9em;
+  }
+  th, td {
+    border: 1px solid var(--border);
+    padding: 10px 14px;
+    text-align: left;
+  }
+  th {
+    background: var(--primary-light);
+    font-weight: 600;
+    color: var(--primary);
+  }
+  tr:nth-child(even) { background: #FAFAFA; }
+  .info-box {
+    border-left: 4px solid var(--info);
+    background: #E1F5FE;
+    padding: 14px 18px;
+    border-radius: 0 8px 8px 0;
+    margin: 14px 0;
+  }
+  footer {
+    text-align: center;
+    padding: 40px 20px;
+    color: var(--text-secondary);
+    font-size: 0.85em;
+    border-top: 1px solid var(--border);
+  }
+  @media (max-width: 600px) {
+    header h1 { font-size: 1.6em; }
+    .feature-grid { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>WiFi BSS Query System</h1>
+  <p>Campus WiFi full-stack solution — Android client, AC data collection, and API server</p>
+  <span class="badge">Kotlin / Python &bull; Android 10+ &bull; H3C / Huawei AC</span>
+</header>
+
+<nav>
+  <a href="#overview">Overview</a>
+  <a href="#app">Android App</a>
+  <a href="#api-server">API Server</a>
+  <a href="#ac-collection">AC Data Collection</a>
+  <a href="#build">Build &amp; Deploy</a>
+</nav>
+
+<div class="container">
+
+<section id="overview">
+  <h2>Overview</h2>
+  <p>
+    This project provides a complete toolchain for campus WiFi network management. It enables both network administrators and regular users to view detailed WiFi connection information and query AP (Access Point) physical location, model, and serial number via AC (Wireless Controller) data.
+  </p>
+  <p>The system consists of three core components:</p>
+  <div class="feature-grid" style="margin-top:16px">
+    <div class="feature-card">
+      <h4>Android App</h4>
+      <p>Real-time WiFi info display, RSSI chart, Room local database, DataStore preferences, remote API query</p>
+    </div>
+    <div class="feature-card" style="border-top-color: var(--success);">
+      <h4>API Server</h4>
+      <p>Python standard library http.server, in-memory database, REST API, Bearer Token auth</p>
+    </div>
+    <div class="feature-card" style="border-top-color: var(--warning);">
+      <h4>AC Data Collection</h4>
+      <p>Parse H3C / Huawei AC command output, extract AP and BSS information for API queries</p>
+    </div>
+  </div>
+</section>
+
+<section id="app">
+  <h2>Android App</h2>
+
+  <div class="card">
+    <h4>Tech Stack</h4>
+    <div class="tech-list">
+      <span class="tech-tag">Kotlin</span>
+      <span class="tech-tag">OkHttp 4.11</span>
+      <span class="tech-tag">Coroutines</span>
+      <span class="tech-tag">ViewBinding</span>
+      <span class="tech-tag">Room</span>
+      <span class="tech-tag">DataStore</span>
+      <span class="tech-tag">Material Design</span>
+      <span class="tech-tag">Min SDK 29 (Android 10)</span>
+      <span class="tech-tag">Target SDK 34</span>
+    </div>
+  </div>
+
+  <h3>Features</h3>
+  <div class="feature-grid">
+    <div class="feature-card">
+      <h4>WiFi Info Display</h4>
+      <p>SSID, BSSID, IP, signal strength (RSSI + level), frequency/channel/band (2.4/5/6 GHz), link speed, WiFi standard (Wi-Fi 4/5/6/7)</p>
+    </div>
+    <div class="feature-card">
+      <h4>RSSI Signal Chart</h4>
+      <p>Custom RssiChartView widget using Canvas to plot the last 10 minutes of signal strength, multi-AP display, red dots on BSSID handover</p>
+    </div>
+    <div class="feature-card">
+      <h4>Local Database</h4>
+      <p>Room database with QueryHistoryDao and BssLocalDao. Supports sort (MAC/Building/AP Name), batch add, edit, swipe-to-delete</p>
+    </div>
+    <div class="feature-card">
+      <h4>Auto Refresh &amp; Query</h4>
+      <p>1s/3s/5s refresh interval (default 1s), auto-query AP info on BSSID change (local DB first, then remote, 3 retries)</p>
+    </div>
+    <div class="feature-card">
+      <h4>Version Check</h4>
+      <p>Checks noc.ustc.edu.cn/version.json on start for new versions. Auto or manual check modes available.</p>
+    </div>
+  </div>
+
+  <h3>How It Works</h3>
+  <div class="card">
+    <ol style="margin-left:20px;color:var(--text-secondary);line-height:2">
+      <li><strong>Permission check:</strong> Requests location/nearby permission on start (once, no repeated prompts during auto-refresh)</li>
+      <li><strong>Get BSSID:</strong> Reads from <code>WifiManager.connectionInfo.bssid</code></li>
+      <li><strong>Normalize:</strong> Strip non-hex chars, convert to 12-char lowercase</li>
+      <li><strong>Log history:</strong> BSSID change recorded via Room DAO</li>
+      <li><strong>Local query:</strong> Lookup in Room BssLocalEntity first</li>
+      <li><strong>Remote query:</strong> If not found locally, call the configured API URL with retries</li>
+    </ol>
+  </div>
+</section>
+
+<section id="api-server">
+  <h2>API Server</h2>
+  <p>Based on Python standard library <code>http.server</code>, no third-party dependencies. Loads all data into memory on startup.</p>
+
+  <h3>Startup</h3>
+  <pre class="code">python3 server.py &lt;port&gt; &lt;ap_info&gt; &lt;bss_info&gt; &lt;group_map&gt; &lt;name_map&gt; [auth_key]</pre>
+  <table>
+    <tr><th>Parameter</th><th>Description</th></tr>
+    <tr><td><code>port</code></td><td>TCP listen port</td></tr>
+    <tr><td><code>ap_info</code></td><td>AP info file (process_ap.py output)</td></tr>
+    <tr><td><code>bss_info</code></td><td>BSS info file (process_bss.py output)</td></tr>
+    <tr><td><code>group_map</code></td><td>AP group → building name mapping (longest prefix match)</td></tr>
+    <tr><td><code>name_map</code></td><td>AP name → building name mapping (longest prefix match)</td></tr>
+    <tr><td><code>auth_key</code></td><td>(Optional) Bearer Token auth key</td></tr>
+  </table>
+
+  <h3>Query API</h3>
+  <pre class="code">curl -H "Authorization: Bearer my_key" \
+  "http://your-server:8000/api/bssinfo?bssid=bcd0eb0c6691"</pre>
+  <p>Response format:</p>
+  <pre class="code">{
+  "status": "ok",
+  "data": [{
+    "BSS_MAC": "19c97ad55e00",
+    "AP_NAME": "wlzx-13895-207",
+    "AP_SN": "219801A6M28257E00XXX",
+    "AP_MAC": "19c97ad55e00",
+    "AC_IP": "10.0.0.1",
+    "SSID": "eduroam",
+    "AP_Building": "Bldg A - Network Center",
+    "AP_IP": "10.0.0.2"
+  }]
+}</pre>
+</section>
+
+<section id="ac-collection">
+  <h2>AC Data Collection</h2>
+
+  <h3>H3C AC</h3>
+  <p>On the H3C AC, run:</p>
+  <pre class="code"><span class="comment"># Collect AP details</span>
+display wlan ap all verbose  &gt; display_ap_all_verbose.txt
+
+<span class="comment"># Collect BSS details</span>
+display wlan bss all verbose &gt; display_ap_bss_all_verbose.txt</pre>
+  <p>Then process with <code>process_ap.py</code> and <code>process_bss.py</code> in <code>api/h3c/</code>.</p>
+
+  <h3>Huawei AC</h3>
+  <p>On the Huawei AC, run:</p>
+  <pre class="code"><span class="comment"># Collect AP list</span>
+display ap all          &gt; display_ap_all.txt
+
+<span class="comment"># Collect AP labels (serial numbers)</span>
+display ap elabel all   &gt; display_ap_elabel_all.txt
+
+<span class="comment"># Collect VAP info (BSSIDs)</span>
+display vap all         &gt; display_vap_all.txt</pre>
+  <p>Huawei output uses fixed-width column formatting. Process with scripts in <code>api/huawei/</code>.</p>
+
+  <div class="info-box">
+    <strong>Key difference from H3C:</strong> Huawei AC output is fixed-width table format. Two AP info files must be correlated by MAC address for complete data. Output format is compatible with <code>server.py</code>.
+  </div>
+</section>
+
+<section id="build">
+  <h2>Build &amp; Deploy</h2>
+
+  <h3>Android App Build</h3>
+  <pre class="code"><span class="comment"># Build Release APK (signed, default)</span>
+./gradlew assembleRelease
+
+<span class="comment"># Build Debug APK</span>
+./gradlew assembleDebug</pre>
+  <p>Output: <code>app/build/outputs/apk/release/app-release.apk</code></p>
+
+  <div class="info-box">
+    <strong>Signing:</strong> Release builds use <code>wifi-bss-key.jks</code> (credentials in <code>keystore.properties</code>, gitignored).<br>
+    <strong>Mirror:</strong> <code>settings.gradle.kts</code> redirects Google and Maven Central to Aliyun mirrors.
+  </div>
+
+  <h3>API Server Deployment</h3>
+  <pre class="code"><span class="comment"># 1. Collect data from AC</span>
+<span class="comment"># (run display commands, see section above)</span>
+
+<span class="comment"># 2. Process data</span>
+cd h3c
+python3 process_ap.py display_ap_all_verbose.txt &gt; ap_info.txt
+python3 process_bss.py display_ap_bss_all_verbose.txt &gt; bss_info.txt
+
+<span class="comment"># 3. Start API server</span>
+python3 server.py 8000 h3c/ap_info.txt h3c/bss_info.txt h3c/group_map.txt h3c/name_map.txt my_key
+
+<span class="comment"># 4. Test query</span>
+curl -H "Authorization: Bearer my_key" \
+  "http://your-server:8000/api/bssinfo?bssid=bcd0eb0c6691"</pre>
+
+  <h3>BSSID Normalization</h3>
+  <table>
+    <tr><th>Raw Format</th><th>Normalized</th></tr>
+    <tr><td><code>BC:D0:EB:0C:66:91</code></td><td><code>bcd0eb0c6691</code></td></tr>
+    <tr><td><code>bc-d0-eb-0c-66-91</code></td><td><code>bcd0eb0c6691</code></td></tr>
+    <tr><td><code>bcd0eb0c6691</code></td><td><code>bcd0eb0c6691</code></td></tr>
+  </table>
+</section>
+
+</div>
+
+<footer>
+  <p>WiFi BSS Query System &mdash; <a href="https://github.com/bg6cq/wifibss" style="color:var(--primary)">GitHub</a></p>
+</footer>
+
+</body>
+</html>

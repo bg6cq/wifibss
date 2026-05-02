@@ -2,6 +2,8 @@ package com.ustc.wifibss.util
 
 import java.util.regex.Pattern
 
+import com.ustc.wifibss.R
+
 /**
  * WiFi 相关工具方法
  */
@@ -101,11 +103,11 @@ object WifiUtils {
         }
     }
 
-    enum class SignalLevel(val label: String) {
-        EXCELLENT("优秀"),
-        GOOD("良好"),
-        FAIR("一般"),
-        WEAK("较差"),
-        POOR("弱")
+    enum class SignalLevel(val resId: Int) {
+        EXCELLENT(R.string.signal_excellent),
+        GOOD(R.string.signal_good),
+        FAIR(R.string.signal_fair),
+        WEAK(R.string.signal_weak),
+        POOR(R.string.signal_poor)
     }
 }

@@ -91,6 +91,12 @@ api/h3c 和 api/huawei 目录下分别有对应厂商的数据采集和处理脚
 
 ## 更新历史
 
+### v1.35
+- 新增英语界面支持，系统语言为英文时自动切换
+- 创建 values-en/strings.xml 英文翻译资源
+- 新增英文项目介绍页面 introduction_en.html
+- 重构硬编码中文，SignalLevel 枚举改用 string resource ID
+
 ### v1.34
 - 修复自动查询时本地BSSMAC结果未更新历史记录AP名字的问题
 

@@ -7,6 +7,10 @@
     <string name="query_button">查询 BSS 信息</string>
     <string name="result_label">查询结果:</string>
     <string name="result_default">点击查询按钮获取信息</string>
+    <string name="current_ap_label">当前 AP</string>
+    <string name="unknown_ap">未知 AP</string>
+    <string name="version_info">版本：%s</string>
+    <string name="author_text">作者：%s</string>
     <string name="permission_required">需要位置权限才能获取 WiFi 信息</string>
     <string name="no_wifi_connection">未连接到 WiFi 网络</string>
     <string name="querying">查询中...</string>
@@ -19,6 +23,8 @@
     <string name="bss_mac_label">BSS  MAC:</string>
     <string name="new_version_found">发现新版本</string>
     <string name="download_now">立即下载</string>
+    <string name="update_dialog_message">当前版本：%1$s\n最新版本：%2$s\n\n%3$s</string>
+    <string name="update_dialog_default_log">发现新版本，是否立即下载更新？</string>
     <string name="menu_settings">设置</string>
     <string name="menu_about">关于</string>
     <string name="menu_history">历史记录</string>
@@ -48,6 +54,8 @@
     <string name="wifi_ip_label">IP 地址:</string>
     <string name="wifi_rssi_label">频宽/信号:</string>
     <string name="wifi_frequency_label">频率/信道:</string>
+    <string name="channel_label">(信道 %d)</string>
+    <string name="wifi_standard_unknown">WiFi 代码 %d</string>
     <string name="wifi_linkspeed_label">速率/标准:</string>
     <string name="signal_excellent">优秀</string>
     <string name="signal_good">良好</string>
@@ -100,8 +108,13 @@
     <string name="permission_location">• 位置权限：Android 10+ 要求位置权限才能获取 WiFi BSSID 信息</string>
     <string name="permission_nearby">• 附近设备权限：Android 13+ 需要此权限以扫描附近 WiFi 设备</string>
 
+    <!-- 关于页面 -->
+    <string name="about_section_features">功能说明</string>
+    <string name="about_section_changelog">更新记录</string>
+    <string name="about_section_privacy">隐私说明</string>
+
     <!-- 更新日志 -->
-    <string name="about_changes">v1.34 Bug修复和本地查询增强\n- 修复自动查询时本地BSSMAC结果未更新历史记录AP名字的问题\n\nv1.33 暗主题适配和界面优化\n- 适配手机暗主题（颜色资源、MaterialAlertDialog）\n- 禁止横屏，锁定竖屏显示\n- 根据BSSMAC查名字统一处理，优先查询本地数据库\n- 设置页面增加滚动条\n- 对话框底部间距优化\n- 新增运行统计菜单（AP切换、本地查询、缓存使用、远程查询）\n\nv1.32 查询结果显示改进和关于页面增强\n- DataStore 迁移设置存储，废弃 SharedPreferences\n- 硬编码中文字符串迁移到 strings.xml\n- 查询结果显示原始 JSON 字符串\n- 关于页面增加\"详细说明\"按钮，打开项目介绍 HTML\n\nv1.31 设置界面重构和数据记录调整\n- 数据记录改用 Room\n- 设置布局重排，新增\"自动检查更新\"和\"检查软件更新\"\n- 修复自动刷新每秒检查权限导致的弹窗闪烁\n- 设置项改为\"1秒/3秒/5秒\"，新安装默认 1 秒刷新\n- 缓存AP信息默认开启\n\nv1.30 显示可能漫游切换的 AP 信号\n- 自动查询附近 AP 名称并在图表下方显示\n- 设置中增加缓存 AP 信息选项，减少查询次数\n- 图表布局和显示优化\n\nv1.28 显示文字优化\n- 优化关于页面描述文本，表达更清晰流畅\n- 设置项文字调整：\"BSSID 变化时自动查询\"\n- 作者信息格式简化\n\nv1.27 构建系统升级\n- AGP 7.4.2 → 8.5.2\n- Kotlin 1.8.22 → 2.0.0\n- Gradle 8.0 → 8.7\n- Java 11 → 17\n\nv1.26 BSSMAC 编辑优化\n- 修改 MAC 地址时保留原记录并添加新记录\n\nv1.24 历史记录修复\n- 修复本地 BSSMAC 数据未更新历史记录的问题\n\nv1.23 功能增强\n- BSSMAC 支持按 MAC/所在楼/AP 名字排序\n- BSSMAC 信息支持导出到文件\n- 权限不足时显示详细说明，解释为什么需要各项权限\n\nv1.21 BSSMAC 编辑修复\n- 修复 BSSMAC 信息编辑后列表不刷新的问题\n\nv1.19 权限和体验优化\n- 添加屏幕唤醒保持，APP 运行时屏幕不会休眠\n- 自动查询关闭时也会检查本地数据库\n\nv1.18 WiFi 技术标准显示\n- 链路速度后显示 WiFi 技术标准（WiFi 4/WiFi 5/WiFi 6/WiFi 6E/WiFi 7）\n\nv1.17 RSSI 图表优化\n- 添加每分钟一条的竖向虚线网格，方便查看时间\n\nv1.16 历史记录增强\n- 点击历史记录可保存到本地 BSSMAC 数据库\n\nv1.15 本地 BSS MAC 数据库\n- 新增本地 BSSMAC 信息编辑功能（设置 → BSSMAC 信息）\n- 支持批量添加：每行格式\"BSSMAC AP 名字 所在楼\"\n- 支持多种 BSSMAC 格式自动识别（xx:xx:xx:xx:xx:xx、xxxx-xxxx-xxxx 等）\n- 左滑删除记录，点击记录可编辑\n- 查询时优先使用本地数据，无数据时调用远程 API\n\nv1.13 历史记录优化\n- BSSID 变化时立即记录历史（无需等待查询结果）\n- 查询到 AP 信息后自动更新对应历史记录\n- 历史记录时间精确到秒\n\nv1.12 信号强度图表\n- 新增 RSSI 信号强度曲线图，显示最近 5 分钟变化\n- BSSID 切换时用红色大圆点标记\n\nv1.11 历史记录功能\n- 新增查询历史记录，保存 BSSID、AP 名字、楼名和查询时间\n- BSSID 变化时自动记录，相同 BSSID 智能合并\n\nv1.10 图标修复\n- 修复应用图标显示问题（标准 WiFi 信号图案：3 条弧线 + 中心圆点）\n\nv1.9 应用图标更新\n- 更换为 WiFi 信号主题图标（青绿色背景 + 白色信号弧线）\n\nv1.8 包名更新\n- 包名从 com.example.wifibssquery 更名为 com.ustc.wifibss\n\nv1.7 修正频段显示\n- 修正 5GHz/6GHz 频段判断逻辑（5925MHz 以上为 6GHz）\n- 无效频率时不显示频段标识\n\nv1.6 自动刷新 WiFi 信息\n- 设置中增加自动刷新时间选项（不刷新/1s/5s/10s）\n- 按设定间隔自动刷新 WiFi 信息（RSSI、频率/信道等）\n- 刷新后 BSSID 变化时触发自动查询（如果已开启）\n- 自动查询失败时 1 秒后重试，最多 3 次\n\nv1.2 新增 BSS MAC 显示\n- 在查询结果最上方显示返回的 BSS MAC 地址\n\nv1.1 菜单功能和 WiFi 信息增强\n- 设置可配置查询 URL 和 KEY（Authorization: Bearer）\n- WiFi 信息卡片显示：SSID、BSSID、IP 地址、信号强度、频率/信道、链路速度\n- 信号强度分级显示（优秀/良好/一般/较差/弱）\n- 自动感知 WiFi 连接变化并刷新显示\n\nv1.0 初始版本\n- 获取当前 WiFi BSSID\n- 查询 BSS 信息并显示</string>
+    <string name="about_changes">v1.35 新增英语界面支持\n- 创建 values-en/strings.xml 英文翻译资源\n- 新增英文项目介绍页面 introduction_en.html\n- 重构 SignalLevel 枚举使用 string resource ID\n- MainActivity.kt 硬编码中文迁移到 strings.xml\n- 系统语言为英文时自动切换为英语界面\n\nv1.34 Bug修复和本地查询增强\n- 修复自动查询时本地BSSMAC结果未更新历史记录AP名字的问题\n\nv1.33 暗主题适配和界面优化\n- 适配手机暗主题（颜色资源、MaterialAlertDialog）\n- 禁止横屏，锁定竖屏显示\n- 根据BSSMAC查名字统一处理，优先查询本地数据库\n- 设置页面增加滚动条\n- 对话框底部间距优化\n- 新增运行统计菜单（AP切换、本地查询、缓存使用、远程查询）\n\nv1.32 查询结果显示改进和关于页面增强\n- DataStore 迁移设置存储，废弃 SharedPreferences\n- 硬编码中文字符串迁移到 strings.xml\n- 查询结果显示原始 JSON 字符串\n- 关于页面增加\"详细说明\"按钮，打开项目介绍 HTML\n\nv1.31 设置界面重构和数据记录调整\n- 数据记录改用 Room\n- 设置布局重排，新增\"自动检查更新\"和\"检查软件更新\"\n- 修复自动刷新每秒检查权限导致的弹窗闪烁\n- 设置项改为\"1秒/3秒/5秒\"，新安装默认 1 秒刷新\n- 缓存AP信息默认开启\n\nv1.30 显示可能漫游切换的 AP 信号\n- 自动查询附近 AP 名称并在图表下方显示\n- 设置中增加缓存 AP 信息选项，减少查询次数\n- 图表布局和显示优化\n\nv1.28 显示文字优化\n- 优化关于页面描述文本，表达更清晰流畅\n- 设置项文字调整：\"BSSID 变化时自动查询\"\n- 作者信息格式简化\n\nv1.27 构建系统升级\n- AGP 7.4.2 → 8.5.2\n- Kotlin 1.8.22 → 2.0.0\n- Gradle 8.0 → 8.7\n- Java 11 → 17\n\nv1.26 BSSMAC 编辑优化\n- 修改 MAC 地址时保留原记录并添加新记录\n\nv1.24 历史记录修复\n- 修复本地 BSSMAC 数据未更新历史记录的问题\n\nv1.23 功能增强\n- BSSMAC 支持按 MAC/所在楼/AP 名字排序\n- BSSMAC 信息支持导出到文件\n- 权限不足时显示详细说明，解释为什么需要各项权限\n\nv1.21 BSSMAC 编辑修复\n- 修复 BSSMAC 信息编辑后列表不刷新的问题\n\nv1.19 权限和体验优化\n- 添加屏幕唤醒保持，APP 运行时屏幕不会休眠\n- 自动查询关闭时也会检查本地数据库\n\nv1.18 WiFi 技术标准显示\n- 链路速度后显示 WiFi 技术标准（WiFi 4/WiFi 5/WiFi 6/WiFi 6E/WiFi 7）\n\nv1.17 RSSI 图表优化\n- 添加每分钟一条的竖向虚线网格，方便查看时间\n\nv1.16 历史记录增强\n- 点击历史记录可保存到本地 BSSMAC 数据库\n\nv1.15 本地 BSS MAC 数据库\n- 新增本地 BSSMAC 信息编辑功能（设置 → BSSMAC 信息）\n- 支持批量添加：每行格式\"BSSMAC AP 名字 所在楼\"\n- 支持多种 BSSMAC 格式自动识别（xx:xx:xx:xx:xx:xx、xxxx-xxxx-xxxx 等）\n- 左滑删除记录，点击记录可编辑\n- 查询时优先使用本地数据，无数据时调用远程 API\n\nv1.13 历史记录优化\n- BSSID 变化时立即记录历史（无需等待查询结果）\n- 查询到 AP 信息后自动更新对应历史记录\n- 历史记录时间精确到秒\n\nv1.12 信号强度图表\n- 新增 RSSI 信号强度曲线图，显示最近 5 分钟变化\n- BSSID 切换时用红色大圆点标记\n\nv1.11 历史记录功能\n- 新增查询历史记录，保存 BSSID、AP 名字、楼名和查询时间\n- BSSID 变化时自动记录，相同 BSSID 智能合并\n\nv1.10 图标修复\n- 修复应用图标显示问题（标准 WiFi 信号图案：3 条弧线 + 中心圆点）\n\nv1.9 应用图标更新\n- 更换为 WiFi 信号主题图标（青绿色背景 + 白色信号弧线）\n\nv1.8 包名更新\n- 包名从 com.example.wifibssquery 更名为 com.ustc.wifibss\n\nv1.7 修正频段显示\n- 修正 5GHz/6GHz 频段判断逻辑（5925MHz 以上为 6GHz）\n- 无效频率时不显示频段标识\n\nv1.6 自动刷新 WiFi 信息\n- 设置中增加自动刷新时间选项（不刷新/1s/5s/10s）\n- 按设定间隔自动刷新 WiFi 信息（RSSI、频率/信道等）\n- 刷新后 BSSID 变化时触发自动查询（如果已开启）\n- 自动查询失败时 1 秒后重试，最多 3 次\n\nv1.2 新增 BSS MAC 显示\n- 在查询结果最上方显示返回的 BSS MAC 地址\n\nv1.1 菜单功能和 WiFi 信息增强\n- 设置可配置查询 URL 和 KEY（Authorization: Bearer）\n- WiFi 信息卡片显示：SSID、BSSID、IP 地址、信号强度、频率/信道、链路速度\n- 信号强度分级显示（优秀/良好/一般/较差/弱）\n- 自动感知 WiFi 连接变化并刷新显示\n\nv1.0 初始版本\n- 获取当前 WiFi BSSID\n- 查询 BSS 信息并显示</string>
 
     <!-- 隐私说明 -->
     <string name="privacy_description">本应用在运行时会收集以下信息：\n\n当前连接及周边同SSID的 WiFi AP BSSID（MAC 地址）和信号强度（RSSI），用于查询 AP 信息和显示信号图表。\n\n上述BSSID(MAC地址)信息将发送到您在「设置」中配置的查询 URL，您可以在设置中禁止查询、修改或清空该URL禁止外发。\n\n所有历史记录和 BSSMAC 数据仅存储在设备本地，不会传输到其他服务器。\n\n需要位置权限是 Android 系统的要求，本应用不采集、处理位置信息。\n\n本应用不收集、处理任何个人身份信息（姓名、账号、设备、位置等信息）。</string>

@@ -166,13 +166,8 @@ class MainActivity : AppCompatActivity() {
     private fun showUpdateDialog(versionInfo: BssInfoApiService.VersionInfo, packageInfo: android.content.pm.PackageInfo) {
         val currentVersionStr = "v${packageInfo.versionName} (${packageInfo.longVersionCode})"
         val newVersionStr = "v${versionInfo.versionName} (${versionInfo.versionCode})"
-
-        val message = """
-            当前版本：$currentVersionStr
-            最新版本：$newVersionStr
-
-            ${versionInfo.updateLog.ifEmpty { "发现新版本，是否立即下载更新？" }}
-        """.trimIndent()
+        val updateLog = versionInfo.updateLog.ifEmpty { getString(R.string.update_dialog_default_log) }
+        val message = getString(R.string.update_dialog_message, currentVersionStr, newVersionStr, updateLog)
 
         MaterialAlertDialogBuilder(this)
             .setTitle(R.string.new_version_found)
@@ -245,7 +240,7 @@ class MainActivity : AppCompatActivity() {
         val rssi = wifiInfo.rssi
         val signalLevel = WifiUtils.getSignalLevel(rssi)
         val bandwidthText = if (bandwidth.isNotEmpty()) "$bandwidth  " else ""
-        binding.tvRssi.text = "${bandwidthText}$rssi dBm (${signalLevel.label})"
+        binding.tvRssi.text = "${bandwidthText}$rssi dBm (${getString(signalLevel.resId)})"
 
         // 添加 RSSI 数据点到图表
         addRssiDataPoint(rssi)
@@ -258,7 +253,7 @@ class MainActivity : AppCompatActivity() {
         val channel = WifiUtils.frequencyToChannel(freq)
         val band = WifiUtils.getBand(freq)
         val bandText = if (band.isNotEmpty()) " ($band)" else ""
-        binding.tvFrequency.text = "$freq MHz (信道 $channel)$bandText"
+        binding.tvFrequency.text = "$freq MHz${getString(R.string.channel_label, channel)}$bandText"
 
         // 链路速度和 WiFi 标准
         val wifiStandard = getWifiStandard(wifiInfo)
@@ -279,7 +274,7 @@ class MainActivity : AppCompatActivity() {
                     ScanResult.WIFI_STANDARD_11AC -> "Wi-Fi 5 (802.11ac)"
                     ScanResult.WIFI_STANDARD_11AX -> "Wi-Fi 6 (802.11ax)"
                     ScanResult.WIFI_STANDARD_11BE -> "Wi-Fi 7 (802.11be)"
-                    else -> "WiFi 代码 $standard"
+                    else -> getString(R.string.wifi_standard_unknown, standard)
                 }
             } catch (e: Exception) {
                 ""
@@ -316,7 +311,7 @@ class MainActivity : AppCompatActivity() {
     private fun addRssiDataPoint(rssi: Int) {
         binding.rssiChart.addOrUpdateApSeries(
             apId = "current",
-            apName = "当前 AP",
+            apName = getString(R.string.current_ap_label),
             bssid = "current",
             isCurrentAp = true,
             rssi = rssi,
@@ -399,7 +394,8 @@ class MainActivity : AppCompatActivity() {
 
         btnIntroduction.setOnClickListener {
             val webView = android.webkit.WebView(this)
-            webView.loadUrl("file:///android_asset/introduction.html")
+            val htmlFile = if (Locale.getDefault().language.startsWith("en")) "introduction_en.html" else "introduction.html"
+            webView.loadUrl("file:///android_asset/$htmlFile")
             webView.settings.apply {
                 builtInZoomControls = true
                 displayZoomControls = false
@@ -420,13 +416,13 @@ class MainActivity : AppCompatActivity() {
             .show()
     }
 
-    private fun getVersionInfo(): String = "版本：1.34"
+    private fun getVersionInfo(): String = getString(R.string.version_info, "1.35")
 
     private fun getDescriptionText(): String = getString(R.string.about_description)
 
     private fun getChangesText(): String = getString(R.string.about_changes)
 
-    private fun getAuthorText(): String = "作者：james@ustc.edu.cn 2026"
+    private fun getAuthorText(): String = getString(R.string.author_text, "james@ustc.edu.cn 2026")
 
     /**
      * 显示历史记录对话框
