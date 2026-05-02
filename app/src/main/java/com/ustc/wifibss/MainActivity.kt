@@ -420,7 +420,7 @@ class MainActivity : AppCompatActivity() {
             .show()
     }
 
-    private fun getVersionInfo(): String = "版本：1.33"
+    private fun getVersionInfo(): String = "版本：1.34"
 
     private fun getDescriptionText(): String = getString(R.string.about_description)
 
@@ -908,6 +908,7 @@ class MainActivity : AppCompatActivity() {
             binding.tvApSn.text = "-"
             binding.tvApBuilding.text = apInfo.building
             binding.tvResult.text = getString(R.string.query_from_local)
+            repository.updateHistoryRecord(bssid, apInfo.apName, apInfo.building)
         } else if (apInfo.bssMac != "-") {
             binding.tvBssMac.text = apInfo.bssMac
             binding.tvAcIp.text = apInfo.acIp
