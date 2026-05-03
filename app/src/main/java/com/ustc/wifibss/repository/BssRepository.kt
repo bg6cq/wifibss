@@ -85,12 +85,14 @@ class BssRepository(
         } else {
             bssLocalDao.insert(BssLocalEntity(bssMac = normalizedMac, apName = apName, building = building))
         }
+        apiService.invalidateCache(normalizedMac)
         return true
     }
 
     suspend fun deleteBssLocal(bssMac: String) {
         val normalizedMac = WifiUtils.normalizeBssMac(bssMac) ?: return
         bssLocalDao.deleteByBssMac(normalizedMac)
+        apiService.invalidateCache(normalizedMac)
     }
 
     suspend fun exportBssLocalToString(): String {

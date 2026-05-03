@@ -66,6 +66,10 @@ class BssInfoApiService(
         return cached != null && System.currentTimeMillis() - cached.cachedAt < cacheDurationMs
     }
 
+    fun invalidateCache(bssid: String) {
+        apInfoCache.remove(bssid)
+    }
+
     fun clearCache() {
         apInfoCache.clear()
     }
