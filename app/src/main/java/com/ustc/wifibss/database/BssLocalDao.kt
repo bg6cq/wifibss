@@ -7,6 +7,9 @@ interface BssLocalDao {
     @Query("SELECT * FROM bss_local")
     suspend fun getAll(): List<BssLocalEntity>
 
+    @Query("SELECT * FROM bss_local ORDER BY building COLLATE NOCASE, apName COLLATE NOCASE")
+    suspend fun getAllSorted(): List<BssLocalEntity>
+
     @Query("SELECT * FROM bss_local WHERE bssMac = :bssMac LIMIT 1")
     suspend fun getByBssMac(bssMac: String): BssLocalEntity?
 

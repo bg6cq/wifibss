@@ -96,7 +96,7 @@ class BssRepository(
     }
 
     suspend fun exportBssLocalToString(): String {
-        return bssLocalDao.getAll().map(BssLocalEntity::toBssLocalEntry)
+        return bssLocalDao.getAllSorted().map(BssLocalEntity::toBssLocalEntry)
             .joinToString("\n") { entry ->
                 val parts = mutableListOf(entry.bssMac, entry.apName)
                 if (entry.building.isNotEmpty()) parts.add(entry.building)
