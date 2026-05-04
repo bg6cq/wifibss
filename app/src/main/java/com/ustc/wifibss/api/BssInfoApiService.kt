@@ -2,7 +2,6 @@ package com.ustc.wifibss.api
 
 import com.ustc.wifibss.data.AppPreferences
 import com.ustc.wifibss.model.ApInfo
-import com.ustc.wifibss.util.WifiUtils
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -48,17 +47,6 @@ class BssInfoApiService(
             apInfoCache[bssid] = CacheEntry(queryResult, System.currentTimeMillis())
         }
         queryResult
-    }
-
-    suspend fun queryNearbyApName(bssid: String): String? {
-        return try {
-            withContext(kotlinx.coroutines.Dispatchers.IO) {
-                val result = queryBssInfo(bssid)
-                if (result.apInfo.apName != "-") result.apInfo.apName else null
-            }
-        } catch (_: Exception) {
-            null
-        }
     }
 
     fun isInCache(bssid: String): Boolean {

@@ -16,7 +16,8 @@ object WifiUtils {
      */
     fun formatBssid(bssid: String?): String? {
         bssid ?: return null
-        return HEX_PATTERN.matcher(bssid).replaceAll("").lowercase()
+        val result = HEX_PATTERN.matcher(bssid).replaceAll("").lowercase()
+        return result.ifEmpty { null }
     }
 
     /**
@@ -24,8 +25,7 @@ object WifiUtils {
      * 返回 12 位十六进制字符串，或 null（如果格式无效）
      */
     fun normalizeBssMac(input: String): String? {
-        val hexOnly = HEX_PATTERN.matcher(input).replaceAll("")
-        return if (hexOnly.length == 12) hexOnly.lowercase() else null
+        return formatBssid(input)?.takeIf { it.length == 12 }
     }
 
     /**
