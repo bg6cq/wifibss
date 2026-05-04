@@ -62,7 +62,6 @@ class MainActivity : AppCompatActivity() {
     }
 
     private var lastBssid: String? = null
-    private var autoQueryRetryCount = 0
     private var autoRefreshJob: kotlinx.coroutines.Job? = null
     private var autoRefreshIntervalMs: Int = 0
     private var bssidChangedForChart: Boolean = false
@@ -220,14 +219,8 @@ class MainActivity : AppCompatActivity() {
 
             lifecycleScope.launch {
                 prefs.incrementApSwitch()
-                if (prefs.isAutoQueryEnabled() && bssid.length == 12) {
-                    autoQueryRetryCount = 0
-                    queryBssInfoWithRetry(bssid)
-                } else {
-                    val localData = repository.getBssLocalByMac(bssid)
-                    if (localData != null) {
-                        displayLocalBssInfo(localData)
-                    }
+                if (bssid.length == 12) {
+                    queryBss(bssid, localOnly = !prefs.isAutoQueryEnabled())
                 }
             }
         }
@@ -297,7 +290,7 @@ class MainActivity : AppCompatActivity() {
             val bssid = WifiUtils.formatBssid(wifiManager.connectionInfo.bssid)
             if (bssid != null && bssid.length == 12) {
                 binding.tvBssidValue.text = bssid
-                queryBssInfo(bssid)
+                queryBss(bssid, isButtonQuery = true)
             } else {
                 binding.tvResult.text = getString(R.string.no_wifi_connection)
             }
@@ -358,7 +351,7 @@ class MainActivity : AppCompatActivity() {
                 val nearbyIds = listOf("nearby_1", "nearby_2")
                 for ((index, ap) in sameSsidAps.withIndex()) {
                     val apBssid = ap.BSSID.replace(Regex("[^0-9a-fA-F]"), "").lowercase()
-                    val result = trackedQuery(apBssid)
+                    val result = try { repository.queryBssInfo(apBssid) } catch (_: Exception) { null }
                     val apName = result?.apInfo?.apName?.takeIf { it != "-" } ?: apBssid
                     binding.rssiChart.addOrUpdateApSeries(
                         apId = nearbyIds[index],
@@ -876,22 +869,6 @@ class MainActivity : AppCompatActivity() {
     }
 
     /**
-     * 统一查询：本地 → 缓存 → API，包含统计
-     */
-    private suspend fun trackedQuery(bssid: String): BssQueryResult? {
-        val wasCached = repository.isInApiCache(bssid)
-        return try {
-            val result = repository.queryBssInfo(bssid)
-            if (result.fromLocal) prefs.incrementLocalHit()
-            else if (wasCached) prefs.incrementCacheHit()
-            else prefs.incrementQuerySuccess()
-            result
-        } catch (e: Exception) {
-            null
-        }
-    }
-
-    /**
      * 显示查询结果（统一处理本地和远程）
      */
     private suspend fun displayQueryResult(bssid: String, result: BssQueryResult) {
@@ -920,58 +897,62 @@ class MainActivity : AppCompatActivity() {
     }
 
     /**
-     * 查询 BSS 信息（带重试，用于自动查询）
+     * 统一查询入口：本地 DB → 远程 API（失败重试 3 次）
+     * @param localOnly true 时仅查本地 DB，不调远程 API
      */
-    private fun queryBssInfoWithRetry(bssid: String) {
+    private fun queryBss(bssid: String, isButtonQuery: Boolean = false, localOnly: Boolean = false) {
         lifecycleScope.launch {
-            binding.tvResult.text = getString(R.string.querying)
-            clearApInfoDisplay()
+            if (!localOnly) {
+                binding.tvResult.text = getString(R.string.querying)
+                clearApInfoDisplay()
+            }
+            if (isButtonQuery) binding.btnQuery.isEnabled = false
 
-            var result: BssQueryResult? = null
-            while (result == null && autoQueryRetryCount < 3) {
-                result = trackedQuery(bssid)
-                if (result == null) {
-                    autoQueryRetryCount++
-                    if (autoQueryRetryCount < 3) {
-                        withContext(Dispatchers.Main) {
-                            binding.tvResult.text = getString(R.string.query_retry_format, autoQueryRetryCount)
+            if (localOnly) {
+                val local = repository.getBssLocalByMac(bssid)
+                if (local != null) {
+                    prefs.incrementLocalHit()
+                    val result = BssQueryResult(
+                        rawJson = "来自本地数据库",
+                        apInfo = ApInfo(local.bssMac, local.apName, "-", "-", "-", local.building),
+                        fromLocal = true
+                    )
+                    displayQueryResult(bssid, result)
+                }
+            } else {
+                val wasCached = repository.isInApiCache(bssid)
+                var retryCount = 0
+                var result: BssQueryResult? = null
+
+                while (result == null && retryCount < 3) {
+                    try {
+                        result = repository.queryBssInfo(bssid)
+                    } catch (e: Exception) {
+                        retryCount++
+                        if (retryCount < 3) {
+                            withContext(Dispatchers.Main) {
+                                binding.tvResult.text = getString(R.string.query_retry_format, retryCount)
+                            }
+                            delay(1000)
+                        } else {
+                            withContext(Dispatchers.Main) {
+                                binding.tvResult.text = "${getString(R.string.query_error)}: ${getString(R.string.query_max_retries)}"
+                                Toast.makeText(this@MainActivity, getString(R.string.query_error), Toast.LENGTH_SHORT).show()
+                            }
+                            prefs.incrementQueryFailure()
                         }
-                        delay(1000)
-                    } else {
-                        withContext(Dispatchers.Main) {
-                            binding.tvResult.text = "${getString(R.string.query_error)}: ${getString(R.string.query_max_retries)}"
-                            Toast.makeText(this@MainActivity, getString(R.string.query_error), Toast.LENGTH_SHORT).show()
-                        }
-                        prefs.incrementQueryFailure()
                     }
                 }
-            }
-            if (result != null) {
-                displayQueryResult(bssid, result)
-            }
-        }
-    }
 
-    /**
-     * 查询 BSS 信息（手动查询）
-     */
-    private fun queryBssInfo(bssid: String) {
-        lifecycleScope.launch {
-            binding.tvResult.text = getString(R.string.querying)
-            clearApInfoDisplay()
-            binding.btnQuery.isEnabled = false
-
-            val result = trackedQuery(bssid)
-            if (result != null) {
-                displayQueryResult(bssid, result)
-            } else {
-                withContext(Dispatchers.Main) {
-                    binding.tvResult.text = "${getString(R.string.query_error)}: ${getString(R.string.query_max_retries)}"
+                if (result != null) {
+                    if (result.fromLocal) prefs.incrementLocalHit()
+                    else if (wasCached) prefs.incrementCacheHit()
+                    else prefs.incrementQuerySuccess()
+                    displayQueryResult(bssid, result)
                 }
             }
-            withContext(Dispatchers.Main) {
-                binding.btnQuery.isEnabled = true
-            }
+
+            if (isButtonQuery) binding.btnQuery.isEnabled = true
         }
     }
 
@@ -1030,23 +1011,6 @@ class MainActivity : AppCompatActivity() {
         binding.tvApName.text = "-"
         binding.tvApSn.text = "-"
         binding.tvApBuilding.text = "-"
-    }
-
-    private fun displayLocalBssInfo(localData: BssLocalEntry) {
-        binding.tvBssMac.text = localData.bssMac
-        binding.tvAcIp.text = "-"
-        binding.tvApIp.text = "-"
-        binding.tvApName.text = localData.apName
-        binding.tvApSn.text = "-"
-        binding.tvApBuilding.text = localData.building
-        binding.tvResult.text = getString(R.string.query_from_local)
-
-        lifecycleScope.launch {
-            val currentBssid = WifiUtils.formatBssid(wifiManager.connectionInfo.bssid)
-            if (currentBssid != null && currentBssid.length == 12) {
-                repository.updateHistoryRecord(currentBssid, localData.apName, localData.building)
-            }
-        }
     }
 
     private fun addHistoryRecord(bssid: String, apName: String, building: String) {
