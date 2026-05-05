@@ -283,6 +283,10 @@ class MainActivity : AppCompatActivity() {
         binding.tvRssi.text = "-"
         binding.tvFrequency.text = "-"
         binding.tvLinkSpeed.text = "-"
+        clearApInfoDisplay()
+        binding.tvResult.text = getString(R.string.result_default)
+        binding.rssiChart.removeApSeries("nearby_1")
+        binding.rssiChart.removeApSeries("nearby_2")
     }
 
     private fun setupUI() {
