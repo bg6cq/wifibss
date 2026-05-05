@@ -101,6 +101,7 @@ class RssiChartView @JvmOverloads constructor(
         val apId: String,           // 唯一标识（BSSID）
         var apName: String,         // AP 名称/楼名
         val bssid: String,          // BSSID 用于显示
+        var channel: String,        // 信道 (如 "6" 或 "-")
         var isCurrentAp: Boolean,   // 是否为当前连接的 AP
         val lineColor: Int,         // 线条颜色
         val dataPoints: ConcurrentLinkedQueue<RssiDataPoint> = ConcurrentLinkedQueue(),
@@ -221,6 +222,7 @@ class RssiChartView @JvmOverloads constructor(
         apId: String,
         apName: String,
         bssid: String,  // 仅用于显示，不用于标识数据流
+        channel: String = "-",
         isCurrentAp: Boolean,
         rssi: Int,
         bssidChanged: Boolean = false
@@ -228,6 +230,7 @@ class RssiChartView @JvmOverloads constructor(
         val existing = apSeries.find { it.apId == apId }
         if (existing != null) {
             existing.apName = apName
+            existing.channel = channel
             existing.addDataPoint(rssi)
             if (bssidChanged && existing.isCurrentAp) {
                 existing.bssidChangeMarkers.add(
@@ -239,6 +242,7 @@ class RssiChartView @JvmOverloads constructor(
                 apId = apId,
                 apName = apName.ifEmpty { context.getString(R.string.unknown_ap) },
                 bssid = bssid,
+                channel = channel,
                 isCurrentAp = isCurrentAp,
                 lineColor = getApColor(apSeries.size),
             )
@@ -412,7 +416,7 @@ class RssiChartView @JvmOverloads constructor(
     }
 
     private fun drawApNames(canvas: Canvas, width: Float, yPosition: Float) {
-        // 只显示非当前 AP 的名称（最多 2 个）, 不显示 dBm
+        // 只显示非当前 AP 的名称（最多 2 个）, 显示 "名字 ChX"
         val nearbySeries = apSeries.filter { !it.isCurrentAp }.take(MAX_NEARBY_APS)
         if (nearbySeries.isEmpty()) return
 
@@ -426,7 +430,8 @@ class RssiChartView @JvmOverloads constructor(
 
             // AP 名称（一行显示，允许更长文字）
             val displayName = series.apName.take(MAX_AP_NAME_CHARS)
-            canvas.drawText(displayName, startX + LEGEND_TEXT_X_OFFSET, yPosition, legendPaint)
+            val channelText = if (series.channel != "-") " Ch${series.channel}" else ""
+            canvas.drawText("$displayName$channelText", startX + LEGEND_TEXT_X_OFFSET, yPosition, legendPaint)
         }
     }
 

@@ -357,10 +357,12 @@ class MainActivity : AppCompatActivity() {
                     val apBssid = ap.BSSID.replace(Regex("[^0-9a-fA-F]"), "").lowercase()
                     val result = try { repository.queryBssInfo(apBssid) } catch (_: Exception) { null }
                     val apName = result?.apInfo?.apName?.takeIf { it != "-" } ?: apBssid
+                    val channel = WifiUtils.frequencyToChannel(ap.frequency).let { if (it > 0) it.toString() else "-" }
                     binding.rssiChart.addOrUpdateApSeries(
                         apId = nearbyIds[index],
                         apName = apName,
                         bssid = apBssid,
+                        channel = channel,
                         isCurrentAp = false,
                         rssi = ap.level,
                         bssidChanged = false
