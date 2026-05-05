@@ -436,7 +436,8 @@ class RssiChartView @JvmOverloads constructor(
     }
 
     private fun getYForRssi(rssi: Float, rect: RectF): Float {
-        val normalized = (rssi - RSSI_MIN) / RSSI_RANGE
+        val clampedRssi = rssi.coerceAtMost(RSSI_MIN.toFloat())
+        val normalized = (clampedRssi - RSSI_MIN) / RSSI_RANGE
         return rect.bottom - (normalized * (rect.bottom - rect.top))
     }
 }
