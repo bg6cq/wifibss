@@ -561,8 +561,10 @@ class MainActivity : AppCompatActivity() {
                     rvBssLocal.layoutManager = LinearLayoutManager(this@MainActivity)
                     rvBssLocal.adapter = BssLocalAdapter(bssList) { entry ->
                         showEditBssDialog(entry) {
-                            lifecycleScope.launch { reloadList() }
-                            updateAdapter()
+                            lifecycleScope.launch {
+                                reloadList()
+                                updateAdapter()
+                            }
                         }
                     }
                 }
