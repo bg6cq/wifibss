@@ -418,7 +418,7 @@ class MainActivity : AppCompatActivity() {
             .show()
     }
 
-    private fun getVersionInfo(): String = getString(R.string.version_info, "1.35")
+    private fun getVersionInfo(): String = getString(R.string.version_info, "1.36")
 
     private fun getDescriptionText(): String = getString(R.string.about_description)
 

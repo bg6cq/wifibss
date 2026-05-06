@@ -82,13 +82,13 @@
     <string name="bssmac_cancel">Cancel</string>
     <string name="bssmac_edit_title">Edit Record</string>
     <string name="bssmac_field_bssmac">BSS MAC</string>
-    <string name="bssmac_field_ap_name">AP Name</string>
-    <string name="bssmac_field_building">Building</string>
+    <string name="bssmac_field_ap_name">AP</string>
+    <string name="bssmac_field_building">Bldg</string>
     <string name="bssmac_export">Export to File</string>
-    <string name="bssmac_sort">Sort by:</string>
+    <string name="bssmac_sort">Sort:</string>
     <string name="bssmac_sort_mac">MAC</string>
-    <string name="bssmac_sort_building">Building</string>
-    <string name="bssmac_sort_apname">AP Name</string>
+    <string name="bssmac_sort_building">Bldg</string>
+    <string name="bssmac_sort_apname">AP</string>
     <string name="edit_record_title">Edit Record</string>
     <string name="saved_to_local_db">Saved to local BSS MAC database</string>
     <string name="save_failed_invalid_mac">Save failed: invalid BSS MAC format</string>
@@ -116,7 +116,7 @@
     <string name="permission_nearby">• Nearby devices: Android 13+ requires this to scan nearby WiFi devices</string>
 
     <!-- Changelog -->
-    <string name="about_changes">v1.35 English UI support\n- Created values-en/strings.xml with English translations\n- Added English project introduction page (introduction_en.html)\n- Refactored SignalLevel enum to use string resource IDs\n- Migrated hardcoded Chinese strings in MainActivity.kt to strings.xml\n- UI automatically switches to English when system language is set to English\n\nv1.34 Bug fixes and local query improvements\n- Fixed auto-query not updating AP names from local BSSMAC results\n\nv1.33 Dark theme and UI optimization\n- Dark theme support (color resources, MaterialAlertDialog)\n- Locked portrait orientation\n- Prioritize local database for BSSMAC name lookup\n- Scrollable settings page\n- Stats menu (AP switch, local query, cache, remote query)\n\nv1.32 Display improvements and about page enhancements\n- DataStore migration, deprecated SharedPreferences\n- Moved hardcoded strings to strings.xml\n- Show raw JSON in query results\n- Added detailed intro button in About page\n\nFor full changelog, see Chinese version.</string>
+    <string name="about_changes">v1.36 UI text cleanup and bug fixes\n- Shortened BSSMAC labels: \"Sort by\"→\"Sort\", \"AP Name\"→\"AP\", \"Building\"→\"Bldg\"\n- Fixed BSSMAC edit list not refreshing after save\n- Fixed nearby AP info not clearing on WiFi disconnect\n- RSSI chart now shows nearby AP names with channel number, excludes current AP\n- RSSI chart Y-axis starts at -90, values below -90 clamped\n\nv1.35 English UI support\n- Created values-en/strings.xml with English translations\n- Added English project introduction page (introduction_en.html)\n- Refactored SignalLevel enum to use string resource IDs\n- Migrated hardcoded Chinese strings in MainActivity.kt to strings.xml\n- UI automatically switches to English when system language is set to English\n\nv1.34 Bug fixes and local query improvements\n- Fixed auto-query not updating AP names from local BSSMAC results\n\nv1.33 Dark theme and UI optimization\n- Dark theme support (color resources, MaterialAlertDialog)\n- Locked portrait orientation\n- Prioritize local database for BSSMAC name lookup\n- Scrollable settings page\n- Stats menu (AP switch, local query, cache, remote query)\n\nv1.32 Display improvements and about page enhancements\n- DataStore migration, deprecated SharedPreferences\n- Moved hardcoded strings to strings.xml\n- Show raw JSON in query results\n- Added detailed intro button in About page\n\nFor full changelog, see Chinese version.</string>
 
     <!-- Privacy -->
     <string name="privacy_description">This app collects the following information at runtime:\n\nThe BSSID (MAC address) and signal strength (RSSI) of the currently connected and nearby APs sharing the same SSID, used for AP info queries and signal chart display.\n\nThe BSSID (MAC address) will be sent to the query URL configured in Settings. You can disable queries, modify, or clear the URL to prevent data transmission.\n\nAll history and BSSMAC data is stored locally on the device and is not transmitted to any other server.\n\nLocation permission is required by the Android system; this app does not collect or process location information.\n\nThis app does not collect or process any personally identifiable information (name, account, device, location, etc.).</string>
