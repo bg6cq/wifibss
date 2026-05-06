@@ -348,7 +348,10 @@ class MainActivity : AppCompatActivity() {
 
                 val sameSsidAps = scanResults
                     .filter { it.SSID.removeSurroundingQuotes() == currentSsid }
-                    .filter { it.BSSID != currentBssid }
+                    .filter {
+                        val scanBssid = it.BSSID.replace(Regex("[^0-9a-fA-F]"), "").lowercase()
+                        scanBssid != currentBssid
+                    }
                     .sortedByDescending { it.level }
                     .take(2)
 
