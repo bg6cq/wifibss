@@ -214,16 +214,32 @@
 
     </com.google.android.material.card.MaterialCardView>
 
-    <!-- 查询按钮 -->
-    <Button
-        android:id="@+id/btnQuery"
+    <!-- 查询 / 信道利用 按钮并排 -->
+    <LinearLayout
+        android:id="@+id/llButtons"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginTop="8dp"
-        android:text="@string/query_button"
+        android:orientation="horizontal"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/wifiInfoCard" />
+        app:layout_constraintTop_toBottomOf="@id/wifiInfoCard">
+
+        <Button
+            android:id="@+id/btnQuery"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginEnd="4dp"
+            android:text="@string/query_button" />
+
+        <Button
+            android:id="@+id/btnChannel"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="4dp"
+            android:text="@string/menu_channel" />
+
+    </LinearLayout>
 
     <!-- AP 信息显示（卡片形式） -->
     <com.google.android.material.card.MaterialCardView
@@ -235,7 +251,7 @@
         app:cardElevation="2dp"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/btnQuery">
+        app:layout_constraintTop_toBottomOf="@id/llButtons">
 
         <LinearLayout
             android:layout_width="match_parent"

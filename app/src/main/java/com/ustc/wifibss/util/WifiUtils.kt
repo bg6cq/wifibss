@@ -89,6 +89,21 @@ object WifiUtils {
     }
 
     /**
+     * WiFi 标准代码转可读字符串 (WifiInfo.getWifiStandard / ScanResult.getWifiStandard)
+     * 需要 API 30+，调用方自行保证
+     */
+    fun wifiStandardToString(standard: Int): String {
+        return when (standard) {
+            android.net.wifi.ScanResult.WIFI_STANDARD_LEGACY -> "802.11a/b/g"
+            android.net.wifi.ScanResult.WIFI_STANDARD_11N -> "Wi-Fi 4 (802.11n)"
+            android.net.wifi.ScanResult.WIFI_STANDARD_11AC -> "Wi-Fi 5 (802.11ac)"
+            android.net.wifi.ScanResult.WIFI_STANDARD_11AX -> "Wi-Fi 6 (802.11ax)"
+            android.net.wifi.ScanResult.WIFI_STANDARD_11BE -> "Wi-Fi 7 (802.11be)"
+            else -> ""
+        }
+    }
+
+    /**
      * 将信道宽度常量转为可读字符串
      */
     fun channelWidthToString(width: Int): String {
@@ -100,6 +115,21 @@ object WifiUtils {
             android.net.wifi.ScanResult.CHANNEL_WIDTH_80MHZ_PLUS_MHZ -> "80+80 MHz"
             android.net.wifi.ScanResult.CHANNEL_WIDTH_320MHZ -> "320 MHz"
             else -> ""
+        }
+    }
+
+    /**
+     * 将信道宽度常量转为 MHz 数值（80+80 按单段 80 处理）
+     */
+    fun channelWidthToMhz(width: Int): Int {
+        return when (width) {
+            android.net.wifi.ScanResult.CHANNEL_WIDTH_20MHZ -> 20
+            android.net.wifi.ScanResult.CHANNEL_WIDTH_40MHZ -> 40
+            android.net.wifi.ScanResult.CHANNEL_WIDTH_80MHZ -> 80
+            android.net.wifi.ScanResult.CHANNEL_WIDTH_160MHZ -> 160
+            android.net.wifi.ScanResult.CHANNEL_WIDTH_80MHZ_PLUS_MHZ -> 80
+            android.net.wifi.ScanResult.CHANNEL_WIDTH_320MHZ -> 320
+            else -> 20
         }
     }
 

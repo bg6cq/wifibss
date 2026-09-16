@@ -261,14 +261,8 @@ class MainActivity : AppCompatActivity() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
             return try {
                 val standard = wifiInfo.wifiStandard
-                when (standard) {
-                    ScanResult.WIFI_STANDARD_LEGACY -> "802.11a/b/g"
-                    ScanResult.WIFI_STANDARD_11N -> "Wi-Fi 4 (802.11n)"
-                    ScanResult.WIFI_STANDARD_11AC -> "Wi-Fi 5 (802.11ac)"
-                    ScanResult.WIFI_STANDARD_11AX -> "Wi-Fi 6 (802.11ax)"
-                    ScanResult.WIFI_STANDARD_11BE -> "Wi-Fi 7 (802.11be)"
-                    else -> getString(R.string.wifi_standard_unknown, standard)
-                }
+                WifiUtils.wifiStandardToString(standard)
+                    .ifEmpty { getString(R.string.wifi_standard_unknown, standard) }
             } catch (e: Exception) {
                 ""
             }
@@ -299,6 +293,12 @@ class MainActivity : AppCompatActivity() {
                 binding.tvResult.text = getString(R.string.no_wifi_connection)
             }
         }
+
+        binding.btnChannel.setOnClickListener { openChannelActivity() }
+    }
+
+    private fun openChannelActivity() {
+        startActivity(android.content.Intent(this, ChannelActivity::class.java))
     }
 
     private fun setupRssiChart() {
@@ -418,7 +418,7 @@ class MainActivity : AppCompatActivity() {
             .show()
     }
 
-    private fun getVersionInfo(): String = getString(R.string.version_info, "1.36")
+    private fun getVersionInfo(): String = getString(R.string.version_info, "1.37")
 
     private fun getDescriptionText(): String = getString(R.string.about_description)
 

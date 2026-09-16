@@ -1,0 +1,112 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  热点列表单行。列之间的竖线与 activity_channel.xml 的表头保持同样的顺序与 weight，
+  否则列会对不齐。
+-->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="horizontal"
+    android:paddingStart="4dp"
+    android:paddingEnd="4dp">
+
+    <!-- 名称 (SSID) -->
+    <TextView
+        android:id="@+id/tvApName"
+        android:layout_width="0dp"
+        android:layout_height="match_parent"
+        android:layout_weight="2.8"
+        android:paddingEnd="2dp"
+        android:paddingTop="6dp"
+        android:paddingBottom="6dp"
+        android:textSize="11sp"
+        android:textColor="@color/text_primary" />
+
+    <View
+        android:layout_width="1dp"
+        android:layout_height="match_parent"
+        android:background="@color/chart_grid" />
+
+    <!-- 设备 (MAC 或 AP 名字) -->
+    <TextView
+        android:id="@+id/tvApMac"
+        android:layout_width="0dp"
+        android:layout_height="match_parent"
+        android:layout_weight="2.8"
+        android:paddingStart="2dp"
+        android:paddingEnd="2dp"
+        android:paddingTop="6dp"
+        android:paddingBottom="6dp"
+        android:textSize="11sp"
+        android:fontFamily="monospace"
+        android:textColor="@color/text_secondary" />
+
+    <View
+        android:layout_width="1dp"
+        android:layout_height="match_parent"
+        android:background="@color/chart_grid" />
+
+    <!-- 强度 -->
+    <TextView
+        android:id="@+id/tvApRssi"
+        android:layout_width="0dp"
+        android:layout_height="match_parent"
+        android:layout_weight="0.8"
+        android:gravity="center_horizontal"
+        android:paddingTop="6dp"
+        android:paddingBottom="6dp"
+        android:textSize="11sp"
+        android:textColor="@color/text_primary" />
+
+    <View
+        android:layout_width="1dp"
+        android:layout_height="match_parent"
+        android:background="@color/chart_grid" />
+
+    <!-- 信道 -->
+    <TextView
+        android:id="@+id/tvApChannel"
+        android:layout_width="0dp"
+        android:layout_height="match_parent"
+        android:layout_weight="0.7"
+        android:gravity="center_horizontal"
+        android:paddingTop="6dp"
+        android:paddingBottom="6dp"
+        android:textSize="11sp"
+        android:textColor="@color/text_primary" />
+
+    <View
+        android:layout_width="1dp"
+        android:layout_height="match_parent"
+        android:background="@color/chart_grid" />
+
+    <!-- 带宽 -->
+    <TextView
+        android:id="@+id/tvApBandwidth"
+        android:layout_width="0dp"
+        android:layout_height="match_parent"
+        android:layout_weight="0.8"
+        android:gravity="center_horizontal"
+        android:paddingTop="6dp"
+        android:paddingBottom="6dp"
+        android:textSize="11sp"
+        android:textColor="@color/text_primary" />
+
+    <View
+        android:layout_width="1dp"
+        android:layout_height="match_parent"
+        android:background="@color/chart_grid" />
+
+    <!-- 标准 -->
+    <TextView
+        android:id="@+id/tvApStandard"
+        android:layout_width="0dp"
+        android:layout_height="match_parent"
+        android:layout_weight="0.7"
+        android:gravity="center_horizontal"
+        android:paddingTop="6dp"
+        android:paddingBottom="6dp"
+        android:textSize="11sp"
+        android:textColor="@color/text_primary" />
+
+</LinearLayout>
