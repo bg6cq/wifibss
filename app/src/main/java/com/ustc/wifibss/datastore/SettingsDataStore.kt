@@ -23,6 +23,9 @@ class SettingsDataStore(private val context: Context) {
         private val KEY_AUTO_CHECK_UPDATE = booleanPreferencesKey("auto_check_update")
         private val KEY_SP_MIGRATED = booleanPreferencesKey("sp_migrated")
 
+        /** 最近一次记录到的 BSSID，用于冷启动恢复“AP 切换检测”基线 */
+        private val KEY_LAST_BSSID = stringPreferencesKey("last_bssid")
+
         // 统计
         private val KEY_STATS_AP_SWITCH = intPreferencesKey("stats_ap_switch")
         private val KEY_STATS_QUERY_SUCCESS = intPreferencesKey("stats_query_success")
@@ -96,6 +99,28 @@ class SettingsDataStore(private val context: Context) {
 
     suspend fun saveAutoCheckUpdate(enabled: Boolean) {
         context.dataStore.edit { prefs -> prefs[KEY_AUTO_CHECK_UPDATE] = enabled }
+    }
+
+    // ==================== AP 切换检测基线 ====================
+
+    /**
+     * 最近一次记录到的 BSSID，null 表示未记录或已断开。
+     * 冷启动时用它初始化切换检测基线，避免每次冷启动都计一次 AP 切换。
+     */
+    suspend fun getLastBssid(): String? {
+        return context.dataStore.data.map { prefs ->
+            prefs[KEY_LAST_BSSID]?.takeIf { it.length == 12 }
+        }.first()
+    }
+
+    suspend fun saveLastBssid(bssid: String?) {
+        context.dataStore.edit { prefs ->
+            if (bssid == null) {
+                prefs.remove(KEY_LAST_BSSID)
+            } else {
+                prefs[KEY_LAST_BSSID] = bssid
+            }
+        }
     }
 
     // ==================== 统计 ====================

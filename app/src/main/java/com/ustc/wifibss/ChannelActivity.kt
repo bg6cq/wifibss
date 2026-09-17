@@ -264,8 +264,11 @@ class ChannelActivity : AppCompatActivity() {
             aps24g = rename(aps24g)
             aps5g = rename(aps5g)
 
-            // 名字变化同时影响图表标签与列表，直接整体重绘当前频段，避免维护索引
-            renderCurrentBand()
+            // 仅重绘图表与列表：名字不影响数量与提示行，避免并发回调重复改写提示文字
+            val band = currentBand()
+            val aps = if (band == BAND_24G) aps24g else aps5g
+            renderChart(aps, band)
+            renderList(aps)
         }
     }
 
@@ -277,7 +280,7 @@ class ChannelActivity : AppCompatActivity() {
 
         renderChart(aps, band)
         renderList(aps)
-        renderScanHint(aps.size, band)
+        renderScanHint()
     }
 
     private fun renderChart(aps: List<ChannelAp>, band: Int) {
@@ -356,7 +359,15 @@ class ChannelActivity : AppCompatActivity() {
         }
     }
 
-    private fun renderScanHint(count: Int, band: Int) {
+    /**
+     * 扫描提示行。
+     *
+     * 计数始终从当前频段的列表长度现算，不接受外部传入：渲染入口有多个
+     * （加载、切频段、远程名字解析回调），任何"把调用时的 count 传递下去"的写法
+     * 都会让提示文字取决于最后一次回调的时序。这里只读当前状态，保证幂等。
+     */
+    private fun renderScanHint() {
+        val count = (if (currentBand() == BAND_24G) aps24g else aps5g).size
         binding.tvScanHint.text = if (count == 0) {
             getString(R.string.channel_scan_hint_empty)
         } else {
@@ -390,13 +401,16 @@ class ChannelActivity : AppCompatActivity() {
         private var aps: List<ChannelAp> = aps
 
         /**
-         * 替换数据源并刷新。列表项数量变化时用 notifyDataSetChanged，
-         * 数量不变时逐项刷新，避免整表闪动。
+         * 替换数据源并刷新。
+         *
+         * 列表按 RSSI 降序排列，信号波动会让同一位置的 AP 换成另一个，
+         * 因此不能按位置做增量刷新（会把新数据画到旧行的位置造成错位）。
+         * 只有确认内容完全一致时才跳过，否则整体刷新。
          */
         fun submit(newAps: List<ChannelAp>) {
-            val sameSize = newAps.size == aps.size
+            if (newAps == aps) return
             aps = newAps
-            if (sameSize) notifyItemRangeChanged(0, aps.size) else notifyDataSetChanged()
+            notifyDataSetChanged()
         }
 
         class ViewHolder(view: View) : RecyclerView.ViewHolder(view) {

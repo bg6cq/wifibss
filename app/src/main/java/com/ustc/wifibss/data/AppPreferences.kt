@@ -63,6 +63,14 @@ class AppPreferences(private val context: Context,
         store.saveAutoCheckUpdate(enabled)
     }
 
+    // ==================== AP 切换检测基线 ====================
+
+    suspend fun getLastBssid(): String? = store.getLastBssid()
+
+    suspend fun saveLastBssid(bssid: String?) {
+        store.saveLastBssid(bssid)
+    }
+
     // ==================== 统计 ====================
     suspend fun getStatsApSwitch(): Int = store.getStatsApSwitch()
 

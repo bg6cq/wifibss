@@ -62,6 +62,9 @@ class MainActivity : AppCompatActivity() {
     }
 
     private var lastBssid: String? = null
+
+    /** lastBssid 是否已从持久化存储恢复。未恢复前不进行切换检测。 */
+    private var bssidBaselineReady: Boolean = false
     private var autoRefreshJob: kotlinx.coroutines.Job? = null
     private var autoRefreshIntervalMs: Int = 0
     private var bssidChangedForChart: Boolean = false
@@ -88,6 +91,12 @@ class MainActivity : AppCompatActivity() {
         // 加载自动刷新设置、迁移、检查更新（在同一协程中顺序执行）
         lifecycleScope.launch {
             autoRefreshIntervalMs = prefs.getAutoRefreshInterval()
+
+            // 恢复上次记录到的 BSSID，使“切换检测”有正确基线。
+            // 该值在挂起读取完成前为 null，此窗口内的 updateWifiInfo() 不得判定切换，
+            // 否则冷启动会被当成一次 AP 切换而重复计数。
+            lastBssid = prefs.getLastBssid()
+            bssidBaselineReady = true
             restartAutoRefresh()
 
             // 执行数据迁移
@@ -197,7 +206,11 @@ class MainActivity : AppCompatActivity() {
         val wifiInfo = wifiManager.connectionInfo
         if (wifiInfo == null || wifiInfo.bssid == null) {
             clearWifiInfo()
-            lastBssid = null
+            // 断开连接：清空基线，下次连上任何 AP 都算一次真实切换
+            if (bssidBaselineReady) {
+                lastBssid = null
+                persistLastBssid(null)
+            }
             return
         }
 
@@ -210,17 +223,29 @@ class MainActivity : AppCompatActivity() {
         binding.tvBssidValue.text = bssid ?: getString(R.string.no_wifi_connection)
 
         // 检测 BSSID 变化
-        val bssidChanged = (bssid != null && bssid != lastBssid)
-        bssidChangedForChart = bssidChanged
+        // 只把合法（12 位）的 BSSID 当作“已连接”，否则 MAC 随机化或读取失败产生的
+        // 半截值会先写入 lastBssid，下一次刷新再被真正的 BSSID 覆盖，
+        // 导致同一个 AP 被重复判定为切换、重复累加统计。
+        // 基线尚未从存储恢复时不判定切换，只补记基线，避免把冷启动当成一次切换。
+        val validBssid = bssid?.takeIf { it.length == 12 }
+        if (!bssidBaselineReady) {
+            lastBssid = validBssid
+            bssidChangedForChart = false
+        } else {
+            val bssidChanged = (validBssid != null && validBssid != lastBssid)
+            bssidChangedForChart = bssidChanged
 
-        if (bssidChanged) {
-            lastBssid = bssid
-            addHistoryRecord(bssid, "", "")
+            if (bssidChanged) {
+                lastBssid = validBssid
+                persistLastBssid(validBssid)
+                addHistoryRecord(validBssid, "", "")
 
-            lifecycleScope.launch {
-                prefs.incrementApSwitch()
-                if (bssid.length == 12) {
-                    queryBss(bssid, localOnly = !prefs.isAutoQueryEnabled())
+                // 在进入协程前读设置项：挂起函数会把读取推迟到调度之后，
+                // 期间用户可能已在设置里改了开关，导致读到与实际不符的值。
+                lifecycleScope.launch {
+                    val localOnly = !prefs.isAutoQueryEnabled()
+                    prefs.incrementApSwitch()
+                    queryBss(validBssid, localOnly = localOnly)
                 }
             }
         }
@@ -418,7 +443,7 @@ class MainActivity : AppCompatActivity() {
             .show()
     }
 
-    private fun getVersionInfo(): String = getString(R.string.version_info, "1.37")
+    private fun getVersionInfo(): String = getString(R.string.version_info, "1.38")
 
     private fun getDescriptionText(): String = getString(R.string.about_description)
 
@@ -1027,6 +1052,16 @@ class MainActivity : AppCompatActivity() {
     private fun addHistoryRecord(bssid: String, apName: String, building: String) {
         lifecycleScope.launch {
             repository.addHistoryRecord(bssid, apName, building)
+        }
+    }
+
+    /**
+     * 持久化最近一次记录到的 BSSID，供下次冷启动恢复切换检测基线。
+     * 传 null 表示断开连接。
+     */
+    private fun persistLastBssid(bssid: String?) {
+        lifecycleScope.launch {
+            prefs.saveLastBssid(bssid)
         }
     }
 
