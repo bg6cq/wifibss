@@ -99,6 +99,14 @@
                 android:text="@string/channel_name_mode_mac"
                 android:textSize="13sp" />
         </RadioGroup>
+
+        <CheckBox
+            android:id="@+id/cbAggregate"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="4dp"
+            android:text="@string/channel_aggregate"
+            android:textSize="13sp" />
     </LinearLayout>
 
     <!-- 表头：列宽与竖线必须与 item_channel_ap.xml 一致 -->

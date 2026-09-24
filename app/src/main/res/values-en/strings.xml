@@ -147,6 +147,7 @@
     <string name="channel_col_standard">Std</string>
     <string name="channel_name_mode_ap">AP Name</string>
     <string name="channel_name_mode_mac">MAC</string>
+    <string name="channel_aggregate">Merge</string>
     <string name="channel_hidden_ssid">&lt;HiddenSSID&gt;</string>
     <string name="channel_chart_empty_hint">No scan data</string>
     <string name="channel_list_empty">No AP found on this band</string>

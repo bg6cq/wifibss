@@ -443,7 +443,7 @@ class MainActivity : AppCompatActivity() {
             .show()
     }
 
-    private fun getVersionInfo(): String = getString(R.string.version_info, "1.38")
+    private fun getVersionInfo(): String = getString(R.string.version_info, "1.39")
 
     private fun getDescriptionText(): String = getString(R.string.about_description)
 

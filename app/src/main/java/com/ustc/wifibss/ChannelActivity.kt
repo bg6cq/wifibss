@@ -35,8 +35,10 @@ import kotlinx.coroutines.withContext
 /**
  * 信道利用界面：频谱曲线图 + 热点列表
  *
- * 名称列支持在 MAC 与 AP 名字间切换。AP 名字解析策略为本地库优先、远程按需查询：
- * 先一次性匹配本地 BSSMAC 表，未命中的再并发调用查询 API（受 10 分钟缓存保护）。
+ * 名称列支持在 MAC 与 AP 名字间切换，并可将同一 BSSID 的多个 SSID 聚合显示为一行。
+ * AP 名字解析策略为本地库优先、远程按需查询：先一次性匹配本地 BSSMAC 表，
+ * 未命中的再并发调用查询 API（受 10 分钟缓存保护）；查询失败的 BSSID 在重试
+ * 间隔内不再占用每轮查询配额，避免反复失败的 AP 饿死其他 AP 的名字解析。
  */
 class ChannelActivity : AppCompatActivity() {
 
@@ -48,9 +50,12 @@ class ChannelActivity : AppCompatActivity() {
         private const val LOCATION_PERMISSION_CODE = 2001
         private const val SCAN_INTERVAL_MS = 30000L
 
-        // 远程名字查询的并发上限与总数上限
+        // 远程名字查询的并发上限与每轮总数上限
         private const val MAX_REMOTE_LOOKUPS = 20
         private const val REMOTE_CONCURRENCY = 4
+
+        // 查询失败的 BSSID 在此间隔内不再重试（与 API 结果缓存时长一致）
+        private const val LOOKUP_RETRY_INTERVAL_MS = 10 * 60 * 1000L
     }
 
     private var adapter: ChannelAdapter? = null
@@ -62,6 +67,9 @@ class ChannelActivity : AppCompatActivity() {
 
     // 已查询到的 AP 名字缓存（跨刷新保留，避免每 30s 重新查一遍）
     private val resolvedNames = mutableMapOf<String, String>()
+
+    // 查询失败的 BSSID → 失败时间：短期内不再重试，把每轮查询配额让给没查过的 AP
+    private val failedLookups = mutableMapOf<String, Long>()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -84,6 +92,8 @@ class ChannelActivity : AppCompatActivity() {
             adapter?.nameMode = currentNameMode()
             adapter?.notifyDataSetChanged()
         }
+
+        binding.cbAggregate.setOnCheckedChangeListener { _, _ -> renderCurrentBand() }
 
         loadData()
     }
@@ -125,6 +135,15 @@ class ChannelActivity : AppCompatActivity() {
 
     private fun currentBand(): Int =
         if (binding.rgBand.checkedRadioButtonId == R.id.rbBand5) BAND_5G else BAND_24G
+
+    /**
+     * 按「聚合显示」开关加工后的显示列表：开启时同一 BSSID 的多个 SSID 合并为一行
+     */
+    private fun displayList(aps: List<ChannelAp>): List<ChannelAp> =
+        if (binding.cbAggregate.isChecked)
+            ChannelAp.aggregateByBssid(aps, getString(R.string.channel_hidden_ssid))
+        else
+            aps
 
     // ==================== 数据加载 ====================
 
@@ -220,10 +239,14 @@ class ChannelActivity : AppCompatActivity() {
      * 对本地库与已查缓存均未命中的 AP 并发查询名字，查到后增量刷新列表
      */
     private fun resolveRemoteNames(scanned: List<ScanResult>, knownNames: Map<String, String>) {
+        val now = System.currentTimeMillis()
         val pending = scanned.mapNotNull { result ->
             val bssid = WifiUtils.formatBssid(result.BSSID) ?: return@mapNotNull null
             if (bssid.length != 12) return@mapNotNull null
             if (knownNames.containsKey(bssid)) return@mapNotNull null
+            // 近期查询失败的先跳过，否则它们会反复占满每轮配额，导致其他 AP 永远轮不到查询
+            val failedAt = failedLookups[bssid]
+            if (failedAt != null && now - failedAt < LOOKUP_RETRY_INTERVAL_MS) return@mapNotNull null
             bssid to result.level
         }
             .distinctBy { it.first }
@@ -237,8 +260,13 @@ class ChannelActivity : AppCompatActivity() {
             val semaphore = Semaphore(REMOTE_CONCURRENCY)
             pending.forEach { bssid ->
                 launch {
-                    val name = semaphore.withPermit { queryApName(bssid) } ?: return@launch
-                    applyResolvedName(bssid, name)
+                    val name = semaphore.withPermit { queryApName(bssid) }
+                    if (name != null) {
+                        applyResolvedName(bssid, name)
+                    } else {
+                        // 查不到（不在库里/接口异常）也记一笔，下一轮把配额让给别的 AP
+                        failedLookups[bssid] = System.currentTimeMillis()
+                    }
                 }
             }
         }
@@ -264,11 +292,8 @@ class ChannelActivity : AppCompatActivity() {
             aps24g = rename(aps24g)
             aps5g = rename(aps5g)
 
-            // 仅重绘图表与列表：名字不影响数量与提示行，避免并发回调重复改写提示文字
-            val band = currentBand()
-            val aps = if (band == BAND_24G) aps24g else aps5g
-            renderChart(aps, band)
-            renderList(aps)
+            // 名字解析后按当前频段/聚合状态整体重绘（各渲染入口只读当前状态，幂等）
+            renderCurrentBand()
         }
     }
 
@@ -276,7 +301,7 @@ class ChannelActivity : AppCompatActivity() {
 
     private fun renderCurrentBand() {
         val band = currentBand()
-        val aps = if (band == BAND_24G) aps24g else aps5g
+        val aps = displayList(if (band == BAND_24G) aps24g else aps5g)
 
         renderChart(aps, band)
         renderList(aps)
@@ -367,7 +392,7 @@ class ChannelActivity : AppCompatActivity() {
      * 都会让提示文字取决于最后一次回调的时序。这里只读当前状态，保证幂等。
      */
     private fun renderScanHint() {
-        val count = (if (currentBand() == BAND_24G) aps24g else aps5g).size
+        val count = displayList(if (currentBand() == BAND_24G) aps24g else aps5g).size
         binding.tvScanHint.text = if (count == 0) {
             getString(R.string.channel_scan_hint_empty)
         } else {
