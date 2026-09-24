@@ -476,7 +476,7 @@ class ChannelActivity : AppCompatActivity() {
 
             holder.tvApBandwidth.text = if (ap.bandwidthMhz > 0) ap.bandwidthMhz.toString() else "-"
 
-            // 标准列缩写为数字代号：4/5/6/7
+            // 标准列缩写为带圈数字：④⑤⑥⑦
             holder.tvApStandard.text = standardShort(ap.standard)
         }
 
@@ -485,10 +485,10 @@ class ChannelActivity : AppCompatActivity() {
         private fun standardShort(standard: String): String {
             return when {
                 standard.isEmpty() -> "-"
-                standard.contains("Wi-Fi 7") -> "7"
-                standard.contains("Wi-Fi 6") -> "6"
-                standard.contains("Wi-Fi 5") -> "5"
-                standard.contains("Wi-Fi 4") -> "4"
+                standard.contains("Wi-Fi 7") -> "⑦"
+                standard.contains("Wi-Fi 6") -> "⑥"
+                standard.contains("Wi-Fi 5") -> "⑤"
+                standard.contains("Wi-Fi 4") -> "④"
                 else -> "-"
             }
         }
