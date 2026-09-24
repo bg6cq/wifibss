@@ -88,14 +88,17 @@ class ChannelChartView @JvmOverloads constructor(
         // 5GHz 信道号：只列常用信道，中间 64→100 之间的 DFS 频段在国内基本空闲
         val CHANNELS_5G = listOf(36, 40, 44, 48, 52, 56, 60, 64, 149, 153, 157, 161, 165)
 
-        const val FREQ_MIN_24G = 2400
+        // 左边界比信道 1（2412）多留 4 格（20MHz）：信道 1 上的 40MHz 曲线
+        // 会向右占到信道 5，左侧留同样的空档才对称
+        const val FREQ_MIN_24G = 2392
         const val FREQ_MAX_24G = 2484
 
         // 5GHz 横轴拆成两段连续区间，跳过中间无信道的 DFS 空档，避免图上大片空白。
-        // 每段为 [起始频率, 结束频率]。
+        // 每段为 [起始频率, 结束频率]；宽信道曲线按真实频段绘制（主信道在最低端），
+        // 最大占用到 ch64 上缘 5330 / ch165 上缘 5835，两端各留 20MHz 空档即可。
         val SEGMENTS_5G = listOf(
-            5170 to 5330,   // 信道 36-64  (5170 = ch36 中心 - 10，5330 = ch64 中心 + 10)
-            5735 to 5835    // 信道 149-165 (5735 = ch149 中心 - 10，5835 = ch165 中心 + 10)
+            5150 to 5350,   // 信道 36-64  (5170/5330 = ch36 下缘/ch64 上缘，各外扩 20)
+            5715 to 5855    // 信道 149-165 (5735/5835 = ch149 下缘/ch165 上缘，各外扩 20)
         )
 
         // 最外侧留白：按像素给（dp），而非按频率宽度。
@@ -103,8 +106,9 @@ class ChannelChartView @JvmOverloads constructor(
         // 而段间空档是按像素固定的，两者单位不同会让总预算永远配不平。
         const val SEGMENT_EDGE_PAD_DP = 14f
 
-        const val FREQ_MIN_5G = 5170
-        const val FREQ_MAX_5G = 5835
+        // 与 SEGMENTS_5G 整体范围保持一致（无分段参数时的回退轴范围）
+        const val FREQ_MIN_5G = 5150
+        const val FREQ_MAX_5G = 5855
 
         // 分段之间折叠后的固定宽度占绘图区宽度的比例
         const val SEGMENT_GAP_RATIO = 0.06f
@@ -325,6 +329,14 @@ class ChannelChartView @JvmOverloads constructor(
         val centerFreq = curve.freqMhz.toFloat()
         val halfWidth = (curve.widthMhz / 2f).coerceAtLeast(5f)
 
+        // 5G/6G 宽信道由主信道与更高编号信道绑定（如 ch36/160MHz = 36~64，
+        // 主信道在频段最低端）：曲线只覆盖真实频段 [主信道下缘, 下缘+带宽]，
+        // 峰在主信道、向右覆盖绑定的信道，不以主信道为中心对称绘制。
+        // 2.4G 无法从扫描结果判定 HT40 向高/向低扩展，仍按对称绘制。
+        val wideBonded = centerFreq > 3000f && curve.widthMhz > 20
+        val bandLo = if (wideBonded) centerFreq - 10f else centerFreq - halfWidth
+        val bandHi = if (wideBonded) centerFreq - 10f + curve.widthMhz else centerFreq + halfWidth
+
         // 峰高按带宽略作衰减，避免宽信道曲线视觉上完全淹没窄信道
         val peakRssi = curve.rssi.toFloat()
         val bottomRssi = (peakRssi - (curve.widthMhz / 20f) * WIDTH_DECAY_FACTOR * 10f)
@@ -338,7 +350,7 @@ class ChannelChartView @JvmOverloads constructor(
 
         // 逐段绘制：曲线可能跨越段间空档，若用单条路径会把空档一起填满
         for ((segLo, segHi) in segments) {
-            if (centerFreq + halfWidth < segLo || centerFreq - halfWidth > segHi) continue
+            if (bandHi < segLo || bandLo > segHi) continue
 
             curvePath.reset()
             fillPath.reset()
@@ -348,17 +360,25 @@ class ChannelChartView @JvmOverloads constructor(
 
             for (i in 0..CURVE_SAMPLES) {
                 val t = i.toFloat() / CURVE_SAMPLES
-                // 从左边缘 (centerFreq - halfWidth) 到右边缘 (centerFreq + halfWidth)
-                val freq = centerFreq - halfWidth + t * halfWidth * 2f
+                // 从曲线域左边缘采样到右边缘
+                val freq = bandLo + t * (bandHi - bandLo)
                 if (freq < segLo || freq > segHi) {
                     started = false
                     continue
                 }
 
-                // 升余弦：距离中心越远越接近 bottomRssi
-                val d = abs(freq - centerFreq) / halfWidth
-                val shape = (1f - cos((PI * d.coerceIn(0f, 1f)).toDouble()).toFloat()) / 2f
-                val rssi = peakRssi - shape * (peakRssi - bottomRssi)
+                val rssi = if (wideBonded) {
+                    // 峰在主信道刻度处：左侧 10MHz 内落底（与窄信道观感一致），
+                    // 右侧以升余弦长弧跨过全部绑定信道衰减到频段右缘
+                    val side = if (freq <= centerFreq) centerFreq - bandLo else bandHi - centerFreq
+                    val p = if (side <= 0f) 1f else abs((freq - centerFreq) / side).coerceIn(0f, 1f)
+                    peakRssi - (1f - cos((PI * p).toDouble()).toFloat()) / 2f * (peakRssi - bottomRssi)
+                } else {
+                    // 升余弦：距离中心越远越接近 bottomRssi
+                    val d = abs(freq - centerFreq) / halfWidth
+                    val shape = (1f - cos((PI * d.coerceIn(0f, 1f)).toDouble()).toFloat()) / 2f
+                    peakRssi - shape * (peakRssi - bottomRssi)
+                }
 
                 val x = getXForFreq(freq, rect)
                 val y = getYForRssi(rssi, rect)

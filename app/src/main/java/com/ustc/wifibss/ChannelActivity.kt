@@ -35,7 +35,8 @@ import kotlinx.coroutines.withContext
 /**
  * 信道利用界面：频谱曲线图 + 热点列表
  *
- * 名称列支持在 MAC 与 AP 名字间切换，并可将同一 BSSID 的多个 SSID 聚合显示为一行。
+ * 名称列支持在 MAC 与 AP 名字间切换，并可将同一设备的多个 SSID 聚合显示为一行：
+ * AP名模式按 AP 名合并（同名不同 BSSMAC 合为一行），MAC 模式按 MAC 合并。
  * AP 名字解析策略为本地库优先、远程按需查询：先一次性匹配本地 BSSMAC 表，
  * 未命中的再并发调用查询 API（受 10 分钟缓存保护）；查询失败的 BSSID 在重试
  * 间隔内不再占用每轮查询配额，避免反复失败的 AP 饿死其他 AP 的名字解析。
@@ -89,7 +90,9 @@ class ChannelActivity : AppCompatActivity() {
         binding.rgBand.setOnCheckedChangeListener { _, _ -> renderCurrentBand() }
 
         binding.rgNameMode.setOnCheckedChangeListener { _, _ ->
+            // 聚合键随 AP名/MAC 切换而变，需整体重绘；再显式刷新一次以更新设备列文字
             adapter?.nameMode = currentNameMode()
+            renderCurrentBand()
             adapter?.notifyDataSetChanged()
         }
 
@@ -137,11 +140,12 @@ class ChannelActivity : AppCompatActivity() {
         if (binding.rgBand.checkedRadioButtonId == R.id.rbBand5) BAND_5G else BAND_24G
 
     /**
-     * 按「聚合显示」开关加工后的显示列表：开启时同一 BSSID 的多个 SSID 合并为一行
+     * 按「聚合显示」开关加工后的显示列表：AP名模式按 AP 名聚合（同名不同 BSSMAC 合并），
+     * MAC 模式按 BSSID 聚合（不同 MAC 不合并）
      */
     private fun displayList(aps: List<ChannelAp>): List<ChannelAp> =
         if (binding.cbAggregate.isChecked)
-            ChannelAp.aggregateByBssid(aps, getString(R.string.channel_hidden_ssid))
+            ChannelAp.aggregate(aps, getString(R.string.channel_hidden_ssid), currentNameMode() == NAME_MODE_AP)
         else
             aps
 
@@ -301,10 +305,15 @@ class ChannelActivity : AppCompatActivity() {
 
     private fun renderCurrentBand() {
         val band = currentBand()
-        val aps = displayList(if (band == BAND_24G) aps24g else aps5g)
+        val raw = if (band == BAND_24G) aps24g else aps5g
 
-        renderChart(aps, band)
-        renderList(aps)
+        // 频谱图固定按 BSSID 聚合：同名不同 MAC 的 AP 可能工作在不同信道，不应合并曲线
+        val chartAps = if (binding.cbAggregate.isChecked)
+            ChannelAp.aggregate(raw, getString(R.string.channel_hidden_ssid), showApName = false)
+        else raw
+
+        renderChart(chartAps, band)
+        renderList(displayList(raw))
         renderScanHint()
     }
 

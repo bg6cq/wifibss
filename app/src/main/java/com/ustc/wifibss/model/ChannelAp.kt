@@ -28,13 +28,15 @@ data class ChannelAp(
 
     companion object {
         /**
-         * 按 BSSID 聚合：企业/校园网同一 BSSID 常开通多个 SSID，合并为一行。
+         * 按设备列显示内容（deviceLabel）聚合：同一设备的多个 SSID 合并为一行。
+         * showApName=true 时按 AP 名聚合（同一 AP 的不同 BSSMAC 也合并），
+         * 未解析到名字的按各自 BSSID 单独成组；showApName=false 时按 BSSID 聚合。
          * 名称列为各 SSID 按出现顺序以 "/" 连接（隐藏 SSID 用占位符代替），
-         * 信号取最强者，其余列取信号最强记录（同一射频硬件，取值相同）。
+         * 信号取最强者，其余列取信号最强记录。
          */
-        fun aggregateByBssid(aps: List<ChannelAp>, hiddenSsidLabel: String): List<ChannelAp> {
+        fun aggregate(aps: List<ChannelAp>, hiddenSsidLabel: String, showApName: Boolean): List<ChannelAp> {
             if (aps.size < 2) return aps
-            return aps.groupBy { it.bssid }.map { (_, group) ->
+            return aps.groupBy { it.deviceLabel(showApName) }.map { (_, group) ->
                 if (group.size == 1) return@map group.first()
                 val best = group.maxByOrNull { it.rssi } ?: group.first()
                 best.copy(
