@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 带宽/标准/加密 短值胶囊背景 -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle">
+    <solid android:color="@color/detail_chip_bg" />
+    <corners android:radius="12dp" />
+</shape>

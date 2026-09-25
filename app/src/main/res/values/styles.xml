@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  AP 详情弹窗的排版样式。集中在这里，避免每行重复写十几行属性。
+  颜色一律引用 detail_* 资源（日间/夜间各一套），保证暗主题下的对比度。
+-->
+<resources>
+
+    <!-- 分组标题：小号、加粗、灰蓝，上下留白拉开组间距 -->
+    <style name="DetailSectionHeader">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:layout_marginTop">16dp</item>
+        <item name="android:layout_marginBottom">2dp</item>
+        <item name="android:textColor">@color/detail_accent</item>
+        <item name="android:textSize">11sp</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:letterSpacing">0.08</item>
+    </style>
+
+    <!-- 一行键值：左标签固定宽度，右值占满剩余空间 -->
+    <style name="DetailRow">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:orientation">horizontal</item>
+        <item name="android:paddingTop">5dp</item>
+        <item name="android:paddingBottom">5dp</item>
+    </style>
+
+    <style name="DetailLabel">
+        <item name="android:layout_width">76dp</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:textColor">@color/detail_label</item>
+        <item name="android:textSize">13sp</item>
+    </style>
+
+    <style name="DetailValue">
+        <item name="android:layout_width">0dp</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:layout_weight">1</item>
+        <item name="android:textColor">@color/detail_value</item>
+        <item name="android:textSize">14sp</item>
+    </style>
+
+    <!-- 短值胶囊 -->
+    <style name="DetailChip">
+        <item name="android:layout_width">wrap_content</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:background">@drawable/detail_chip_bg</item>
+        <item name="android:paddingStart">10dp</item>
+        <item name="android:paddingEnd">10dp</item>
+        <item name="android:paddingTop">4dp</item>
+        <item name="android:paddingBottom">4dp</item>
+        <item name="android:textColor">@color/detail_value_strong</item>
+        <item name="android:textSize">12sp</item>
+        <item name="android:textStyle">bold</item>
+    </style>
+
+</resources>

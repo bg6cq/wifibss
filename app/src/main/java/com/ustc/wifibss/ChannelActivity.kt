@@ -11,6 +11,7 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.FrameLayout
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
@@ -18,6 +19,8 @@ import androidx.core.content.ContextCompat
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
+import com.ustc.wifibss.api.MacVendorService
 import com.ustc.wifibss.data.AppPreferences
 import com.ustc.wifibss.database.WifiBssDatabase
 import com.ustc.wifibss.databinding.ActivityChannelBinding
@@ -214,7 +217,11 @@ class ChannelActivity : AppCompatActivity() {
                 bandwidthMhz = WifiUtils.channelWidthToMhz(result.channelWidth),
                 standard = getScanStandard(result),
                 apName = localName,
-                building = null
+                building = null,
+                centerFreq0 = result.centerFreq0,
+                centerFreq1 = result.centerFreq1,
+                widthRaw = result.channelWidth,
+                capabilities = result.capabilities ?: ""
             )
         }.sortedByDescending { it.rssi }
     }
@@ -335,7 +342,8 @@ class ChannelActivity : AppCompatActivity() {
                 rssi = ap.rssi,
                 widthMhz = ap.bandwidthMhz,
                 color = colorForAp(ap, index, currentBssid),
-                isCurrent = ap.bssid == currentBssid
+                isCurrent = ap.bssid == currentBssid,
+                centerFreqMhz = ap.centerFreq0
             )
         }
 
@@ -386,12 +394,198 @@ class ChannelActivity : AppCompatActivity() {
             // 复用适配器，仅替换数据并整体刷新（数据量小，无需 DiffUtil）
             existing.submit(aps)
         } else {
-            val newAdapter = ChannelAdapter(aps, currentNameMode())
+            val newAdapter = ChannelAdapter(aps, currentNameMode(), ::showApDetail)
             binding.rvChannel.layoutManager = LinearLayoutManager(this)
             binding.rvChannel.adapter = newAdapter
             adapter = newAdapter
         }
     }
+
+    // ==================== AP 详情弹窗 ====================
+
+    /**
+     * 点击列表某行：显示该 AP 的详细信息。
+     *
+     * 弹窗先立即显示扫描结果里已有的字段（信道/频率/带宽/标准/加密等，无需等待网络），
+     * 厂商（ip.ustc.edu.cn 按 OUI 查询）与 AP 名字/楼宇（本地库或远程 API，与列表中
+     * 名字解析同一套缓存）随后异步补上，查到一项填一项。
+     */
+    private fun showApDetail(ap: ChannelAp) {
+        val view = layoutInflater.inflate(R.layout.dialog_channel_ap, null)
+        val tvRssi = view.findViewById<TextView>(R.id.tvDetailRssi)
+        val tvLevel = view.findViewById<TextView>(R.id.tvDetailLevel)
+        val vSignalFill = view.findViewById<View>(R.id.vSignalFill)
+        val tvSsid = view.findViewById<TextView>(R.id.tvDetailSsid)
+        val tvFreq = view.findViewById<TextView>(R.id.tvDetailFreq)
+        val tvRange = view.findViewById<TextView>(R.id.tvDetailRange)
+        val tvBand = view.findViewById<TextView>(R.id.tvDetailBand)
+        val tvBandwidthChip = view.findViewById<TextView>(R.id.tvDetailBandwidthChip)
+        val tvStandardChip = view.findViewById<TextView>(R.id.tvDetailStandardChip)
+        val tvSecurityChip = view.findViewById<TextView>(R.id.tvDetailSecurityChip)
+        val tvCapabilities = view.findViewById<TextView>(R.id.tvDetailCapabilities)
+        val tvMac = view.findViewById<TextView>(R.id.tvDetailMac)
+        val rowBuilding = view.findViewById<View>(R.id.rowDetailBuilding)
+        val tvApName = view.findViewById<TextView>(R.id.tvDetailApName)
+        val tvBuilding = view.findViewById<TextView>(R.id.tvDetailBuilding)
+        val tvVendor = view.findViewById<TextView>(R.id.tvDetailVendor)
+        val tvStatus = view.findViewById<TextView>(R.id.tvDetailStatus)
+
+        val unknown = getString(R.string.channel_detail_unknown)
+
+        // 标题：SSID (MAC)，隐藏网络用占位符，与 WiFi Analyzer 的写法一致
+        val title = "${ap.ssidLabel(getString(R.string.channel_hidden_ssid))} (${ap.macWithColons()})"
+
+        // ---- 信号强度：大号数值 + 等级文字 + 信号条，颜色随等级变化 ----
+        val level = WifiUtils.getSignalLevel(ap.rssi)
+        val levelColor = ContextCompat.getColor(this, signalColorRes(level))
+        tvRssi.text = ap.rssi.toString()
+        tvLevel.text = getString(level.resId)
+        tvLevel.setTextColor(levelColor)
+        vSignalFill.setBackgroundTintList(android.content.res.ColorStateList.valueOf(levelColor))
+
+        // 信号条宽度按 RSSI 在 -90..-30 之间的位置，并保证最弱时也可见
+        val fraction = ((ap.rssi + 90).toFloat() / 60f).coerceIn(0.04f, 1f)
+        // 用 post 而非直接取宽：此时视图尚未布局，parent.width 会是 0
+        vSignalFill.post {
+            val track = (vSignalFill.parent as View).width
+            vSignalFill.layoutParams = (vSignalFill.layoutParams as FrameLayout.LayoutParams).apply {
+                width = (track * fraction).toInt()
+            }
+        }
+
+        // ---- 扫描结果里已有的信息，同步填好 ----
+        tvSsid.text = ap.ssidLabel(getString(R.string.channel_hidden_ssid))
+        tvMac.text = ap.macWithColons()
+
+        val distance = ap.estimatedDistanceMeters()
+        tvFreq.text = if (distance != null) {
+            getString(R.string.channel_detail_freq_dist, ap.freqMhz, ap.channel, formatDistance(distance))
+        } else {
+            getString(R.string.channel_detail_freq, ap.freqMhz, ap.channel)
+        }
+
+        val ranges = ap.occupiedRangesMhz()
+        tvRange.text = when {
+            ranges.isEmpty() -> unknown
+            ranges.size > 1 -> getString(
+                R.string.channel_detail_range_multi,
+                ranges.joinToString("  ") { formatRange(it) }
+            )
+            else -> formatRange(ranges.first())
+        }
+
+        val centerChannel = ap.centerChannel()
+        val span = ap.channelSpan()
+        tvBand.text = if (centerChannel > 0 && span != null && span.first != span.second) {
+            getString(
+                R.string.channel_detail_band,
+                WifiUtils.getBand(ap.freqMhz), span.first, span.second, centerChannel
+            )
+        } else {
+            getString(R.string.channel_detail_band_nocenter, WifiUtils.getBand(ap.freqMhz))
+        }
+
+        // 三个短值并排成胶囊；标准列沿用列表里的带圈数字，并补回完整标准名
+        tvBandwidthChip.text = getString(R.string.channel_detail_chip_bandwidth, ap.bandwidthMhz)
+        tvStandardChip.text = standardChipText(ap.standard)
+
+        val security = ap.securityCode()
+        tvSecurityChip.text = if (security.isNotEmpty()) {
+            getString(R.string.channel_detail_security, security)
+        } else {
+            getString(R.string.channel_detail_security_open)
+        }
+
+        val tokens = ap.capabilityTokens()
+        tvCapabilities.visibility = if (tokens.isEmpty()) View.GONE else View.VISIBLE
+        tvCapabilities.text = tokens.joinToString("")
+
+        // ---- 需要查询的两项，先置占位 ----
+        tvApName.text = ap.apName ?: unknown
+        rowBuilding.visibility = View.GONE
+        tvVendor.text = unknown
+        tvStatus.text = getString(R.string.channel_detail_loading)
+        tvStatus.visibility = View.VISIBLE
+
+        val dialog = MaterialAlertDialogBuilder(this)
+            .setTitle(title)
+            .setView(view)
+            .setPositiveButton(android.R.string.ok, null)
+            .show()
+
+        // 弹窗生命周期内查询，关闭后不再更新已销毁的视图
+        val job = lifecycleScope.launch {
+            // 厂商查询（独立于 AP 信息查询，任一先返回就先显示）
+            launch {
+                val vendor = MacVendorService.lookupVendor(ap.bssid)
+                if (vendor != null) {
+                    // 厂商名较长时自动换行，标签列宽度固定不影响对齐
+                    tvVendor.text = vendor
+                }
+            }
+
+            // AP 名字与楼宇：本地库或远程 API，与列表中名字解析共用同一套缓存
+            val result = try {
+                repository.queryBssInfo(ap.bssid)
+            } catch (_: Exception) {
+                null
+            }
+            val info = result?.apInfo
+            if (info != null) {
+                val name = info.apName.takeIf { it.isNotBlank() && it != "-" }
+                if (name != null) {
+                    tvApName.text = name
+                }
+                val building = info.building.takeIf { it.isNotBlank() && it != "-" }
+                if (building != null) {
+                    rowBuilding.visibility = View.VISIBLE
+                    tvBuilding.text = building
+                }
+            }
+            tvStatus.visibility = View.GONE
+        }
+        dialog.setOnDismissListener { job.cancel() }
+    }
+
+    /**
+     * 标准胶囊文字：带圈数字 + 括号里的完整标准名，如「⑥ Wi-Fi 6 (802.11ax)」。
+     * 列表列窄只放得下带圈数字，弹窗空间充足就补全，避免要看懂缩写。
+     */
+    private fun standardChipText(standard: String): String {
+        if (standard.isEmpty()) return getString(R.string.channel_detail_unknown)
+        val digit = when {
+            standard.contains("Wi-Fi 7") -> "⑦"
+            standard.contains("Wi-Fi 6") -> "⑥"
+            standard.contains("Wi-Fi 5") -> "⑤"
+            standard.contains("Wi-Fi 4") -> "④"
+            else -> null
+        } ?: return standard
+        return getString(R.string.channel_detail_chip_standard_pair, digit, standard)
+    }
+
+    /**
+     * 信号等级对应的颜色资源
+     */
+    private fun signalColorRes(level: WifiUtils.SignalLevel): Int = when (level) {
+        WifiUtils.SignalLevel.EXCELLENT -> R.color.signal_excellent
+        WifiUtils.SignalLevel.GOOD -> R.color.signal_good
+        WifiUtils.SignalLevel.FAIR -> R.color.signal_fair
+        WifiUtils.SignalLevel.WEAK -> R.color.signal_weak
+        WifiUtils.SignalLevel.POOR -> R.color.signal_poor
+    }
+
+
+    /**
+     * 频率范围显示为「2412 - 2452」；范围两端取信道刻度（20MHz 的上下缘）。
+     */
+    private fun formatRange(range: IntRange): String = "${range.first} - ${range.last}"
+
+    /**
+     * 距离格式化：<10m 保留一位小数，更大时取整
+     */
+    private fun formatDistance(meters: Double): String =
+        if (meters < 10) String.format(java.util.Locale.US, "%.1fm", meters)
+        else String.format(java.util.Locale.US, "%.0fm", meters)
 
     /**
      * 扫描提示行。
@@ -429,7 +623,8 @@ class ChannelActivity : AppCompatActivity() {
 
     private class ChannelAdapter(
         aps: List<ChannelAp>,
-        var nameMode: String
+        var nameMode: String,
+        private val onApClick: (ChannelAp) -> Unit
     ) : RecyclerView.Adapter<ChannelAdapter.ViewHolder>() {
 
         private var aps: List<ChannelAp> = aps
@@ -478,6 +673,9 @@ class ChannelActivity : AppCompatActivity() {
 
             // 标准列缩写为带圈数字：④⑤⑥⑦
             holder.tvApStandard.text = standardShort(ap.standard)
+
+            // 点击整行弹详情，不限于某个单元格
+            holder.itemView.setOnClickListener { onApClick(ap) }
         }
 
         override fun getItemCount() = aps.size

@@ -21,4 +21,25 @@
     <color name="chart_grid">#E0E0E0</color>
     <color name="chart_time_line">#CCCCCC</color>
     <color name="chart_text">#999999</color>
+    <!-- 详情弹窗中信号强度的高亮色 -->
+    <color name="chart_rssi">#E65100</color>
+
+    <!-- AP 详情弹窗 -->
+    <color name="detail_surface">#FFFFFF</color>
+    <color name="detail_surface_alt">#F5F7FA</color>
+    <color name="detail_divider">#E3E8EF</color>
+    <color name="detail_title">#1A1A1A</color>
+    <color name="detail_label">#8A94A6</color>
+    <color name="detail_value">#1F2933</color>
+    <color name="detail_value_strong">#0B1220</color>
+    <color name="detail_accent">#1565C0</color>
+    <color name="detail_chip_bg">#E8F0FE</color>
+    <color name="signal_bar_track">#E3E8EF</color>
+
+    <!-- 信号等级色 -->
+    <color name="signal_excellent">#2E9E4F</color>
+    <color name="signal_good">#7CB342</color>
+    <color name="signal_fair">#F9A825</color>
+    <color name="signal_weak">#EF6C00</color>
+    <color name="signal_poor">#D32F2F</color>
 </resources>

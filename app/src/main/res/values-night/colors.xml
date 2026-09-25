@@ -13,4 +13,23 @@
     <color name="chart_grid">#444444</color>
     <color name="chart_time_line">#555555</color>
     <color name="chart_text">#AAAAAA</color>
+
+    <!-- AP 详情弹窗（暗主题） -->
+    <color name="detail_surface">#1E2228</color>
+    <color name="detail_surface_alt">#262B33</color>
+    <color name="detail_divider">#39414D</color>
+    <color name="detail_title">#F2F5F9</color>
+    <color name="detail_label">#9AA5B4</color>
+    <color name="detail_value">#E6EAF0</color>
+    <color name="detail_value_strong">#FFFFFF</color>
+    <color name="detail_accent">#64B5F6</color>
+    <color name="detail_chip_bg">#26344A</color>
+    <color name="signal_bar_track">#39414D</color>
+
+    <!-- 信号等级色（暗主题下略微提亮，保证在深底上的对比度） -->
+    <color name="signal_excellent">#4CD07D</color>
+    <color name="signal_good">#9CCC65</color>
+    <color name="signal_fair">#FFCA28</color>
+    <color name="signal_weak">#FFA726</color>
+    <color name="signal_poor">#EF5350</color>
 </resources>

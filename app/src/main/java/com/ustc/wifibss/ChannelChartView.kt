@@ -120,12 +120,16 @@ class ChannelChartView @JvmOverloads constructor(
     data class ApCurve(
         val bssid: String,
         val label: String,
-        val freqMhz: Int,      // 中心频率
+        val freqMhz: Int,      // 主信道频率（曲线峰值所在处）
         val channel: Int,
         val rssi: Int,
         val widthMhz: Int,
         val color: Int,
-        val isCurrent: Boolean
+        val isCurrent: Boolean,
+        // 绑定块的中心频率（ScanResult.centerFreq0）。0 表示厂商未上报，由主信道推算。
+        // 主信道可以在绑定块内的任意位置（如 149-161 块的主信道可以是 157），
+        // 所以块的位置必须由它决定，不能假定主信道在块边缘。
+        val centerFreqMhz: Int = 0
     )
 
     private var curves: List<ApCurve> = emptyList()
@@ -327,15 +331,24 @@ class ChannelChartView @JvmOverloads constructor(
      */
     private fun drawCurve(canvas: Canvas, curve: ApCurve, rect: RectF, isCurrent: Boolean) {
         val centerFreq = curve.freqMhz.toFloat()
-        val halfWidth = (curve.widthMhz / 2f).coerceAtLeast(5f)
 
-        // 5G/6G 宽信道由主信道与更高编号信道绑定（如 ch36/160MHz = 36~64，
-        // 主信道在频段最低端）：曲线只覆盖真实频段 [主信道下缘, 下缘+带宽]，
-        // 峰在主信道、向右覆盖绑定的信道，不以主信道为中心对称绘制。
-        // 2.4G 无法从扫描结果判定 HT40 向高/向低扩展，仍按对称绘制。
-        val wideBonded = centerFreq > 3000f && curve.widthMhz > 20
-        val bandLo = if (wideBonded) centerFreq - 10f else centerFreq - halfWidth
-        val bandHi = if (wideBonded) centerFreq - 10f + curve.widthMhz else centerFreq + halfWidth
+        // 曲线覆盖 [块中心 ± 带宽/2]，块中心的取法按频段分两种：
+        //
+        // 5G/6G：主信道可在块内偏居一侧（ch36/80MHz 峰在块最左端 36+40+44+48，
+        //   ch157/80MHz 则偏右，块为 149-161、中心 5775），光凭主信道推不出块
+        //   在哪，只能靠 centerFreq0；未上报时退回以主信道为中心。
+        // 2.4G：始终以主信道为中心的对称钟形。2.4G 相邻信道互相重叠，centerFreq0
+        //   给出的块位置在驱动间并不可靠；而且横轴本就按这个假设设计——
+        //   FREQ_MIN_24G = 2392 正是为 ch1 的 40MHz（2412±20）留的左侧空档。
+        //   若改用块中心，ch1 的曲线会整体右移 10MHz，既歪又与刻度对不上。
+        val is24g = curve.freqMhz < 3000
+        val blockCenter = if (is24g) {
+            centerFreq
+        } else {
+            curve.centerFreqMhz.toFloat().takeIf { it > 0f } ?: centerFreq
+        }
+        val bandLo = blockCenter - curve.widthMhz / 2f
+        val bandHi = blockCenter + curve.widthMhz / 2f
 
         // 峰高按带宽略作衰减，避免宽信道曲线视觉上完全淹没窄信道
         val peakRssi = curve.rssi.toFloat()
@@ -367,18 +380,13 @@ class ChannelChartView @JvmOverloads constructor(
                     continue
                 }
 
-                val rssi = if (wideBonded) {
-                    // 峰在主信道刻度处：左侧 10MHz 内落底（与窄信道观感一致），
-                    // 右侧以升余弦长弧跨过全部绑定信道衰减到频段右缘
-                    val side = if (freq <= centerFreq) centerFreq - bandLo else bandHi - centerFreq
-                    val p = if (side <= 0f) 1f else abs((freq - centerFreq) / side).coerceIn(0f, 1f)
-                    peakRssi - (1f - cos((PI * p).toDouble()).toFloat()) / 2f * (peakRssi - bottomRssi)
-                } else {
-                    // 升余弦：距离中心越远越接近 bottomRssi
-                    val d = abs(freq - centerFreq) / halfWidth
-                    val shape = (1f - cos((PI * d.coerceIn(0f, 1f)).toDouble()).toFloat()) / 2f
-                    peakRssi - shape * (peakRssi - bottomRssi)
-                }
+                // 升余弦，峰在主信道处：两侧各自在到达块边缘时衰减到 bottomRssi。
+                // 两侧长度不同（峰偏居块内一侧），所以按所在侧分别归一化，而不是
+                // 用固定半宽——这样峰一定落在主信道上，且两端都收在块边缘。
+                val side = if (freq <= centerFreq) centerFreq - bandLo else bandHi - centerFreq
+                val d = if (side <= 0f) 1f else abs(freq - centerFreq) / side
+                val shape = (1f - cos((PI * d.coerceIn(0f, 1f)).toDouble()).toFloat()) / 2f
+                val rssi = peakRssi - shape * (peakRssi - bottomRssi)
 
                 val x = getXForFreq(freq, rect)
                 val y = getYForRssi(rssi, rect)
