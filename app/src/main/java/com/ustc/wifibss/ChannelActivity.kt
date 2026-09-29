@@ -8,6 +8,7 @@ import android.net.wifi.ScanResult
 import android.net.wifi.WifiManager
 import android.os.Build
 import android.os.Bundle
+import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -20,6 +21,7 @@ import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
+import com.ustc.wifibss.api.BssQueryResult
 import com.ustc.wifibss.api.MacVendorService
 import com.ustc.wifibss.data.AppPreferences
 import com.ustc.wifibss.database.WifiBssDatabase
@@ -28,6 +30,7 @@ import com.ustc.wifibss.model.ChannelAp
 import com.ustc.wifibss.repository.BssRepository
 import com.ustc.wifibss.util.WifiUtils
 import com.ustc.wifibss.util.WifiUtils.removeSurroundingQuotes
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -41,8 +44,9 @@ import kotlinx.coroutines.withContext
  * 名称列支持在 MAC 与 AP 名字间切换，并可将同一设备的多个 SSID 聚合显示为一行：
  * AP名模式按 AP 名合并（同名不同 BSSMAC 合为一行），MAC 模式按 MAC 合并。
  * AP 名字解析策略为本地库优先、远程按需查询：先一次性匹配本地 BSSMAC 表，
- * 未命中的再并发调用查询 API（受 10 分钟缓存保护）；查询失败的 BSSID 在重试
- * 间隔内不再占用每轮查询配额，避免反复失败的 AP 饿死其他 AP 的名字解析。
+ * 未命中的再并发调用查询 API（受 10 分钟缓存保护）。网络异常会退避重试；
+ * 查询失败的 BSSID 在退避期内不再占用每轮查询配额，避免反复失败的 AP 饿死
+ * 其他 AP 的名字解析——但「网络不通」只退避一个刷新周期，因为它是临时故障。
  */
 class ChannelActivity : AppCompatActivity() {
 
@@ -51,6 +55,7 @@ class ChannelActivity : AppCompatActivity() {
     private lateinit var repository: BssRepository
 
     companion object {
+        private const val TAG = "wifibss"
         private const val LOCATION_PERMISSION_CODE = 2001
         private const val SCAN_INTERVAL_MS = 30000L
 
@@ -60,6 +65,14 @@ class ChannelActivity : AppCompatActivity() {
 
         // 查询失败的 BSSID 在此间隔内不再重试（与 API 结果缓存时长一致）
         private const val LOOKUP_RETRY_INTERVAL_MS = 10 * 60 * 1000L
+
+        // 单次远程查询的重试次数与退避基数（仅针对网络/服务器异常）
+        private const val LOOKUP_MAX_ATTEMPTS = 3
+        private const val LOOKUP_RETRY_BASE_MS = 1000L
+
+        // 网络异常导致的失败在此间隔内不重试：30s 的刷新周期下每轮重试一次，
+        // 既不会在断网时空转刷屏，网络恢复后也能很快补上
+        private const val NETWORK_FAILURE_BACKOFF_MS = 25 * 1000L
     }
 
     private var adapter: ChannelAdapter? = null
@@ -72,8 +85,12 @@ class ChannelActivity : AppCompatActivity() {
     // 已查询到的 AP 名字缓存（跨刷新保留，避免每 30s 重新查一遍）
     private val resolvedNames = mutableMapOf<String, String>()
 
-    // 查询失败的 BSSID → 失败时间：短期内不再重试，把每轮查询配额让给没查过的 AP
-    private val failedLookups = mutableMapOf<String, Long>()
+    // 查询失败的 BSSID → 下次可重试时间：期内不再占用每轮查询配额。
+    // 区分两种失败原因，因为它们的重试代价完全不同：
+    //  - 接口正常应答但库里没有该 MAC（NOT_FOUND）：重试没有意义，退避 10 分钟；
+    //  - 网络不通/超时等异常（ERROR）：多半是临时故障，只退避一个刷新周期，
+    //    否则用户说的「查的时候网络正好不通」会让该 AP 被冷藏 10 分钟。
+    private val lookupRetryAt = mutableMapOf<String, Long>()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -255,9 +272,9 @@ class ChannelActivity : AppCompatActivity() {
             val bssid = WifiUtils.formatBssid(result.BSSID) ?: return@mapNotNull null
             if (bssid.length != 12) return@mapNotNull null
             if (knownNames.containsKey(bssid)) return@mapNotNull null
-            // 近期查询失败的先跳过，否则它们会反复占满每轮配额，导致其他 AP 永远轮不到查询
-            val failedAt = failedLookups[bssid]
-            if (failedAt != null && now - failedAt < LOOKUP_RETRY_INTERVAL_MS) return@mapNotNull null
+            // 处于退避期的先跳过，否则它们会反复占满每轮配额，导致其他 AP 永远轮不到查询
+            val retryAt = lookupRetryAt[bssid]
+            if (retryAt != null && now < retryAt) return@mapNotNull null
             bssid to result.level
         }
             .distinctBy { it.first }
@@ -271,25 +288,62 @@ class ChannelActivity : AppCompatActivity() {
             val semaphore = Semaphore(REMOTE_CONCURRENCY)
             pending.forEach { bssid ->
                 launch {
-                    val name = semaphore.withPermit { queryApName(bssid) }
-                    if (name != null) {
-                        applyResolvedName(bssid, name)
-                    } else {
-                        // 查不到（不在库里/接口异常）也记一笔，下一轮把配额让给别的 AP
-                        failedLookups[bssid] = System.currentTimeMillis()
+                    when (val outcome = semaphore.withPermit { lookupApName(bssid) }) {
+                        is LookupOutcome.Resolved -> {
+                            lookupRetryAt.remove(bssid)
+                            applyResolvedName(bssid, outcome.name)
+                        }
+                        // 接口答了但没有这条记录：重试无意义，长时间退避把配额让给别的 AP
+                        LookupOutcome.NotFound ->
+                            lookupRetryAt[bssid] = System.currentTimeMillis() + LOOKUP_RETRY_INTERVAL_MS
+                        // 网络/服务器异常：短退避，下一轮刷新就会再试
+                        LookupOutcome.Error ->
+                            lookupRetryAt[bssid] = System.currentTimeMillis() + NETWORK_FAILURE_BACKOFF_MS
                     }
                 }
             }
         }
     }
 
-    private suspend fun queryApName(bssid: String): String? {
-        return try {
-            val result = repository.queryBssInfo(bssid)
-            result.apInfo.apName.takeIf { it.isNotBlank() && it != "-" }
-        } catch (_: Exception) {
-            null
+    /**
+     * 查询单个 AP 的名字，内部对网络/服务器异常做退避重试。
+     * 三种结果必须分开：网络不通是临时的，而「库里没有」是确定性的，
+     * 用同一个 null 表示会让一次网络抖动把 AP 冷藏很久。
+     */
+    private sealed interface LookupOutcome {
+        data class Resolved(val name: String) : LookupOutcome
+        data object NotFound : LookupOutcome
+        data object Error : LookupOutcome
+    }
+
+    private suspend fun lookupApName(bssid: String): LookupOutcome {
+        val result = queryApInfoWithRetry(bssid) ?: return LookupOutcome.Error
+        val name = result.apInfo.apName.takeIf { it.isNotBlank() && it != "-" }
+        return if (name != null) LookupOutcome.Resolved(name) else LookupOutcome.NotFound
+    }
+
+    /**
+     * 带重试的 AP 信息查询：网络/服务器异常按 1s、2s 线性退避重试，最终仍失败返回 null。
+     * 本地库命中时不发网络请求，不会触发重试。
+     *
+     * 注意 catch 的是 Exception——CancellationException 是它的子类，页面/弹窗关闭时
+     * 必须原样抛出，否则协程取消会被当成查询失败而白白重试下去。
+     */
+    private suspend fun queryApInfoWithRetry(bssid: String): BssQueryResult? {
+        repeat(LOOKUP_MAX_ATTEMPTS) { attempt ->
+            try {
+                return repository.queryBssInfo(bssid)
+            } catch (cancelled: CancellationException) {
+                throw cancelled
+            } catch (e: Exception) {
+                if (attempt < LOOKUP_MAX_ATTEMPTS - 1) {
+                    delay(LOOKUP_RETRY_BASE_MS * (attempt + 1))
+                } else {
+                    Log.w(TAG, "查询 AP 信息失败 $bssid，已试 $LOOKUP_MAX_ATTEMPTS 次", e)
+                }
+            }
         }
+        return null
     }
 
     private suspend fun applyResolvedName(bssid: String, name: String) {
@@ -524,13 +578,8 @@ class ChannelActivity : AppCompatActivity() {
                 }
             }
 
-            // AP 名字与楼宇：本地库或远程 API，与列表中名字解析共用同一套缓存
-            val result = try {
-                repository.queryBssInfo(ap.bssid)
-            } catch (_: Exception) {
-                null
-            }
-            val info = result?.apInfo
+            // AP 名字与楼宇：本地库或远程 API，与列表中名字解析共用同一套缓存与重试
+            val info = queryApInfoWithRetry(ap.bssid)?.apInfo
             if (info != null) {
                 val name = info.apName.takeIf { it.isNotBlank() && it != "-" }
                 if (name != null) {
